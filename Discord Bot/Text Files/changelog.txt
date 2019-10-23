@@ -1,0 +1,35 @@
+Add your changes here
+--0.04--
+ben
+Still working on executeOnEvents
+
+ExecuteOnEvents thread removed. 
+
+Added main to pass in functions to the event loop and start all threads
+
+Removed global variable botChannel to avoid deadlock
+
+Added commandListener class
+with methods: run, __init__, listening 
+and attributes: commands, threads, loop
+
+Added new commands to commandListener: help, close
+
+Moved classes to separate file
+to make navigation of the code easier
+--0.03--
+ben
+Testing executeOnEvents
+
+Known bugs: bot.get_channel(545818844036464670) returns None unless used in on_ready
+--0.02--
+ben
+The bot announces in #servitors when it's started
+
+--0.01--
+ben
+Made doAttendance, getAttendance, giveAdvice, commandListener, on_ready, giveAdvice, executeOnEvents, createListFromFile
+
+Added cooldown to giveAdvice, getAttendance
+
+Overrode on_command_error to send a message when a command is on cooldown
