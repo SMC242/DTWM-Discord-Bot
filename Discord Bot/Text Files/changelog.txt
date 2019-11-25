@@ -17,6 +17,9 @@ Added new commands to commandListener: help, close
 
 Moved classes to separate file
 to make navigation of the code easier
+
+Known bugs: 
+main thread dies randomly
 --0.03--
 ben
 Testing executeOnEvents
