@@ -145,7 +145,11 @@ async def doAttendance(ctx):
     async with ctx.typing():
         attendees=await attendanceWrapper()
 
-        await ctx.send(f"Attendees: {attendees}")
+        if attendees==[]:
+            await ctx.send("Nobody is there, My Liege. Our men have become complacent!")
+
+        else:
+            await ctx.send(f"Attendees: {attendees}")
 
         await ctx.send("Attendance completed **UmU**")
 
