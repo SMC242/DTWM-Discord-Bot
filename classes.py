@@ -1,8 +1,10 @@
+#author: benmitchellmtb
 from discord.ext import commands
 from discord import Forbidden
 import threading, os, sys, traceback, asyncio
 from typing import Callable, Union, Tuple, List
 import asyncio
+import datetime as D
 
 #bot=commands.Bot(command_prefix="ab!")
 def createListFromFile(filePath, type=str):
@@ -36,19 +38,19 @@ class botOverrides(commands.Cog):
 
         #if command on cooldown
         if isinstance(exception, commands.CommandOnCooldown):
-          await ctx.send(f"Hold on, My Lord. I must gather my energy before another\nTry again in {int(exception.retry_after)} seconds!")
+          return await ctx.send(f"Hold on, My Lord. I must gather my energy before another\nTry again in {int(exception.retry_after)} seconds!")
 
         #if command is unknown
         elif isinstance(exception, commands.CommandNotFound):
             if '@' in ctx.invoked_with :
-                await ctx.send("How dare you try to use me to annoy others!")
+                return await ctx.send("How dare you try to use me to annoy others!")
 
             else:
-                await ctx.send(f'Sorry My Lord, the archives do not know of this "{ctx.invoked_with}" you speak of')
+                return await ctx.send(f'Sorry My Lord, the archives do not know of this "{ctx.invoked_with}" you speak of')
 
         #if bot can't access the channel
         elif isinstance(exception, Forbidden):
-            await ctx.send("I can't access one or more of those channels TwT")
+            return await ctx.send("I can't access one or more of those channels TwT")
 
         else:  #if not caught by previous conditions, display error
             # NOTE: This is the default error handling behaviour, which is kept for
@@ -57,8 +59,9 @@ class botOverrides(commands.Cog):
             print(f'Ignoring exception in command {ctx.command}:', file=sys.stderr)
             traceback.print_exception(type(exception), exception,
                                       exception.__traceback__, file=sys.stderr)
+            print(f"Occured at: {D.datetime.now().time()}")
 
-            await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  #give user feedback if internal error occurs
+            return await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  #give user feedback if internal error occurs
 
 class TerminalCommand:
     '''Class to wrap all information about a terminal command'''

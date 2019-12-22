@@ -1,3 +1,4 @@
+#authors: benmitchellmtb, ScreaminSteve, FasterNo1
 from discord import *
 from discord.ext import commands
 import threading, time, random, asyncio
@@ -5,6 +6,7 @@ import datetime as D
 from typing import *
 
 from classes import *
+from sheet import *
 
 bot=commands.Bot(command_prefix="ab!")
 bot.add_cog(botOverrides(bot))
@@ -37,7 +39,7 @@ async def executeOnEvents(func: AsyncCommand):
                 for attendee in output:
 
                     if attendee not in varList:
-                        varList.append(element)
+                        varList.append(attendee)
 
                 await asyncio.sleep(35)
 
@@ -77,12 +79,12 @@ async def getAttendance():
 
     return attendees
 
-async def attendanceWrapper(*args):
+async def attendanceWrapper():
     '''This wrapper exists so that attendance can be called outside of doAttendance
     as doAttendance is a command object'''
-    print(*args)
     attendees=await getAttendance()
-    print(attendees)
+
+    writeattendance(attendees)
     return attendees
 
 @bot.command()
@@ -210,9 +212,9 @@ async def giveAdvice(ctx):
             "We have trainings from Monday to Wednesday at 2100 CEST. Come along!",
             "Avoid cluttering comms", 
             "Remember to use cardinal directions not relative callouts! Use the format: '[cardinal direction/building call out] [target type]"
-            "You can get access to the meme and not safe for life channel by typing .iam heretic in #545818844036464670",
+            f"You can get access to the meme and not safe for life channel by typing .iam heretic in {ctx.bot.get_channel(545818844036464670).mention}",
             "To get promoted, you need to attend all 3 basic trainings and be noticed by >= Keepers as well-integrated into the community",
-            "You may seek knowledge in our chapter's #551905489236000794 . Training docs will be pinned"
+            f"You may seek knowledge in our chapter's {ctx.bot.get_channel(551905489236000794).mention} . Training docs will be pinned"
             ],
 
         "battle brother" : [
@@ -253,19 +255,14 @@ async def giveAdvice(ctx):
             "Make something pretty for us, loyal Remembrancer",
             ],
 
-        "primarch, reclaimed" :[
-            "Train harder",
-            "Do some 1v1s",
-            ],
-
         "primarch" :[
-            "You can find all relevant information to our co-ops pinned in #566316662748348447",
+            f"You can find all relevant information to our co-ops pinned in {ctx.bot.get_channel(645695680731414578).mention}",
             ],
 
         "heretic" :[
             "HERESY DETECTED! COMMENCE VIRUS BOMBING!",
             "I see you're a man of culture",
-            "Post something weird in #545809293841006603"
+            f"Post something weird in {ctx.bot.get_channel(545809293841006603).mention}"
             ],
 
         "nitro booster" : [
@@ -289,7 +286,7 @@ async def giveAdvice(ctx):
             responseCount=0
 
             #check each supported role against the invoker's roles
-            for role in mainRoleResponses.keys(): 
+            for role in list(mainRoleResponses.keys()): 
                 
                 #limit the responses to up to 4
                 if role in roleNames and responseCount<2: 
@@ -302,23 +299,24 @@ async def giveAdvice(ctx):
                     #1/2 chance to say something per role so that less messages are sent
                     if random.choice([True, False]):
                         await ctx.send(random.choice(mainRoleResponses[role]))
+                        responseCount+=1                    
+
+            #same as main but for extra roles
+            responseCount=0
+            for role in list(extraRoleResponses.keys()):
+                if role in roleNames and responseCount<2:
+                    if random.choice([False, False, True]):  #1/3 chance to respond
+
+                        await ctx.send(random.choice(extraRoleResponses[role]))
+
                         responseCount+=1
-
-                    #sometimes invokers will get a response for their extra roles. 1/3 chance
-                    if random.choice([False, False, True]): 
-
-                        await ctx.send(random.choice(extraRoleResponses\
-                            [random.choice([*extraRoleResponses.keys()])]))
-
-                        responseCount+=1
-
-                    
 
 
 async def sendAttToSheet(attendees):
     '''Sends the results of getAttendance() to the Google Sheet
     Attendees: list of people who attended'''
-    pass
+    
+
 
 def main():
     '''Put all function calls in here.
@@ -380,8 +378,12 @@ async def on_ready():
     oldTime=D.datetime.combine(D.date.min, timenow)
     runInSeconds= (newTarget - oldTime).seconds
 
-    await asyncio.sleep(runInSeconds)
+    if runInSeconds<0:
+        return await executeOnEvents(AsyncCommand(attendanceWrapper))
 
-    await executeOnEvents(AsyncCommand(attendanceWrapper))
+    else:
+        await asyncio.sleep(runInSeconds)
+
+        await executeOnEvents(AsyncCommand(attendanceWrapper))
 
 main()
