@@ -1,3 +1,0 @@
-create google sheet integration
-create restart command
-stop main thread from killing itself
