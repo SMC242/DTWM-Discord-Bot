@@ -3,7 +3,7 @@ import threading, os, sys, traceback, asyncio
 from typing import Callable, Union, Tuple, List
 import asyncio
 
-bot=commands.Bot(command_prefix="ab!")
+#bot=commands.Bot(command_prefix="ab!")
 def createListFromFile(filePath, type=str):
     '''Returns a list populated by parsed lines from a text file
     filePath: string path of the file to be read
@@ -15,9 +15,13 @@ def createListFromFile(filePath, type=str):
     
     return varList  
 
-class botOverrides(commands.Bot):
-    @bot.listen()
-    async def on_command_error(ctx, exception):
+class botOverrides(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        '''Subclass of Cog to override certain functions of Bot'''
+        self.bot=bot
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, exception):
         """Handle an exception raised during command invokation."""
         # Only use this error handler if the current context does not provide its
         # own error handler
@@ -42,16 +46,7 @@ class botOverrides(commands.Bot):
 
         #if command is unknown
         elif isinstance(exception, commands.CommandNotFound):
-            #building the invoked command
-            invokedCommand: str=None
-            for char in ctx.message:
-                if char==" ":
-                    break
-
-                else:
-                    invokedCommand.join(char)
-
-            await ctx.send(f'Sorry My Lord, the archives do not know of this "{invokedCommand}" you speak of')
+            await ctx.send(f'Sorry My Lord, the archives do not know of this "{ctx.invoked_with}" you speak of')
 
         #if bot can't access the channel
         elif isinstance(exception, Forbidden):
@@ -105,11 +100,12 @@ class TerminalCommand:
 
 class AsyncCommand(TerminalCommand):
     async def call(self):
-        '''Returns a coroutine for the func and its args'''
-        return await self.func(self.arguments)
+        '''Returns the output of self.coro'''
+        return await self.coro
 
     @property
     def coro(self):
+        '''Returns a coroutine for the func and its args'''
         return self.func(self.arguments)
 
 
@@ -120,16 +116,14 @@ class ThreadCommand(TerminalCommand):
         return threading.Thread(target=self.func, args=self.arguments, name=self.name)
 
 class commandListener():
-    '''Class for handling commands'''
-    #commands={
-    #    'close' : 'Ends the bot rightly. Use for closing the bot without causing problems.',
-    #    'die' : 'Instantly kills the bot. For emergencies only. Use "close" outside of emergencies',
-    #    'help' : 'Displays the commands list'
-    #    }
+    '''Class for handling console commands'''
 
-    def help():
+    def help(self):
+        '''Display all console commands'''
+        print("Commands list:\n")
+
         for command in self.commands:
-            command.showDetails()
+            print(command.details)
 
 
     stopThreads=False
@@ -161,6 +155,7 @@ class commandListener():
     def close(self):
             '''Command to throw pummel at bot'''
 
+            print("Ow that hurts... Closing now :,(")
             self.loop.stop()
             self.stopThreads=True
 
@@ -168,17 +163,19 @@ class commandListener():
     def listening(self):
         '''always listening for commands from the console'''
 
-        listenerInput=input().lower()
-         
         #constantly checking if a command name is inputted
         while True:
+            listenerInput=input().lower()
+
+            if listenerInput==" " or listenerInput=="\n":
+                continue
+
             for command in self.commands:
                 if listenerInput == command.name:
                     try:
                         command.call()
                     except Exception as error:
                         print(error.__repr__())
-                        print("Fatal error. Command listener closing")
                         break
                 else:
                     continue

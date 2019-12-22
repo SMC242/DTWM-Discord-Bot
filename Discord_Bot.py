@@ -7,14 +7,11 @@ from typing import *
 from classes import *
 
 bot=commands.Bot(command_prefix="ab!")
+bot.add_cog(botOverrides(bot))
+
 with open("Text Files/token.txt") as f:
     line=f.readline()
     token=line.strip("\n")
-
-
-startTime=timenow=int(D.datetime.now().strftime("%H%M"))
-opsEndTime=startTime+1
-print(startTime, " ", opsEndTime)
 
 async def executeOnEvents(func: AsyncCommand):
     '''Infinitely checks if the time now is during
@@ -32,12 +29,12 @@ async def executeOnEvents(func: AsyncCommand):
         for milestone in milestones:
 
             if milestone == timenow or int(milestone)-1 == timenow\
-               or int(milestone)+1 == timenow or timenow==startTime:
+               or int(milestone)+1 == timenow:
                 print(True)
 
                 output= await func.call()
 
-                for element in output:
+                for attendee in output:
 
                     if attendee not in varList:
                         varList.append(element)
@@ -48,7 +45,7 @@ async def executeOnEvents(func: AsyncCommand):
                 print(False)
                 await asyncio.sleep(35)
 
-            if timenow == opsEndTime:
+            if timenow == milestones[3]:
                 return varList
             
 
@@ -155,7 +152,7 @@ async def doAttendance(ctx):
 
 
 @bot.command()
-@commands.cooldown(1, 2, type=commands.BucketType.user)
+@commands.cooldown(1, 5, type=commands.BucketType.user)
 async def giveAdvice(ctx):
     '''Gives you advice based on your roles
     If you're a scout you will get mostly useful advice'''
@@ -354,7 +351,7 @@ def main():
 
 @bot.listen()
 async def on_ready():
-    print('Logged in as')
+    print('\nLogged in as')
     print(bot.user.name)
     print(bot.user.id)
     print('------')
@@ -363,8 +360,14 @@ async def on_ready():
     await botChannel.send('I have awoken... I am at your service')
 
     #scheduling the attendance function
-    timenow=int(D.datetime.now().strftime("%H%M"))
-    runInSeconds = int(opsEndTime)-timenow
+    timenow=D.datetime.now()#.strftime("%H%M")
+
+    #find when 1959 is today
+    thisDay=D.datetime.today().strftime("%y%m%d")
+    thisDay=[int(f"20{thisDay[:2]}"), int(thisDay[2:4]), int(thisDay[4:6])]  #list of year, month, day
+    target=D.datetime(year=thisDay[0], month=thisDay[1], day=thisDay[2], hour=19, minute=59)#.strftime("%H%M")
+    
+    runInSeconds = (target-timenow).total_seconds()
 
     await asyncio.sleep(runInSeconds)
 
