@@ -163,6 +163,8 @@ async def doAttendance(ctx):
 async def giveAdvice(ctx):
     '''Gives you advice based on your roles
     If you're a scout you will get mostly useful advice'''
+    print("command: giveAdvice call recieved")
+
     mainRoleResponses={
         "watch commander" : ["Learn to split <:splitwatch_marines:618120678708609054>",
                              "Become a dictator",
@@ -273,7 +275,6 @@ async def giveAdvice(ctx):
 
         }
 
-    print("giveAdvice call recieved")
     await ctx.send("*Thinking...*")
 
     #displays a typing indicator while this happens
@@ -284,6 +285,7 @@ async def giveAdvice(ctx):
 
             roleNames=[ctx.message.author.roles[i].name.lower()\
                for i in range(0, len(ctx.message.author.roles))]
+
             responseCount=0
 
             #check each supported role against the invoker's roles
@@ -300,15 +302,17 @@ async def giveAdvice(ctx):
                     #1/2 chance to say something per role so that less messages are sent
                     if random.choice([True, False]):
                         await ctx.send(random.choice(mainRoleResponses[role]))
+                        responseCount+=1
 
-                    #sometimes invokers will get a response for their extra roles. 1/9 chance
-                    if random.choice([False, False, False, False,\
-                       False, False, False, False, True]): 
+                    #sometimes invokers will get a response for their extra roles. 1/3 chance
+                    if random.choice([False, False, True]): 
 
                         await ctx.send(random.choice(extraRoleResponses\
                             [random.choice([*extraRoleResponses.keys()])]))
 
-                    responseCount+=1
+                        responseCount+=1
+
+                    
 
 
 async def sendAttToSheet(attendees):
@@ -367,14 +371,14 @@ async def on_ready():
     await botChannel.send('I have awoken... I am at your service')
 
     #scheduling the attendance function
-    timenow=D.datetime.now()#.strftime("%H%M")
+    timenow=D.datetime.now()
+    timenow=timenow.time()
 
-    #find when 1959 is today
-    thisDay=D.datetime.today().strftime("%y%m%d")
-    thisDay=[int(f"20{thisDay[:2]}"), int(thisDay[2:4]), int(thisDay[4:6])]  #list of year, month, day
-    target=D.datetime(year=thisDay[0], month=thisDay[1], day=thisDay[2], hour=19, minute=59)#.strftime("%H%M")
+    target=D.time(19, 59)
     
-    runInSeconds = (target-timenow).total_seconds()
+    newTarget=D.datetime.combine(D.date.min, target)
+    oldTime=D.datetime.combine(D.date.min, timenow)
+    runInSeconds= (newTarget - oldTime).seconds
 
     await asyncio.sleep(runInSeconds)
 

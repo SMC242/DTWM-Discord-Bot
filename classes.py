@@ -171,6 +171,7 @@ class commandListener():
         while True:
             listenerInput=input().lower()
 
+
             if listenerInput==" " or listenerInput=="\n":
                 continue
 
