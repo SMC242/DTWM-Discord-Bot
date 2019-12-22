@@ -88,6 +88,8 @@ async def attendanceWrapper(*args):
 @bot.command()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def ayaya(ctx):
+    '''Tell the bot to be a weeb'''
+
     print("Command: ayaya call received")
 
     choice=random.randint(0,5)
@@ -114,6 +116,7 @@ async def ayaya(ctx):
 @bot.command()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def commitNotAlive(ctx):
+    '''Tell the bot to kill itself'''
     print("Command: commitNotAlive call recieved")
 
     choice=random.randint(0, 3)

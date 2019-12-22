@@ -33,13 +33,6 @@ class botOverrides(commands.Cog):
                 ctx.cog.cog_command_error) is not None:
             return
 
-        # NOTE: This is the default error handling behaviour, which is kept for
-        # development purposes for the time being, but will be disabled at a later
-        # point
-        print(f'Ignoring exception in command {ctx.command}:', file=sys.stderr)
-        traceback.print_exception(type(exception), exception,
-                                  exception.__traceback__, file=sys.stderr)
-
         #if command on cooldown
         if isinstance(exception, commands.CommandOnCooldown):
           await ctx.send(f"Hold on, My Lord. I must gather my energy before another\nTry again in {int(exception.retry_after)} seconds!")
@@ -51,6 +44,16 @@ class botOverrides(commands.Cog):
         #if bot can't access the channel
         elif isinstance(exception, Forbidden):
             await ctx.send("I can't access one or more of those channels TwT")
+
+        else:  #if not caught by previous conditions, display error
+            # NOTE: This is the default error handling behaviour, which is kept for
+            # development purposes for the time being, but will be disabled at a later
+            # point
+            print(f'Ignoring exception in command {ctx.command}:', file=sys.stderr)
+            traceback.print_exception(type(exception), exception,
+                                      exception.__traceback__, file=sys.stderr)
+
+            ctx.send("Warp energies inhibit me... I cannot do that, My Lord")
 
 class TerminalCommand:
     '''Class to wrap all information about a terminal command'''
