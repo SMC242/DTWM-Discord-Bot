@@ -1,4 +1,5 @@
 from discord.ext import commands
+from discord import Forbidden
 import threading, os, sys, traceback, asyncio
 from typing import Callable, Union, Tuple, List
 import asyncio
@@ -53,7 +54,7 @@ class botOverrides(commands.Cog):
             traceback.print_exception(type(exception), exception,
                                       exception.__traceback__, file=sys.stderr)
 
-            ctx.send("Warp energies inhibit me... I cannot do that, My Lord")
+            await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  #give user feedback if internal error occurs
 
 class TerminalCommand:
     '''Class to wrap all information about a terminal command'''
