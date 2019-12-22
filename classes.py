@@ -40,7 +40,11 @@ class botOverrides(commands.Cog):
 
         #if command is unknown
         elif isinstance(exception, commands.CommandNotFound):
-            await ctx.send(f'Sorry My Lord, the archives do not know of this "{ctx.invoked_with}" you speak of')
+            if '@' in ctx.invoked_with :
+                await ctx.send("How dare you try to use me to annoy others!")
+
+            else:
+                await ctx.send(f'Sorry My Lord, the archives do not know of this "{ctx.invoked_with}" you speak of')
 
         #if bot can't access the channel
         elif isinstance(exception, Forbidden):
