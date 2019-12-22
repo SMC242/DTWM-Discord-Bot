@@ -2,21 +2,25 @@ from discord import *
 from discord.ext import commands
 import threading, time, random, asyncio
 import datetime as D
+from typing import *
 
 from classes import *
 
 bot=commands.Bot(command_prefix="ab!")
-token=createListFromFile("token.txt")
+with open("Text Files/token.txt") as f:
+    line=f.readline()
+    token=line.strip("\n")
+
 
 startTime=timenow=int(D.datetime.now().strftime("%H%M"))
 opsEndTime=startTime+1
 print(startTime, " ", opsEndTime)
 
-async def executeOnEvents(func, *args):
+async def executeOnEvents(func: AsyncCommand):
     '''Infinitely checks if the time now is during
    the event hours then executes the function if that's true.
    Uses UTC time.
-    func: the string name of the function to be executed'''
+    func: the coroutine to call on each event'''
 
     varList=[]
 
@@ -31,7 +35,7 @@ async def executeOnEvents(func, *args):
                or int(milestone)+1 == timenow or timenow==startTime:
                 print(True)
 
-                output=func(*args)
+                output= await func.call()
 
                 for element in output:
 
@@ -68,6 +72,7 @@ async def getAttendance():
         for delimiter in delimiters:
             try:
                 attendee, null=attendee.split(delimiter)
+
             except ValueError:
                 pass
 
@@ -75,12 +80,60 @@ async def getAttendance():
 
     return attendees
 
-async def attendanceWrapper():
+async def attendanceWrapper(*args):
     '''This wrapper exists so that attendance can be called outside of doAttendance
     as doAttendance is a command object'''
+    print(*args)
     attendees=await getAttendance()
     print(attendees)
     return attendees
+
+@bot.command()
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def ayaya(ctx):
+    print("Command: ayaya call received")
+
+    choice=random.randint(0,5)
+
+    if choice==0:
+        await ctx.send("ayaya!")
+
+    elif choice==1:
+        await ctx.send("AYAYA!")
+
+    elif choice==2:
+        await ctx.send("ayaya ayaya!")
+
+    elif choice==3:
+        await ctx.send("AYAYA AYAYA!")
+
+    elif choice==4:
+        await ctx.send("ayaya ayaya ayaya!")
+
+    else:
+        await ctx.send("AYAYA AYAYA AYAYA!")
+
+
+@bot.command()
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def commitNotAlive(ctx):
+    print("Command: commitNotAlive call recieved")
+
+    choice=random.randint(0, 3)
+    if choice==0:
+        await ctx.send("no u")
+
+    elif choice==1:
+        await ctx.send("commit neck rope")
+
+    elif choice==2:
+        await ctx.send("die")
+
+    else:
+        await ctx.send("kys")
+    
+
+    
 
 @bot.command()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
@@ -89,6 +142,7 @@ async def doAttendance(ctx):
     Gets a list of people in the War Room and Training Deck.
     Will send the list ot the attendance sheet soon.'''
 
+    print("Command: doAttendance call recieved")
     await ctx.send("It will be done, my Lord")
 
     async with ctx.typing():
@@ -97,6 +151,8 @@ async def doAttendance(ctx):
         await ctx.send(f"Attendees: {attendees}")
 
         await ctx.send("Attendance completed **UmU**")
+
+
 
 @bot.command()
 @commands.cooldown(1, 2, type=commands.BucketType.user)
@@ -107,7 +163,8 @@ async def giveAdvice(ctx):
         "watch commander" : ["Learn to split <:splitwatch_marines:618120678708609054>",
                              "Become a dictator",
                              "Make good outfit EZ",
-                             "If you don't have 70 KPM you can't be a leader 😤"
+                             "If you don't have 70 KPM you can't be a leader 😤",
+                             "Disband.",
                              ],
 
         "watch leader" : ["Why haven't you split yet?",
@@ -115,7 +172,8 @@ async def giveAdvice(ctx):
                           "Get more zerglings",
                           "Get a life",
                           "MMO mice are good investments",
-                          "Recruit plox"
+                          "Recruit plox",
+                          "Remember to take breaks from leading or you'll get burnt out"
                           ],
 
         "watch captain" : ["Just get promoted lmao",
@@ -211,6 +269,7 @@ async def giveAdvice(ctx):
 
         }
 
+    print("giveAdvice call recieved")
     await ctx.send("*Thinking...*")
 
     #displays a typing indicator while this happens
@@ -261,61 +320,37 @@ def main():
     or the bot will run like shit.
     Also runs extra threads'''
 
-    #add the async functions to list 1
-    #add the args to the corresponding index of list 2 as a tuple
-    #if no args: put None in the args index
+    #list of AsyncCommands to be added to the event loop
     asyncToExecute=[
-        bot.run,
-        executeOnEvents
-               ],
-    [
-        (token),
+        AsyncCommand(bot.start, arguments=token, name="start bot")
+    ]
 
-     ]
-
-    #same as asyncToExecute but with threading.Thread s
+    #list of ThreadCommand objects to be started
     threadsToExecute=[
-
-        ],
-    [
 
         ]
 
-    threads=[threading.main_thread()]
+    threads=[
+        threading.main_thread(),
+        ]
 
-   
     loop=asyncio.get_event_loop()
 
-    
+    #starting the async commands
+    for command in asyncToExecute:
+        coroutine=command.coro
 
-    if len(asyncToExecute) != 0:
-        for i in range(0, len(asyncToExecute)-1):
-            #Ensuring correct type for the args
-           if not isinstance(asyncToExecute[1][i], tuple) or not isinstance(threadsToExecute[1][i])\
-           and asyncToExecute[1][i] is not None and threadsToExecute[1][i] is not None:
-               raise TypeError("Tuple not passed in main(). Check the arguments lists")
+        loop.create_task(coroutine)
 
-           if asyncToExecute[1][i] is not None:
-                coroutine=asyncToExecute[0][i](asyncToExecute[1][i])
-           else:
-                coroutine=asyncToExecute[0][i]()
-
-           loop.create_task(coroutine)
-
-        if len(threadsToExecute) != 0:
-            #starting the threads
-            for i in range(0, len(threadsToExecute)-1):
-
-                if threadsToExecute[1] [i] is not None:
-                    threads.insert(0, threading.Thread(target=threadsToExecute[0][i], args=threadsToExecute[1][i], name=threadsToExecute[0][i].__name__))
-
-                else:
-                    threads.insert(0, threading.Thread(target=threadsToExecute[0][i], name=threadsToExecute[0][i].__name__))
-
-            for i in range(1, len(threads)-1):
-                thread.start()
+    #starting the threads
+    for command in threadsToExecute:
+        thread=command.call()
+        thread.start()
 
     commandListener(loop, threads)
+
+    loop.run_forever()
+
 
 @bot.listen()
 async def on_ready():
@@ -333,6 +368,6 @@ async def on_ready():
 
     await asyncio.sleep(runInSeconds)
 
-    await executeOnEvents(attendanceWrapper)
+    await executeOnEvents(AsyncCommand(attendanceWrapper))
 
 main()
