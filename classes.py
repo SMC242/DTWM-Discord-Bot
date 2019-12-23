@@ -160,15 +160,16 @@ class commandListener():
         for command in self.commands:
             print(command.details)
 
-        commandListenerThread=threading.Thread(target=commandListener.listening, args=[self], name="commandListener")
-        commandListenerThread.start()
+        self.commandListenerThread=threading.Thread(target=commandListener.listening, args=[self], name="commandListener")
+        self.commandListenerThread.start()
+
 
     def close(self):
-            '''Command to throw pummel at bot'''
+        '''Command to throw pummel at bot'''
 
-            print("Ow that hurts... Closing now :,(")
-            self.loop.stop()
-            self.stopThreads=True
+        print("Ow that hurts... Closing now :,(")
+        self.loop.stop()
+        self.stopThreads=True
 
 
     def listening(self):
@@ -178,7 +179,6 @@ class commandListener():
         while True:
             listenerInput=input().lower()
 
-
             if listenerInput==" " or listenerInput=="\n":
                 continue
 
@@ -186,9 +186,10 @@ class commandListener():
                 if listenerInput == command.name:
                     try:
                         command.call()
+
                     except Exception as error:
                         print(error.__repr__())
-                        break
+
                 else:
                     continue
 

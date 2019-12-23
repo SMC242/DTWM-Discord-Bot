@@ -302,7 +302,10 @@ async def giveAdvice(ctx):
                         #1/2 chance to say something per role so that less messages are sent
                         if random.choice([True, False]):
                             await ctx.send(random.choice(mainRoleResponses[role]))
-                            responseCount+=1                    
+                            responseCount+=1      
+                            
+                    elif responseCount==2:
+                        return
 
                 #same as main but for extra roles
                 responseCountExtra=0
@@ -313,6 +316,9 @@ async def giveAdvice(ctx):
                             await ctx.send(random.choice(extraRoleResponses[role]))
 
                             responseCountExtra+=1
+
+                    elif responseCountExtra==1:
+                        return
 
 
 async def sendAttToSheet(attendees):
