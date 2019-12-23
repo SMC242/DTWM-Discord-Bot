@@ -20,6 +20,7 @@ async def executeOnEvents(func: AsyncCommand):
    the event hours then executes the function if that's true.
    Uses UTC time.
     func: the coroutine to call on each event'''
+    print(f"Scheduled Event ({func}): beginning execution")
 
     varList=[]
 
@@ -32,14 +33,14 @@ async def executeOnEvents(func: AsyncCommand):
 
             if milestone == timenow or int(milestone)-1 == timenow\
                or int(milestone)+1 == timenow:
-                print(True)
+                print(f"Scheduled Event ({func}): milestone hit: {timenow}")
 
                 output= await func.call()
 
-                for attendee in output:
+                for element in output:
 
-                    if attendee not in varList:
-                        varList.append(attendee)
+                    if element not in varList:
+                        varList.append(element)
 
                 await asyncio.sleep(35)
 
@@ -48,6 +49,7 @@ async def executeOnEvents(func: AsyncCommand):
                 await asyncio.sleep(35)
 
             if timenow == milestones[3]:
+                print(f"Scheduled event ({func}): execution finished")
                 return varList
             
 

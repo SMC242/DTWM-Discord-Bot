@@ -6,7 +6,7 @@ from typing import Callable, Union, Tuple, List
 import asyncio
 import datetime as D
 
-#bot=commands.Bot(command_prefix="ab!")
+bot=commands.Bot(command_prefix="ab!")
 def createListFromFile(filePath, type=str):
     '''Returns a list populated by parsed lines from a text file
     filePath: string path of the file to be read
@@ -198,5 +198,6 @@ class commandListener():
                 #kills them if they don't finish in that time
                 for thread in self.threads:
                     thread.join(3)
+                    print(f"thread ({thread}) closed.")
                 
                 sys.exit(0)
