@@ -284,32 +284,35 @@ async def giveAdvice(ctx):
                for i in range(0, len(ctx.message.author.roles))]
 
             responseCount=0
+            responseCountExtra=0
 
-            #check each supported role against the invoker's roles
-            for role in list(mainRoleResponses.keys()): 
+            while responseCount==0 and responseCountExtra==0:
+
+                #check each supported role against the invoker's roles
+                for role in list(mainRoleResponses.keys()): 
                 
-                #limit the responses to up to 4
-                if role in roleNames and responseCount<2: 
+                    #limit the responses to up to 4
+                    if role in roleNames and responseCount<2: 
 
-                    if role=="scout":
-                        await ctx.send("You will get serious advice as you are new here:")
-                        await ctx.send(random.choice(mainRoleResponses[role]))
-                        continue
+                        if role=="scout":
+                            await ctx.send("You will get serious advice as you are new here:")
+                            await ctx.send(random.choice(mainRoleResponses[role]))
+                            continue
 
-                    #1/2 chance to say something per role so that less messages are sent
-                    if random.choice([True, False]):
-                        await ctx.send(random.choice(mainRoleResponses[role]))
-                        responseCount+=1                    
+                        #1/2 chance to say something per role so that less messages are sent
+                        if random.choice([True, False]):
+                            await ctx.send(random.choice(mainRoleResponses[role]))
+                            responseCount+=1                    
 
-            #same as main but for extra roles
-            responseCount=0
-            for role in list(extraRoleResponses.keys()):
-                if role in roleNames and responseCount<2:
-                    if random.choice([False, False, True]):  #1/3 chance to respond
+                #same as main but for extra roles
+                responseCountExtra=0
+                for role in list(extraRoleResponses.keys()):
+                    if role in roleNames and responseCountExtra<1:
+                        if random.choice([False, False, True]):  #1/3 chance to respond
 
-                        await ctx.send(random.choice(extraRoleResponses[role]))
+                            await ctx.send(random.choice(extraRoleResponses[role]))
 
-                        responseCount+=1
+                            responseCountExtra+=1
 
 
 async def sendAttToSheet(attendees):
