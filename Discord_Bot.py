@@ -62,8 +62,6 @@ async def getAttendance():
 
     #for every channel in channels it gets the members
     #sequentially and appends them to the list
-    channelMembers=[]
-
     channelMembers=[member.display_name for channel in channels\
         for member in (await bot.fetch_channel(channel)).members]
 
@@ -72,9 +70,9 @@ async def getAttendance():
     for attendee in channelMembers:
         for delimiter in delimiters:
             try:
-                attendee, null=attendee.split(delimiter)
+                attendee, *null=attendee.split(delimiter)
 
-            except ValueError:
+            except ValueError:  #if delimiter not in attendee
                 pass
 
         attendees.append(attendee)
@@ -158,7 +156,7 @@ async def doAttendance(ctx):
         else:
             await ctx.send(f"Attendees: {attendees}")
 
-        await ctx.send("Attendance completed **UmU**")
+        await ctx.send("Attendance check completed **UmU**")
 
 
 

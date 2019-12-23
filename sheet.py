@@ -18,7 +18,8 @@ with open('Text Files/sheetID.txt') as f:
 #SPREADSHEET_ID = '1FyxzFPl0qWJOHQGlp3h_CumSyDyQN0VuBbldS1n3PIY'
 RANGE = 'Outfit Activity!A5:B'
 
-TableRanges = {
+#this dict is probably wrong
+'''TableRanges = {
     "0": {
         "weekday": "Monday",
         "type" : "Aircraft",
@@ -43,6 +44,35 @@ TableRanges = {
         "weekday": "Sunday",
         "type" : "Internal Ops",
         "column" : "2"
+    }
+}'''
+
+#speculative fix dict
+TableRanges = {
+    "0": {
+        "weekday": "Monday",
+        "type" : "Aircraft",
+        "column" : "2"
+    },"1": {
+        "weekday": "Tuesday",
+        "type" : "Armour",
+        "column" : "7"
+    },"2": {
+        "weekday": "Wednesday",
+        "type" : "Infantry",
+        "column" : "12"
+    },"3": {
+        "weekday": "Thursday",
+        "type" : "Join Ops",
+        "column" : "17"
+    },"4": {
+        "weekday": "Friday",
+        "type" : "Join Ops",
+        "column" : "22"
+    },"6": {
+        "weekday": "Sunday",
+        "type" : "Internal Ops",
+        "column" : "27"
     }
 }
 
