@@ -19,21 +19,25 @@ async def executeOnEvents(func: AsyncCommand):
     '''Infinitely checks if the time now is during
    the event hours then executes the function if that's true.
    Uses UTC time.
-    func: the coroutine to call on each event'''
-    print(f"Scheduled Event ({func}): beginning execution")
+    func: the AsyncCommand object to call on each milestone'''
+    print(f"Scheduled Event ({func.name}): beginning execution")
 
     varList=[]
 
     while True:
-        timenow=int(D.datetime.now().strftime("%H%M"))
+        success=False
+
+        timenow=D.datetime.now().strftime("%H%M")
 
         milestones = createListFromFile("milestones.txt", type=int)
        
         for milestone in milestones:
+            milestone=int(milestone)
 
-            if milestone == timenow or int(milestone)-1 == timenow\
-               or int(milestone)+1 == timenow:
-                print(f"Scheduled Event ({func}): milestone hit: {timenow}")
+            if milestone == int(timenow) or milestone-1 == int(timenow)\
+               or milestone+1 == int(timenow):
+                print(f"Scheduled Event ({func.name}): milestone hit: {timenow}")
+                success=True
 
                 output= await func.call()
 
@@ -42,15 +46,15 @@ async def executeOnEvents(func: AsyncCommand):
                     if element not in varList:
                         varList.append(element)
 
-                await asyncio.sleep(35)
-
-            else:
-                print(False)
-                await asyncio.sleep(35)
+                await asyncio.sleep(35)                
 
             if timenow == milestones[3]:
-                print(f"Scheduled event ({func}): execution finished")
+                print(f"Scheduled event ({func.name}): execution finished")
                 return varList
+        
+        if not success:
+            await asyncio.sleep(35)
+
             
 
 async def getAttendance():
@@ -326,6 +330,13 @@ async def sendAttToSheet(attendees):
     Attendees: list of people who attended'''
     
 
+@bot.command()
+@commands.cooldown(1, 60, type=commands.BucketType.user)
+async def joindtwm(ctx):
+    '''Posts the invite link to the discord'''
+    print("Command: joindtwm call recieved")
+    await ctx.send('Come quickly, brother! We can always use new Astartes. https://joindtwm.net/join')
+
 
 def main():
     '''Put all function calls in here.
@@ -387,12 +398,12 @@ async def on_ready():
     oldTime=D.datetime.combine(D.date.min, timenow)
     runInSeconds= (newTarget - oldTime).seconds
 
-    if runInSeconds<0:
-        return await executeOnEvents(AsyncCommand(attendanceWrapper))
+    if 2000<int(timenow.strftime("%H%M"))<2200:  #if started during an event
+        return await executeOnEvents(AsyncCommand(attendanceWrapper, name="attendanceWrapper"))
 
     else:
         await asyncio.sleep(runInSeconds)
 
-        await executeOnEvents(AsyncCommand(attendanceWrapper))
+        return await executeOnEvents(AsyncCommand(attendanceWrapper, name="attendanceWrapper"))
 
 main()

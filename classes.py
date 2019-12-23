@@ -117,7 +117,11 @@ class AsyncCommand(TerminalCommand):
     @property
     def coro(self):
         '''Returns a coroutine for the func and its args'''
-        return self.func(self.arguments)
+        if self.arguments is not None:
+            return self.func(self.arguments)
+
+        else:
+            return self.func()
 
 
 class ThreadCommand(TerminalCommand):
@@ -138,6 +142,7 @@ class commandListener():
 
 
     stopThreads=False
+
 
     def __init__(self, loop, threads):
         '''Loop: the asyncio event loop.
