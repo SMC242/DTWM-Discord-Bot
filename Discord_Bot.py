@@ -149,6 +149,28 @@ async def doAttendance(ctx):
     Will send the list ot the attendance sheet soon.'''
 
     print("Command: doAttendance call recieved")
+
+    #checking if the user is a leader
+    roleNames=[ctx.message.author.roles[i].name.lower()\
+        for i in range(0, len(ctx.message.author.roles))]
+
+    allowedRoles=[
+        "watch leader",
+        "champion"]
+
+    success=False
+    i=0
+    while success is False and (i!=len(allowedRoles)-1):
+        if allowedRoles[i] in roleNames:
+            success=True
+        i+=1
+
+    #if leader role not found: reject command and exit
+    if success==False:
+        print("         doAttendance call rejected")
+        return await ctx.send('Only leaders may take attendance, brother. Go back to your company')
+    
+    #give user feedback
     await ctx.send("It will be done, my Lord")
 
     async with ctx.typing():
