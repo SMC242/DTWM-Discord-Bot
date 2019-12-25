@@ -11,26 +11,30 @@ from sheet import *
 bot=commands.Bot(command_prefix="ab!")
 bot.add_cog(botOverrides(bot))
 
-with open("Text Files/token.txt") as f:
-    line=f.readline()
-    token=line.strip("\n")
+if __name__=="__main__":
+    with open("Text Files/token.txt") as f:
+        line=f.readline()
+        token=line.strip("\n")
 
-async def executeOnEvents(func: AsyncCommand):
+async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
     '''Infinitely checks if the time now is during
    the event hours then executes the function if that's true.
    Uses UTC time.
-    func: the AsyncCommand object to call on each milestone'''
+
+   func: the AsyncCommand object to call on each milestone
+   milestones: the UTC times to execute at'''
+
     print(f"Scheduled Event ({func.name}): beginning execution")
 
     varList=[]
+    if milestones is None:
+        milestones = createListFromFile("milestones.txt", type=int)
 
     while True:
         success=False
 
         timenow=D.datetime.now().strftime("%H%M")
 
-        milestones = createListFromFile("milestones.txt", type=int)
-       
         for milestone in milestones:
             milestone=int(milestone)
 
@@ -48,7 +52,7 @@ async def executeOnEvents(func: AsyncCommand):
 
                 await asyncio.sleep(35)                
 
-            if timenow == milestones[3]:
+            if timenow == milestones[len(milestones)-1]:
                 print(f"Scheduled event ({func.name}): execution finished")
                 return varList
         
@@ -61,13 +65,27 @@ async def getAttendance():
     '''Returns a list of people in the ops/training channels'''
     #reads the channels to check from a file
     #appends the channel IDs to channels
-    channels=createListFromFile("channels.txt")
+    channels=createListFromFile("channels.txt", type=int)
     delimiters=createListFromFile("delimiters.txt")
 
-    #for every channel in channels it gets the members
+    #for every channel in channels it gets the members  
     #sequentially and appends them to the list
-    channelMembers=[member.display_name for channel in channels\
-        for member in (await bot.fetch_channel(channel)).members]
+    #channelMembers=[member.display_name for channel in channels\
+    #    for member in (await bot.fetch_channel(channel)).members]
+
+    channelMembers=[]
+    for channel in channels:
+        try:
+            channel=bot.get_channel(channel)
+            #channel= await bot.get_channel(channel)
+
+        except Exception as error:
+            print(f'Error occured:', file=sys.stderr)
+            traceback.print_exception(type(error), error,
+                                        error.__traceback__, file=sys.stderr)
+        for attendee in channel.members:
+            channelMembers.append(attendee.display_name)
+
 
     #parsing the names
     attendees=[]
@@ -80,6 +98,8 @@ async def getAttendance():
                 pass
 
         attendees.append(attendee)
+
+    print(attendees)
 
     return attendees
 
@@ -368,37 +388,9 @@ def main():
     or the bot will run like shit.
     Also runs extra threads'''
 
-    #list of AsyncCommands to be added to the event loop
-    asyncToExecute=[
-        AsyncCommand(bot.start, arguments=token, name="start bot")
-    ]
-
-    #list of ThreadCommand objects to be started
-    threadsToExecute=[
-
-        ]
-
-    threads=[
-        threading.main_thread(),
-        ]
-
-    loop=asyncio.get_event_loop()
-
-    #starting the async commands
-    for command in asyncToExecute:
-        coroutine=command.coro
-
-        loop.create_task(coroutine)
-
-    #starting the threads
-    for command in threadsToExecute:
-        thread=command.call()
-        thread.start()
-
-    commandListener(loop, threads)
-
-    loop.run_forever()
-
+    commandListener(bot)
+    bot.run(token)
+    
 
 @bot.listen()
 async def on_ready():
@@ -414,18 +406,21 @@ async def on_ready():
     timenow=D.datetime.now()
     timenow=timenow.time()
 
-    target=D.time(19, 59)
-    
-    newTarget=D.datetime.combine(D.date.min, target)
-    oldTime=D.datetime.combine(D.date.min, timenow)
-    runInSeconds= (newTarget - oldTime).seconds
-
     if 2000<int(timenow.strftime("%H%M"))<2200:  #if started during an event
-        return await executeOnEvents(AsyncCommand(attendanceWrapper, name="attendanceWrapper"))
+        attendees=await executeOnEvents(AsyncCommand(attendanceWrapper, name="attendanceWrapper"))
+        writeattendance(attendees)
 
-    else:
+    else:  #wait until almost event time
+        target=D.time(19, 59)
+    
+        newTarget=D.datetime.combine(D.date.min, target)
+        oldTime=D.datetime.combine(D.date.min, timenow)
+        runInSeconds= (newTarget - oldTime).seconds
         await asyncio.sleep(runInSeconds)
 
-        return await executeOnEvents(AsyncCommand(attendanceWrapper, name="attendanceWrapper"))
+        attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance"))
+        writeattendance(attendees)
 
-main()
+if __name__=="__main__":
+    main()
+    
