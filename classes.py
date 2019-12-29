@@ -181,10 +181,15 @@ class commandListener():
             print(command.details)
 
     
-    def close(self):
+    async def close(self):
         '''Command to throw pummel at bot'''
 
         print("Ow that hurts... Closing now :,(")
+
+        #acknowledge shutdown
+        botChannel=ctx.bot.get_channel(545818844036464670)
+        await botChannel.send('The warp screams in my mind... I must go now')
+
         self.bot.loop.stop()
 
 
@@ -264,14 +269,14 @@ class commandListener():
                 if not fail:
                     success=True
 
-        asyncio.ensure_future(Discord_Bot.executeOnEvents(AsyncCommand(func, name=eventInput, arguments=(validModules[eventInput], self.bot)),\
+        asyncio.ensure_future(Discord_Bot.executeOnEvents(AsyncCommand(func, name=eventInput, arguments=validModules[eventInput]),\
            times), loop=self.loop)
         print(f"Event ({eventInput}) scheduled")
 
 
     async def __ainit__(self, loop, bot):
         self.commands=[
-        TerminalCommand(self.close, name="close",\
+        AsyncCommand(self.close, name="close",\
            description='Ends the bot rightly. Use for closing the bot without causing problems.'),
         TerminalCommand(os._exit, name="die",\
             description='Instantly kills the bot. For emergencies only. Use "close" outside of emergencies',\

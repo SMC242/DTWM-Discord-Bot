@@ -62,51 +62,74 @@ def inBotChannel():
 
     return commands.check(inner)
 
+@bot.group()
+@isLeader()
+async def leader(ctx):
+    if ctx.invoked_subcommand is None:
+        print('Command: leader command rejected. No sub command passed')
+        return await ctx.send('Give me your orders, My Lord. I am but a lowly servitor, not a psyker')
+
+
 @bot.command()
 @inBotChannel()
 async def help(ctx):
     '''Displays all of the commands'''
 
     print("Command: help call recieved")
-    message=Embed(title="Help", description="All of the commands of Inquisition",\
+
+    #show main and leader commands in separate messages
+    mainMessage=Embed(title="Help - Main Commands", description="All of the commands of Inquisition. Invoke with ab!{commandName}",\
        colour=Colour(13908894))
 
-    for command in bot.commands:
-        message.add_field(name=command.name, value=command.help, inline=False)
+    leaderMessage=Embed(title="Help - Leader Commands",\
+       description="Leader only commands. Invoke with ab!leader {commandName}\n>=Champion only",\
+       colour=Colour(13908894))
 
-    await ctx.send(embed=message)
+    #iterate over all commands
+    for command in bot.walk_commands():
+        #check if leader command
+        if command.parent is not None and command.parent.name=="leader":
+            leaderMessage.add_field(name=command.name, value=command.help, inline=False)
+
+        else:
+            if isinstance(command, commands.Group):  #ignore groups
+                continue
+
+            else:
+                mainMessage.add_field(name=command.name, value=command.help, inline=False)
+
+    await ctx.send(embed=mainMessage)
+    return await ctx.send(embed=leaderMessage)
 
 
-@bot.command()
-@isLeader()
+@leader.command()
 @inBotChannel()
 async def getInOps(ctx):
-    '''Pings every member that's playing PS2 but isn't in ops comms. >=Champion only'''
+    '''Pings every member that's playing PS2 but isn't in ops comms.'''
     print("Command: getInOps call recieved")
     await getInOpsInner()
 
+def checkMember(member: Member)-> bool:
+    '''Check if the Member is an outfit member
+        
+    RETURNS
+    True: is member
+    False: not member'''
+
+    memberRoles=[
+        "Astartes",
+        "Watch Leader",
+        ]
+
+    roles=[member.roles[i].name for i in range(0, len(member.roles))]
+    success=False
+    for role in memberRoles:
+        if role in roles:
+            return True
+
+    return False  #if not member
 
 async def getInOpsInner():
-    def checkMember(member: Member)-> bool:
-        '''Check if the Member is an outfit member
-        
-        RETURNS
-        True: is member
-        False: not member'''
-
-        memberRoles=[
-            "Astartes",
-            "Watch Leader",
-            ]
-
-        roles=[member.roles[i].name for i in range(0, len(member.roles))]
-        success=False
-        for role in memberRoles:
-            if role in roles:
-                return True
-
-        return False  #if not member
-
     def inEventChannel(member: Member, channels: List[VoiceChannel])->bool:
         #verifying that they're in a channel
         if member.voice is None:
@@ -196,8 +219,22 @@ async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
             await asyncio.sleep(35)
 
 
+@bot.command()
+@inBotChannel()
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def imNotAMember(ctx):
+    '''Reacts to whether you're a member of DTWM'''
+    print('Command: imNotAMember call recieved')
 
-async def getAttendance(ctx, client=None):
+    if not checkMember(ctx.message.author):
+        await ctx.send('Join DTWM on Miller NC')
+        return await ctx.invoke(joindtwm)
+
+    else:
+        return await ctx.send("Brother, you are one of us!")
+
+
+async def getAttendance(ctx):
     '''Returns a list of people in the ops/training channels'''
     #reads the channels to check from a file
     #appends the channel IDs to channels
@@ -209,7 +246,7 @@ async def getAttendance(ctx, client=None):
 
     channelMembers=[]
     for channel in channels:
-        channel=ctx.get_channel(channel)
+        channel=ctx.bot.get_channel(channel)
 
         for attendee in channel.members:
             channelMembers.append(attendee.display_name)
@@ -245,10 +282,10 @@ def callAttendance(attendees: List[str])-> bool:
         return True
 
 
-async def attendanceWrapper(ctx, client=None):
+async def attendanceWrapper(ctx):
     '''This wrapper exists so that attendance can be called outside of doAttendance
     as doAttendance is a command object'''
-    attendees=await getAttendance(ctx, client)
+    attendees=await getAttendance(ctx)
 
     failure=callAttendance(attendees)
 
@@ -289,12 +326,11 @@ async def commitNotAlive(ctx):
     await ctx.send(random.choice(responses))
     
 
-@bot.command()
+@leader.command()
 @inBotChannel()
-@isLeader()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def doAttendance(ctx):
-    '''Records current attendees in the sheet. >=Champion only'''
+    '''Records current attendees in the sheet.'''
 
     print("Command: doAttendance call recieved")
     
@@ -580,8 +616,13 @@ async def on_ready():
     print(f"User ID: {bot.user.id}")
     print('------')
 
+    #acknowledge startup
     botChannel=bot.get_channel(545818844036464670)
     await botChannel.send('I have awoken... I am at your service')
+
+    #set status
+    status=Activity(name="Purging heretics", type=ActivityType.unknown)
+    await bot.change_presence(activity=status)
 
     #scheduling the attendance function
     timenow=D.datetime.now()
@@ -605,7 +646,7 @@ async def on_ready():
         runInSeconds= (newTarget - oldTime).seconds
         await asyncio.sleep(runInSeconds)
 
-        await getInOpsInner()
+        await getInOpsInner()  #ping people to get in ops
 
         attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance"))
         failure=callAttendance(attendees)
