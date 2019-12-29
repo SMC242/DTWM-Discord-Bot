@@ -116,32 +116,34 @@ async def getInOpsInner():
             #checking if they're in an event channel
             return member.voice.channel in channels
 
-    #get the server
-    server=bot.get_guild(545422040644190220)
-
-    #get list of Members >=Astartes
-    members=[member for member in server.members if checkMember(member)]
-    
-    #get members playing PS2
-    membersInPS2=[]
-    for member in members:
-        for activity in member.activities:
-            if activity.name=="PlanetSide 2":
-                membersInPS2.append(member)
-        
-    #get event channels
-    channels=createListFromFile("channels.txt", type=int)
-
-    eventChannels=[bot.get_channel(channelID) for channelID in channels]
-
-    #check if in event channels
     botChannel=bot.get_channel(545818844036464670)
+    async with botChannel.typing():
+        #get the server
+        server=bot.get_guild(545422040644190220)
 
-    for member in membersInPS2:
-        inEvent=inEventChannel(member, eventChannels)
+        #get list of Members >=Astartes
+        members=[member for member in server.members if checkMember(member)]
+    
+        #get members playing PS2
+        membersInPS2=[]
+        for member in members:
+            for activity in member.activities:
+                if activity.name=="PlanetSide 2":
+                    membersInPS2.append(member)
+        
+        #get event channels
+        channels=createListFromFile("channels.txt", type=int)
 
-        if not inEvent:
-            await botChannel.send(f'{member.mention} an event is running right now, brother. Come join us in glory!')
+        eventChannels=[bot.get_channel(channelID) for channelID in channels]
+
+        #check if in event channels
+        for member in membersInPS2:
+            inEvent=inEventChannel(member, eventChannels)
+
+            if not inEvent:
+                await botChannel.send(f'{member.mention} an event is running right now, brother. Come join us in glory!')
+
+        return  #end typing()
 
 
 async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
