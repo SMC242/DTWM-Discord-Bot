@@ -1,14 +1,43 @@
 #author: benmitchellmtb
 from discord.ext import commands
-from discord import Forbidden
+from discord import Forbidden, Message
 import threading, os, sys, traceback, asyncio
 from typing import Callable, Union, Tuple, List
-import asyncio
+import asyncio, concurrent
 import datetime as D
 
-bot=commands.Bot(command_prefix="ab!")
+def validateString(string: str, validAnswers: List[str]=None)-> bool:
+    '''Check if the input is valid against basic checks and validAnswers, if not None
+    
+    CHECKS
+    length is not 0
+    string is not empty
+    string is in validAnswers if exists
+    
+    string: the input to be validated
+    validAsnwers: string must be in this list to be valid
+    
+    RETURNS
+    True: if valid
+    False: if not valid'''
+
+    if string == "":
+        return False
+
+    elif len(string) == 0:
+        return False
+
+    elif validAnswers is not None and string not in validAnswers:
+        return None
+
+    else:
+        return True
+
+
 def createListFromFile(filePath, type=str):
-    '''Returns a list populated by parsed lines from a text file
+    '''Returns a list populated by parsed lines from a text file.
+    Prefixes filePath with 'TextFiles/'.
+
     filePath: string path of the file to be read
     varList: output list
     type: the type of variables to be read (str, int, float, etc)'''
@@ -47,6 +76,13 @@ class botOverrides(commands.Cog):
 
             else:
                 return await ctx.send(f'Sorry My Lord, the archives do not know of this "{ctx.invoked_with}" you speak of')
+
+        elif isinstance(exception, commands.MissingRequiredArgument):
+            return await ctx.send("Your command is incomplete, My Lord! You must tell me my target")
+
+        elif isinstance(exception, commands.CheckFailure):
+            #the handling for this is done in the checking decorators
+            pass
 
         #if bot can't access the channel
         elif isinstance(exception, Forbidden):
@@ -118,17 +154,21 @@ class AsyncCommand(TerminalCommand):
     def coro(self):
         '''Returns a coroutine for the func and its args'''
         if self.arguments is not None:
-            return self.func(self.arguments)
+            return self.func(*self.arguments)
 
         else:
             return self.func()
 
 
 class ThreadCommand(TerminalCommand):
-    def call(self):
+    @property
+    def thread(self):
         '''Returns an instance of Threading.Thread for the function and its args'''
 
         return threading.Thread(target=self.func, args=self.arguments, name=self.name)
+
+    def call(self):
+        return self.thread.start()
 
 class commandListener():
     '''Class for handling console commands'''
@@ -140,14 +180,96 @@ class commandListener():
         for command in self.commands:
             print(command.details)
 
+    
+    def close(self):
+        '''Command to throw pummel at bot'''
 
-    stopThreads=False
+        print("Ow that hurts... Closing now :,(")
+        self.bot.loop.stop()
 
 
-    def __init__(self, loop, threads):
-        '''Loop: the asyncio event loop.
-        threads: a list of active threads'''
+    async def listening(self):
+        '''always listening for commands from the console'''
 
+        #constantly checking if a command name is inputted
+        while True:
+            try:
+                listenerInput= await self.bot.loop.run_in_executor(None, input)
+                #listenerInput=input()
+                listenerInput=listenerInput.lower()
+
+            except KeyboardInterrupt:
+                continue
+
+            if listenerInput=="" or listenerInput==" " or listenerInput=="\n":
+                continue
+
+            for command in self.commands:
+                if listenerInput == command.name:
+                    try:
+                        if isinstance(command, AsyncCommand):
+                            await command.call()
+
+                        else:
+                            command.call()
+
+                    except KeyboardInterrupt:
+                        continue
+
+                    except Exception as error:
+                        print(f'Error occured:', file=sys.stderr)
+                        traceback.print_exception(type(error), error,
+                                                    error.__traceback__, file=sys.stderr)
+
+
+    async def scheduleEvent(self):
+        '''Take in a function from Discord_Bot.py and schedule it
+        Doesn't support arguments'''
+
+        async def getAttendanceArguments(self):
+            #get the DTWM guild
+            #if URGE rewrite: get 2nd guild
+            return self.bot.get_guild(545422040644190220)
+
+        validModules={
+            "attendanceWrapper": await getAttendanceArguments(self),
+            }
+
+        #set to None if no args
+        print(f"Valid modules:\n{list(validModules.keys())}\n")
+
+        #validating
+        success=False
+        while not success:
+            eventInput=input("Enter the name of the module to execute\n")
+
+            success=validateString(eventInput, list(validModules.keys()))
+                
+        import Discord_Bot
+        func=getattr(Discord_Bot, eventInput)
+        
+        #valdating time
+        success=False
+        while not success:
+            time=input("Enter the time to execute at. Separate multiple times with spaces\n")
+
+            if validateString(time):
+                fail=False
+                times=time.split(" ")
+
+                for time in times:
+                    if len(time) != 4:
+                        fail=True
+
+                if not fail:
+                    success=True
+
+        asyncio.ensure_future(Discord_Bot.executeOnEvents(AsyncCommand(func, name=eventInput, arguments=(validModules[eventInput], self.bot)),\
+           times), loop=self.loop)
+        print(f"Event ({eventInput}) scheduled")
+
+
+    async def __ainit__(self, loop, bot):
         self.commands=[
         TerminalCommand(self.close, name="close",\
            description='Ends the bot rightly. Use for closing the bot without causing problems.'),
@@ -155,54 +277,29 @@ class commandListener():
             description='Instantly kills the bot. For emergencies only. Use "close" outside of emergencies',\
             arguments=(0,)),
         TerminalCommand(self.help, name="help", description="Displays all terminal commands"),
+        AsyncCommand(self.scheduleEvent, name="schedule", description="Schedule a function to execute at a custom time/set of times"),
         ]
 
+        self.bot=bot
         self.loop=loop
-        self.threads=threads
         
         #printing the terminal commands list to the terminal user
         print('Command listener active... Commands list:')
         for command in self.commands:
             print(command.details)
 
-        self.commandListenerThread=threading.Thread(target=commandListener.listening, args=[self], name="commandListener")
-        self.commandListenerThread.start()
+        await self.listening()
+
+    def __init__(self, bot: commands.Bot):
+        '''Loop: the asyncio event loop.
+        threads: a list of active threads '''
+
+        loop=asyncio.get_event_loop()
+
+        coro=self.__ainit__(loop, bot)
+
+        bot.loop.create_task(coro)
 
 
-    def close(self):
-        '''Command to throw pummel at bot'''
-
-        print("Ow that hurts... Closing now :,(")
-        self.loop.stop()
-        self.stopThreads=True
-
-
-    def listening(self):
-        '''always listening for commands from the console'''
-
-        #constantly checking if a command name is inputted
-        while True:
-            listenerInput=input().lower()
-
-            if listenerInput==" " or listenerInput=="\n":
-                continue
-
-            for command in self.commands:
-                if listenerInput == command.name:
-                    try:
-                        command.call()
-
-                    except Exception as error:
-                        print(error.__repr__())
-
-                else:
-                    continue
-
-            if self.stopThreads:
-                #gives each thread 3 seconds to finish
-                #kills them if they don't finish in that time
-                for thread in self.threads:
-                    thread.join(3)
-                    print(f"thread ({thread}) closed.")
-                
-                sys.exit(0)
+class NoArgsPassed(Exception):
+    pass

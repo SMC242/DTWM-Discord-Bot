@@ -1,20 +1,148 @@
 #authors: benmitchellmtb, ScreaminSteve, FasterNo1
 from discord import *
 from discord.ext import commands
-import threading, time, random, asyncio
+import threading, time, random, asyncio, time
 import datetime as D
 from typing import *
 
 from classes import *
 from sheet import *
 
-bot=commands.Bot(command_prefix="ab!")
+bot=commands.Bot(command_prefix="ab!", help_command=None)
 bot.add_cog(botOverrides(bot))
 
 if __name__=="__main__":
     with open("Text Files/token.txt") as f:
         line=f.readline()
         token=line.strip("\n")
+
+#decorators
+def isLeader():
+    '''Decorator to allow only leaders to call the command'''
+    async def inner(ctx):
+        #checking if the user is a leader
+        roleNames=[ctx.message.author.roles[i].name.lower()\
+            for i in range(0, len(ctx.message.author.roles))]
+
+        allowedRoles=[
+            "watch leader",
+            "champion"]
+
+        success=False
+        i=0
+        while success is False and (i!=len(allowedRoles)-1):
+            if allowedRoles[i] in roleNames:
+                success=True
+            i+=1
+
+        if not success:
+            await ctx.send("Only leaders may do that, brother. Go back to your company")
+            print("     Call rejected. Not leader")
+
+        return success
+
+    return commands.check(inner)
+
+
+def inBotChannel():
+    '''Checks if called in bot channel.
+    If not in bot channel, doesn't execute command and scolds.
+    Unless command is whitelisted'''
+
+    async def inner(ctx):
+        botChannel=ctx.bot.get_channel(545818844036464670)
+
+        if not botChannel==ctx.message.channel:
+            await ctx.send(f"These are matters for {botChannel.mention}, brother. Take it there and I will answer you")
+            print("Call rejected. Wrong channel. Command is below this message")
+            return False
+
+        else:
+            return True
+
+    return commands.check(inner)
+
+@bot.command()
+@inBotChannel()
+async def help(ctx):
+    '''Displays all of the commands'''
+
+    print("Command: help call recieved")
+    message=Embed(title="Help", description="All of the commands of Inquisition",\
+       colour=Colour(13908894))
+
+    for command in bot.commands:
+        message.add_field(name=command.name, value=command.help, inline=False)
+
+    await ctx.send(embed=message)
+
+
+@bot.command()
+@isLeader()
+@inBotChannel()
+async def getInOps(ctx):
+    '''Pings every member that's playing PS2 but isn't in ops comms. >=Champion only'''
+    print("Command: getInOps call recieved")
+    await getInOpsInner()
+
+
+async def getInOpsInner():
+    def checkMember(member: Member)-> bool:
+        '''Check if the Member is an outfit member
+        
+        RETURNS
+        True: is member
+        False: not member'''
+
+        memberRoles=[
+            "Astartes",
+            "Watch Leader",
+            ]
+
+        roles=[member.roles[i].name for i in range(0, len(member.roles))]
+        success=False
+        for role in memberRoles:
+            if role in roles:
+                return True
+
+        return False  #if not member
+
+    def inEventChannel(member: Member, channels: List[VoiceChannel])->bool:
+        #verifying that they're in a channel
+        if member.voice is None:
+            return False
+
+        else:
+            #checking if they're in an event channel
+            return member.voice.channel in channels
+
+    #get the server
+    server=bot.get_guild(545422040644190220)
+
+    #get list of Members >=Astartes
+    members=[member for member in server.members if checkMember(member)]
+    
+    #get members playing PS2
+    membersInPS2=[]
+    for member in members:
+        for activity in member.activities:
+            if activity.name=="PlanetSide 2":
+                membersInPS2.append(member)
+        
+    #get event channels
+    channels=createListFromFile("channels.txt", type=int)
+
+    eventChannels=[bot.get_channel(channelID) for channelID in channels]
+
+    #check if in event channels
+    botChannel=bot.get_channel(545818844036464670)
+
+    for member in membersInPS2:
+        inEvent=inEventChannel(member, eventChannels)
+
+        if not inEvent:
+            await botChannel.send(f'{member.mention} an event is running right now, brother. Come join us in glory!')
+
 
 async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
     '''Infinitely checks if the time now is during
@@ -33,7 +161,7 @@ async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
     while True:
         success=False
 
-        timenow=D.datetime.now().strftime("%H%M")
+        timenow=int(D.datetime.now().strftime("%H%M"))
 
         for milestone in milestones:
             milestone=int(milestone)
@@ -46,22 +174,28 @@ async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
                 output= await func.call()
 
                 for element in output:
-
                     if element not in varList:
                         varList.append(element)
 
-                await asyncio.sleep(35)                
+                if timenow == milestones[-1]:
+                    print(f"Scheduled event ({func.name}): execution finished")
+                    return varList
 
-            if timenow == milestones[len(milestones)-1]:
-                print(f"Scheduled event ({func.name}): execution finished")
-                return varList
+                else:
+                    try:
+                        milestones.remove(milestone)  #to stop the milestone from being hit again
+
+                    except ValueError:  #milestone already removed
+                        pass
+
+                await asyncio.sleep(35)     
         
         if not success:
             await asyncio.sleep(35)
 
-            
 
-async def getAttendance():
+
+async def getAttendance(ctx, client=None):
     '''Returns a list of people in the ops/training channels'''
     #reads the channels to check from a file
     #appends the channel IDs to channels
@@ -70,19 +204,11 @@ async def getAttendance():
 
     #for every channel in channels it gets the members  
     #sequentially and appends them to the list
-    #channelMembers=[member.display_name for channel in channels\
-    #    for member in (await bot.fetch_channel(channel)).members]
 
     channelMembers=[]
     for channel in channels:
-        try:
-            channel=bot.get_channel(channel)
-            #channel= await bot.get_channel(channel)
+        channel=ctx.get_channel(channel)
 
-        except Exception as error:
-            print(f'Error occured:', file=sys.stderr)
-            traceback.print_exception(type(error), error,
-                                        error.__traceback__, file=sys.stderr)
         for attendee in channel.members:
             channelMembers.append(attendee.display_name)
 
@@ -99,102 +225,85 @@ async def getAttendance():
 
         attendees.append(attendee)
 
-    print(attendees)
+    print(f"Attendees at {D.datetime.now().strftime('%H%M')}: {attendees}")
 
     return attendees
 
-async def attendanceWrapper():
+def callAttendance(attendees: List[str])-> bool:
+    '''Wrapper for writeattendance. Handles attendance being called on a Saturday.
+    
+    RETURNS
+    False: if no failure
+    True: if failure'''
+    try:
+        writeattendance(attendees)
+        return False
+
+    except KeyError:
+        return True
+
+
+async def attendanceWrapper(ctx, client=None):
     '''This wrapper exists so that attendance can be called outside of doAttendance
     as doAttendance is a command object'''
-    attendees=await getAttendance()
+    attendees=await getAttendance(ctx, client)
 
-    writeattendance(attendees)
-    return attendees
+    failure=callAttendance(attendees)
+
+    return attendees, failure
 
 @bot.command()
+@inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def ayaya(ctx):
     '''Tell the bot to be a weeb'''
 
     print("Command: ayaya call received")
+    responses=[
+        "ayaya!",
+        "AYAYA!",
+        "ayaya ayaya!",
+        "AYAYA AYAYA!",
+        "ayaya ayaya ayaya!",
+        "AYAYA AYAYA AYAYA!"]
 
-    choice=random.randint(0,5)
-
-    if choice==0:
-        await ctx.send("ayaya!")
-
-    elif choice==1:
-        await ctx.send("AYAYA!")
-
-    elif choice==2:
-        await ctx.send("ayaya ayaya!")
-
-    elif choice==3:
-        await ctx.send("AYAYA AYAYA!")
-
-    elif choice==4:
-        await ctx.send("ayaya ayaya ayaya!")
-
-    else:
-        await ctx.send("AYAYA AYAYA AYAYA!")
+    await ctx.send(random.choice(responses))
 
 
 @bot.command()
+@inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def commitNotAlive(ctx):
     '''Tell the bot to kill itself'''
     print("Command: commitNotAlive call recieved")
 
-    choice=random.randint(0, 3)
-    if choice==0:
-        await ctx.send("no u")
-
-    elif choice==1:
-        await ctx.send("commit neck rope")
-
-    elif choice==2:
-        await ctx.send("die")
-
-    else:
-        await ctx.send("kys")
+    responses=[
+        "no u",
+        "commit neck rope",
+        "die",
+        "kys"
+        ]
     
-
+    await ctx.send(random.choice(responses))
     
 
 @bot.command()
+@inBotChannel()
+@isLeader()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def doAttendance(ctx):
-    '''Work in progress.
-    Gets a list of people in the War Room and Training Deck.
-    Will send the list ot the attendance sheet soon.'''
+    '''Records current attendees in the sheet. >=Champion only'''
 
     print("Command: doAttendance call recieved")
-
-    #checking if the user is a leader
-    roleNames=[ctx.message.author.roles[i].name.lower()\
-        for i in range(0, len(ctx.message.author.roles))]
-
-    allowedRoles=[
-        "watch leader",
-        "champion"]
-
-    success=False
-    i=0
-    while success is False and (i!=len(allowedRoles)-1):
-        if allowedRoles[i] in roleNames:
-            success=True
-        i+=1
-
-    #if leader role not found: reject command and exit
-    if success==False:
-        print("         doAttendance call rejected")
-        return await ctx.send('Only leaders may take attendance, brother. Go back to your company')
     
     #give user feedback
     await ctx.send("It will be done, my Lord")
 
     async with ctx.typing():
-        attendees=await attendanceWrapper()
+        attendees, failure=await attendanceWrapper(ctx)
+
+        if failure:
+            await ctx.send('We do not take roll call on Saturdays!')
 
         if attendees==[]:
             await ctx.send("Nobody is there, My Liege. Our men have become complacent!")
@@ -207,6 +316,7 @@ async def doAttendance(ctx):
 
 
 @bot.command()
+@inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def giveAdvice(ctx):
     '''Gives you advice based on your roles
@@ -367,17 +477,86 @@ async def giveAdvice(ctx):
                         return
 
 
-async def sendAttToSheet(attendees):
-    '''Sends the results of getAttendance() to the Google Sheet
-    Attendees: list of people who attended'''
-    
-
 @bot.command()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def joindtwm(ctx):
     '''Posts the invite link to the discord'''
     print("Command: joindtwm call recieved")
     await ctx.send('Come quickly, brother! We can always use new Astartes. https://joindtwm.net/join')
+
+@bot.command()
+@inBotChannel()
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def countMessages(ctx, name):
+    '''Returns and reacts the number of messages in the target channel.
+    Arguments: #mention a text channel'''
+
+    print("Command: countMessages call recieved")
+
+    async with ctx.typing():
+        try:
+            channel=ctx.message.channel_mentions[0]
+
+        except:
+            raise commands.MissingRequiredArgument(name)
+
+        #find today
+        today=D.date.today()
+        after=D.datetime(today.year, today.month, today.day, hour=0, minute=0)
+        count=0
+
+        #get messages today
+        history=channel.history(limit=5000, after=after)  #HistoryIterator isn't iterable (╯°□°）╯︵ ┻━┻
+
+        #iterate over messages
+        while count!=5000:  #ensuring that no more than 5k messages are processed
+            try:
+                await history.next()
+                count+=1
+
+            except NoMoreItems:
+                break
+
+        #reacting
+        if count<=100:
+            messageSuffix="Not much happened, My Lord"
+
+        elif count>200:
+            messageSuffix="The Guardsmen were arguing again"
+
+        elif 400<count<500:
+            messageSuffix="A minor brawl. Nothing too serious, My Lord"
+
+        else:  #if more than 300
+            messageSuffix="Chaos cultists were uprooted from their despicable congregation"
+
+        return await ctx.send(f"Status report, Sir: {count} messages were sent today in {channel.mention}. {messageSuffix}")
+
+
+@bot.command()
+@inBotChannel()
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def ping(ctx):
+    '''Check and react to how fast the bot is running'''
+
+    async with ctx.typing():
+        startTime=time.time()
+        await ctx.send('You summoned me, my Lord?')
+        endTime=time.time()
+        difference=endTime-startTime
+
+        if difference<1:
+            suffixString="I came as fast as I could"
+
+        elif 1<=difference<2:
+            suffixString="I polished your armour"
+
+        else:
+            suffixString="The Tyranids are coming! You must escape now and send word to Terra"
+
+        print(f"Command: ping call recieved.\n   Ping: {difference} seconds")
+        return await ctx.send(f"I took {difference:.2f} seconds to get here. {suffixString}")
+
 
 
 def main():
@@ -395,8 +574,8 @@ def main():
 @bot.listen()
 async def on_ready():
     print('\nLogged in as')
-    print(bot.user.name)
-    print(bot.user.id)
+    print(f"Username: {bot.user.name}")
+    print(f"User ID: {bot.user.id}")
     print('------')
 
     botChannel=bot.get_channel(545818844036464670)
@@ -404,11 +583,17 @@ async def on_ready():
 
     #scheduling the attendance function
     timenow=D.datetime.now()
+    if timenow.weekday() == 5:  #no events on Saturday
+        return
+
     timenow=timenow.time()
 
     if 2000<int(timenow.strftime("%H%M"))<2200:  #if started during an event
         attendees=await executeOnEvents(AsyncCommand(attendanceWrapper, name="attendanceWrapper"))
-        writeattendance(attendees)
+        failure=callAttendance(attendees)
+
+        if failure:
+            await botChannel.send('We do not take roll call on Saturdays!')
 
     else:  #wait until almost event time
         target=D.time(19, 59)
@@ -418,8 +603,13 @@ async def on_ready():
         runInSeconds= (newTarget - oldTime).seconds
         await asyncio.sleep(runInSeconds)
 
+        await getInOpsInner()
+
         attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance"))
-        writeattendance(attendees)
+        failure=callAttendance(attendees)
+
+        if failure:
+            await botChannel.send('We do not take roll call on Saturdays!')
 
 if __name__=="__main__":
     main()
