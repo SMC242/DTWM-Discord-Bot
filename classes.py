@@ -187,7 +187,7 @@ class commandListener():
         print("Ow that hurts... Closing now :,(")
 
         #acknowledge shutdown
-        botChannel=ctx.bot.get_channel(545818844036464670)
+        botChannel=self.bot.get_channel(545818844036464670)
         await botChannel.send('The warp screams in my mind... I must go now')
 
         self.bot.loop.stop()

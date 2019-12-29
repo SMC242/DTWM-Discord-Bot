@@ -109,25 +109,37 @@ async def getInOps(ctx):
     print("Command: getInOps call recieved")
     await getInOpsInner()
 
-def checkMember(member: Member)-> bool:
+def checkRoles(members: List[Member], target: List[Union[Role, str]])-> bool:
     '''Check if the Member is an outfit member
+
+    members: the target member(s)
+    target: the target role(s). Maybe be the name or the Role instance
         
     RETURNS
-    True: is member
-    False: not member'''
+    True: has target role
+    False: does not have target role'''
 
-    memberRoles=[
-        "Astartes",
-        "Watch Leader",
-        ]
+    #fetch roles
+    if isinstance(target[0], str):  #if role name passed
+        roles=[]
+        for member in members:
+            currentRoles=[member.roles[i].name for i in range(0, len(member.roles))]
+            roles+=currentRoles
 
-    roles=[member.roles[i].name for i in range(0, len(member.roles))]
+    else:  #if Role instance passed
+        roles=[]
+        for member in members:
+            roles+=member.roles
+
+
     success=False
-    for role in memberRoles:
-        if role in roles:
-            return True
+    for member in members:
+        for role in target:
+            if role in roles:
+                return True
 
-    return False  #if not member
+    return False  #if not target
+
 
 async def getInOpsInner():
     def inEventChannel(member: Member, channels: List[VoiceChannel])->bool:
@@ -145,7 +157,7 @@ async def getInOpsInner():
         server=bot.get_guild(545422040644190220)
 
         #get list of Members >=Astartes
-        members=[member for member in server.members if checkMember(member)]
+        members=[member for member in server.members if checkRoles((member,), ("Astartes", "Watch Leader"))]
     
         #get members playing PS2
         membersInPS2=[]
@@ -226,7 +238,7 @@ async def imNotAMember(ctx):
     '''Reacts to whether you're a member of DTWM'''
     print('Command: imNotAMember call recieved')
 
-    if not checkMember(ctx.message.author):
+    if not checkRoles((ctx.message.author,), ("Astartes", "Watch Leader")):
         await ctx.send('Join DTWM on Miller NC')
         return await ctx.invoke(joindtwm)
 
