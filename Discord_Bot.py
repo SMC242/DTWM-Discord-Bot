@@ -681,7 +681,7 @@ async def on_ready():
 
         await getInOpsInner()  #ping people to get in ops
 
-        attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=bot.get_guild(545422040644190220)))
+        attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
         failure=callAttendance(attendees)
 
         if failure:
