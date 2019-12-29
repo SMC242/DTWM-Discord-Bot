@@ -16,24 +16,71 @@ if __name__=="__main__":
         line=f.readline()
         token=line.strip("\n")
 
-#decorators
+
+async def checkRoles(members: List[Member], target: List[Union[Role, str]])-> Union[bool, Generator[int, Tuple[bool, Member], None]]:
+    '''Generator checker if the Member is an outfit member
+
+    members: the target member(s)
+    target: the target role(s). Maybe be the name or the Role instance
+        
+    RETURNS
+    AsyncGenerator if multiple members
+    If generator returned, the Member associated with the check is also returned:
+    True(, Member): has target role
+    False(, Member): does not have target role'''
+
+    async def getRoles(members: List[Member], target: Union[List[str], List[Role]])-> List[Union[List[str], List[Role]]]:
+        #made coro to speed up performance
+        roles=[]
+
+        if isinstance(target[0], str):  #if role name passed
+            for member in members:
+                currentRoles=[member.roles[i].name for i in range(0, len(member.roles))]
+                roles.append(currentRoles)
+
+        else:  #if Role instance passed
+            for member in members:
+                roles.append(member.roles)
+
+        return roles
+
+    async def generator(members: List[Member], roles: Union[List[str], List[Role]])-> Generator[int, Tuple[bool, Member], None]:
+        hitMembers=[]
+
+        for i in range(0, len(members)-1):
+            success=False
+            for role in target:
+                if role in roles[i] and members[i] not in hitMembers:
+                    yield (True, members[i])
+                    hitMembers.append(members[i])  #stop the same person being hit 2 times if has multiple target roles
+
+            if not success:  #if not target
+                yield (False, members[i])
+
+
+    #fetch roles
+    roles=await getRoles(members, target)
+
+    #do check
+    isList=len(members)>1
+
+    if isList:  #if list of members: return generator
+        return generator(members, roles)
+
+    else:  #if single member: return bool
+        success=False
+        for role in target:
+            if role in roles[0]:
+                return True
+
+        return False #if not target
+
+
 def isLeader():
     '''Decorator to allow only leaders to call the command'''
     async def inner(ctx):
         #checking if the user is a leader
-        roleNames=[ctx.message.author.roles[i].name.lower()\
-            for i in range(0, len(ctx.message.author.roles))]
-
-        allowedRoles=[
-            "watch leader",
-            "champion"]
-
-        success=False
-        i=0
-        while success is False and (i!=len(allowedRoles)-1):
-            if allowedRoles[i] in roleNames:
-                success=True
-            i+=1
+        success=checkRoles((ctx.message.author,), ("Watch Leader", "Champion"))
 
         if not success:
             await ctx.send("Only leaders may do that, brother. Go back to your company")
@@ -109,37 +156,6 @@ async def getInOps(ctx):
     print("Command: getInOps call recieved")
     await getInOpsInner()
 
-def checkRoles(members: List[Member], target: List[Union[Role, str]])-> bool:
-    '''Check if the Member is an outfit member
-
-    members: the target member(s)
-    target: the target role(s). Maybe be the name or the Role instance
-        
-    RETURNS
-    True: has target role
-    False: does not have target role'''
-
-    #fetch roles
-    if isinstance(target[0], str):  #if role name passed
-        roles=[]
-        for member in members:
-            currentRoles=[member.roles[i].name for i in range(0, len(member.roles))]
-            roles+=currentRoles
-
-    else:  #if Role instance passed
-        roles=[]
-        for member in members:
-            roles+=member.roles
-
-
-    success=False
-    for member in members:
-        for role in target:
-            if role in roles:
-                return True
-
-    return False  #if not target
-
 
 async def getInOpsInner():
     def inEventChannel(member: Member, channels: List[VoiceChannel])->bool:
@@ -152,12 +168,16 @@ async def getInOpsInner():
             return member.voice.channel in channels
 
     botChannel=bot.get_channel(545818844036464670)
+
     async with botChannel.typing():
         #get the server
         server=bot.get_guild(545422040644190220)
 
         #get list of Members >=Astartes
-        members=[member for member in server.members if checkRoles((member,), ("Astartes", "Watch Leader"))]
+        members=[]
+        async for check, member in await checkRoles(server.members, ("Astartes", "Watch Leader")):
+            if check:
+                members.append(member)
     
         #get members playing PS2
         membersInPS2=[]
@@ -238,7 +258,7 @@ async def imNotAMember(ctx):
     '''Reacts to whether you're a member of DTWM'''
     print('Command: imNotAMember call recieved')
 
-    if not checkRoles((ctx.message.author,), ("Astartes", "Watch Leader")):
+    if not await checkRoles((ctx.message.author,), ("Astartes", "Watch Leader")):
         await ctx.send('Join DTWM on Miller NC')
         return await ctx.invoke(joindtwm)
 
