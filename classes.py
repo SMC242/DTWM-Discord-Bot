@@ -84,6 +84,10 @@ class botOverrides(commands.Cog):
             #the handling for this is done in the checking decorators
             pass
 
+        elif isinstance(exception, NotLeaderError):
+            await ctx.send("Only leaders may do that, brother. Go back to your company")
+            print("     Call rejected. Not leader")
+
         #if bot can't access the channel
         elif isinstance(exception, Forbidden):
             return await ctx.send("I can't access one or more of those channels TwT")
@@ -190,6 +194,7 @@ class commandListener():
         botChannel=self.bot.get_channel(545818844036464670)
         await botChannel.send('The warp screams in my mind... I must go now')
 
+        await self.bot.logout()
         self.bot.loop.stop()
 
 
@@ -306,5 +311,5 @@ class commandListener():
         bot.loop.create_task(coro)
 
 
-class NoArgsPassed(Exception):
+class NotLeaderError(commands.CommandError):
     pass

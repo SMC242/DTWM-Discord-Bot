@@ -251,8 +251,7 @@ async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
 
 
 @bot.command()
-@inBotChannel()
-@commands.cooldown(1, 5, type=commands.BucketType.user)
+@commands.cooldown(1, 60, type=commands.BucketType.user)
 async def imNotAMember(ctx):
     '''Reacts to whether you're a member of DTWM'''
     print('Command: imNotAMember call recieved')
@@ -263,6 +262,16 @@ async def imNotAMember(ctx):
 
     else:
         return await ctx.send("Brother, you are one of us!")
+
+
+@bot.command()
+@inBotChannel()
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def patLoli(ctx):
+    '''Pat Komi Shouko-san'''
+
+    print("Command: patLoli call recieved")
+    return await ctx.send('<:w_komi_headpat:622139235742384129>')
 
 
 async def getAttendance(ctx):
@@ -555,16 +564,42 @@ async def joindtwm(ctx):
 
 @bot.command()
 @inBotChannel()
-@commands.cooldown(1, 5, type=commands.BucketType.user)
+@commands.cooldown(1, 60, type=commands.BucketType.user)
 async def countMessages(ctx, name: str):
     '''Returns and reacts the number of messages in the target channel.
-    Arguments: #mention a text channel'''
+    Arguments: #mention a text channel or 'global' for the whole discord'''
+
+    async def getAllMessages(channels: List[TextChannel])-> Generator[int, int, None]:
+        '''Generator for the entire server's messages'''
+
+        for channel in channels:
+            count=0
+            history=channel.history(limit=5000, after=after)
+
+            while count!=5000:  #ensuring that no more than 5k messages are processed per channel
+                try:
+                    await history.next()
+                    count+=1
+
+                except NoMoreItems:
+                    break
+
+                except Forbidden:  #ignore channels that the bot can't read
+                    continue
+
+            yield count
+
 
     print("Command: countMessages call recieved")
 
     async with ctx.typing():
+        server=None
         try:
-            channel=ctx.message.channel_mentions[0]
+            if name=="global":
+                server=ctx.bot.get_guild(545422040644190220)
+            
+            else:
+                channel=ctx.message.channel_mentions[0]
 
         except:
             raise commands.MissingRequiredArgument(inspect.Parameter("name", inspect.Parameter.POSITIONAL_ONLY))
@@ -572,34 +607,65 @@ async def countMessages(ctx, name: str):
         #find today
         today=D.date.today()
         after=D.datetime(today.year, today.month, today.day, hour=0, minute=0)
-        count=0
 
         #get messages today
-        history=channel.history(limit=5000, after=after)  #HistoryIterator isn't iterable (╯°□°）╯︵ ┻━┻
+        count=0
 
-        #iterate over messages
-        while count!=5000:  #ensuring that no more than 5k messages are processed
-            try:
-                await history.next()
-                count+=1
+        if server is None:
+            history=channel.history(limit=5000, after=after)  #HistoryIterator isn't iterable (╯°□°）╯︵ ┻━┻
 
-            except NoMoreItems:
-                break
+            #iterate over messages
+            while count!=5000:  #ensuring that no more than 5k messages are processed
+                try:
+                    await history.next()
+                    count+=1
+
+                except NoMoreItems:
+                    break
+
+                except Forbidden:  #ignore channels that the bot can't read
+                    continue
+
+        else:  #if global check
+            async for channelMessageCount in getAllMessages(server.text_channels):
+                count+=channelMessageCount
+        
 
         #reacting
-        if count<=100:
-            messageSuffix="Not much happened, My Lord"
+        if server is not None:
+            if count<=600:
+                messageSuffix="A quiet day aboard Erioch"
 
-        elif count>200:
-            messageSuffix="The Guardsmen were arguing again"
+            elif 600<count<800:
+                messageSuffix="A mild hull breach occurred. It's fixed now, My Lord"
 
-        elif 400<count<500:
-            messageSuffix="A minor brawl. Nothing too serious, My Lord"
+            elif 800<count<1000:
+                messageSuffix="Maintenance in the engine room occurred today. Many souls were lost"
 
-        else:  #if more than 300
-            messageSuffix="Chaos cultists were uprooted from their despicable congregation"
+            elif 1000<count<1200:
+                messageSuffix="We were planning to make war"
 
-        return await ctx.send(f"Status report, Sir: {count} messages were sent today in {channel.mention}. {messageSuffix}")
+            else:
+                messageSuffix="We suffered an Eldar incursion"
+
+        else:
+            if count<=100:
+                messageSuffix="Not much happened, My Lord"
+
+            elif count>200:
+                messageSuffix="The Guardsmen were arguing again"
+
+            elif 400<count<500:
+                messageSuffix="A minor brawl. Nothing too serious, My Lord"
+
+            else:  #if more than 300
+                messageSuffix="Chaos cultists were uprooted from their despicable congregation"
+
+        if server is None:
+            return await ctx.send(f"Status report, Sir: {count} messages were sent today in {channel.mention}. {messageSuffix}")
+
+        else:  #global is True
+            return await ctx.send(f"Status report, Sir: {count} messages were sent today in our glorious vessel. {messageSuffix}")
 
 
 @bot.command()
