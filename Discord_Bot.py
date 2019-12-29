@@ -80,11 +80,10 @@ def isLeader():
     '''Decorator to allow only leaders to call the command'''
     async def inner(ctx):
         #checking if the user is a leader
-        success=checkRoles((ctx.message.author,), ("Watch Leader", "Champion"))
+        success= await checkRoles((ctx.message.author,), ("Watch Leader", "Champion"))
 
         if not success:
-            await ctx.send("Only leaders may do that, brother. Go back to your company")
-            print("     Call rejected. Not leader")
+            raise NotLeaderError()
 
         return success
 
@@ -664,7 +663,7 @@ async def on_ready():
     timenow=timenow.time()
 
     if 2000<int(timenow.strftime("%H%M"))<2200:  #if started during an event
-        attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=bot.get_guild(545422040644190220)))
+        attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
         failure=callAttendance(attendees)
 
         if failure:
