@@ -198,7 +198,7 @@ async def getInOpsInner():
             if not inEvent:
                 await botChannel.send(f'{member.mention} an event is running right now, brother. Come join us in glory!')
 
-        return  #end typing()
+        return "Nya~"  #end typing()
 
 
 async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
@@ -653,7 +653,7 @@ async def on_ready():
     await botChannel.send('I have awoken... I am at your service')
 
     #set status
-    status=Activity(name="Purging heretics", type=ActivityType.unknown)
+    status=Activity(name="Purging Heretics and Patting Lolis", type=ActivityType.playing)
     await bot.change_presence(activity=status)
 
     #scheduling the attendance function
@@ -676,6 +676,7 @@ async def on_ready():
         newTarget=D.datetime.combine(D.date.min, target)
         oldTime=D.datetime.combine(D.date.min, timenow)
         runInSeconds= (newTarget - oldTime).seconds
+
         await asyncio.sleep(runInSeconds)
 
         await getInOpsInner()  #ping people to get in ops
