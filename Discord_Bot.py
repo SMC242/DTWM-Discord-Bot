@@ -1,7 +1,7 @@
 #authors: benmitchellmtb, ScreaminSteve, FasterNo1
 from discord import *
 from discord.ext import commands
-import threading, time, random, asyncio, time
+import threading, time, random, asyncio, time, inspect
 import datetime as D
 from typing import *
 
@@ -489,7 +489,7 @@ async def joindtwm(ctx):
 @bot.command()
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
-async def countMessages(ctx, name):
+async def countMessages(ctx, name: str):
     '''Returns and reacts the number of messages in the target channel.
     Arguments: #mention a text channel'''
 
@@ -500,7 +500,7 @@ async def countMessages(ctx, name):
             channel=ctx.message.channel_mentions[0]
 
         except:
-            raise commands.MissingRequiredArgument(name)
+            raise commands.MissingRequiredArgument(inspect.Parameter("name", inspect.Parameter.POSITIONAL_ONLY))
 
         #find today
         today=D.date.today()
