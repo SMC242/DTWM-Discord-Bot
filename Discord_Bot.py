@@ -229,8 +229,7 @@ async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
         for milestone in milestones:
             milestone=int(milestone)
 
-            if milestone == int(timenow) or milestone-1 == int(timenow)\
-               or milestone+1 == int(timenow):
+            if milestone == int(timenow):
                 print(f"Scheduled Event ({func.name}): milestone hit: {timenow}")
                 success=True
 
