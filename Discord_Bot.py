@@ -297,7 +297,7 @@ async def patLoli(ctx):
     return await ctx.send(random.choice(emotes))
 
 
-async def getAttendance(ctx):
+async def getAttendance(ctx: Union[commands.Context, Guild]):
     '''Returns a list of people in the ops/training channels'''
     #reads the channels to check from a file
     #appends the channel IDs to channels
@@ -307,9 +307,17 @@ async def getAttendance(ctx):
     #for every channel in channels it gets the members  
     #sequentially and appends them to the list
 
+    #get guild
+    if not isinstance(ctx, Guild):
+        server=ctx.message.guild
+
+    else:
+        server=ctx
+    
+    #get list of names in ops
     channelMembers=[]
     for channel in channels:
-        channel=ctx.bot.get_channel(channel)
+        channel=server.get_channel(channel)
 
         for attendee in channel.members:
             channelMembers.append(attendee.display_name)
