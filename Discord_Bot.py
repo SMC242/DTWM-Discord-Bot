@@ -265,7 +265,7 @@ async def imNotAMember(ctx):
 
     if not await checkRoles((ctx.message.author,), ("Astartes", "Watch Leader")):
         await ctx.send('Join DTWM on Miller NC')
-        return await ctx.invoke(joindtwm)
+        return await ctx.invoke(joinDTWM)
 
     else:
         return await ctx.send("Brother, you are one of us!")
