@@ -8,7 +8,7 @@ from typing import *
 from classes import *
 from sheet import *
 
-bot=commands.Bot(command_prefix="ab!", help_command=None)
+bot=commands.Bot(command_prefix="ab!", help_command=None, case_insensitive=True)
 bot.add_cog(botOverrides(bot))
 
 if __name__=="__main__":
@@ -100,7 +100,6 @@ def inBotChannel():
 
         if not botChannel==ctx.message.channel:
             await ctx.send(f"These are matters for {botChannel.mention}, brother. Take it there and I will answer you")
-            print("Call rejected. Wrong channel. Command is below this message")
             return False
 
         else:
@@ -116,8 +115,9 @@ async def leader(ctx):
         return await ctx.send('Give me your orders, My Lord. I am but a lowly servitor, not a psyker')
 
 
-@bot.command()
+@bot.command(aliases=["h"])
 @inBotChannel()
+@commands.cooldown(1, 10, type=commands.BucketType.user)
 async def help(ctx):
     '''Displays all of the commands'''
 
@@ -132,17 +132,24 @@ async def help(ctx):
        colour=Colour(13908894))
 
     #iterate over all commands
+    hitCommands=[]
     for command in bot.walk_commands():
         #check if leader command
-        if command.parent is not None and command.parent.name=="leader":
-            leaderMessage.add_field(name=command.name, value=command.help, inline=False)
-
-        else:
-            if isinstance(command, commands.Group):  #ignore groups
-                continue
+        if command not in hitCommands:
+            if command.parent is not None and command.parent.name=="leader":
+                leaderMessage.add_field(name=command.name, value=f"{command.help}\nAliases: {command.aliases}", inline=False)
+                hitCommands.append(command)
 
             else:
-                mainMessage.add_field(name=command.name, value=command.help, inline=False)
+                if isinstance(command, commands.Group):  #ignore groups
+                    continue
+
+                else:
+                    mainMessage.add_field(name=command.name, value=f"{command.help}\nAliases: {command.aliases}", inline=False)
+                    hitCommands.append(command)
+
+        else:
+            continue
 
     await ctx.send(embed=mainMessage)
     return await ctx.send(embed=leaderMessage)
@@ -250,8 +257,8 @@ async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
             await asyncio.sleep(35)
 
 
-@bot.command()
-@commands.cooldown(1, 60, type=commands.BucketType.user)
+@bot.command(aliases=["notMember", "notM"])
+@commands.cooldown(1, 5, type=commands.BucketType.user)
 async def imNotAMember(ctx):
     '''Reacts to whether you're a member of DTWM'''
     print('Command: imNotAMember call recieved')
@@ -264,14 +271,30 @@ async def imNotAMember(ctx):
         return await ctx.send("Brother, you are one of us!")
 
 
-@bot.command()
+@bot.command(aliases=["pat", "headpat"])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def patLoli(ctx):
-    '''Pat Komi Shouko-san'''
+    '''Get the bot to pat a loli'''
+
+    emotes=[
+        "<:w_komi_headpat:661011597048938505>",
+        "<a:BTS_pat9:661014548970602506>",
+        "<a:BTS_pat8:661014550396665856>",
+        "<:BTS_pat7:661014545543856178>",
+        "<:BTS_pat6:661014545791320104>",
+       "<:BTS_pat5:661014545560764416>",
+        "<:BTS_pat4:661014544860053504>",
+        "<:BTS_pat3:661014543631253550>",
+        "<a:BTS_pat2:661014549922578432>",
+        "<a:BTS_pat12:661014546260951095>",
+        "<:BTS_pat11:661014545795645443>",
+        "<a:BTS_pat10:661014544944070656>",
+        "<:BTS_pat:661014543765602314>",
+        ]
 
     print("Command: patLoli call recieved")
-    return await ctx.send('<:w_komi_headpat:622139235742384129>')
+    return await ctx.send(random.choice(emotes))
 
 
 async def getAttendance(ctx):
@@ -331,7 +354,7 @@ async def attendanceWrapper(ctx):
 
     return attendees, failure
 
-@bot.command()
+@bot.command(aliases=["weeb"])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def ayaya(ctx):
@@ -349,7 +372,7 @@ async def ayaya(ctx):
     await ctx.send(random.choice(responses))
 
 
-@bot.command()
+@bot.command(aliases=["kys","die", "fuckYou"])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def commitNotAlive(ctx):
@@ -366,7 +389,7 @@ async def commitNotAlive(ctx):
     await ctx.send(random.choice(responses))
     
 
-@leader.command()
+@leader.command(aliases=["attendance","getAttendance", "att"])
 @inBotChannel()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def doAttendance(ctx):
@@ -393,7 +416,7 @@ async def doAttendance(ctx):
 
 
 
-@bot.command()
+@bot.command(aliases=["advice", "advise", "adviseMe"])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def giveAdvice(ctx):
@@ -555,18 +578,44 @@ async def giveAdvice(ctx):
                         return
 
 
-@bot.command()
+@bot.command(aliases=["join", "j"])
 @commands.cooldown(1, 60, type=commands.BucketType.user)
-async def joindtwm(ctx):
+async def joinDTWM(ctx):
     '''Posts the invite link to the discord'''
     print("Command: joindtwm call recieved")
     await ctx.send('Come quickly, brother! We can always use new Astartes. https://joindtwm.net/join')
+
+
+@bot.command(aliases=["fun", "random"])
+@inBotChannel()
+@commands.cooldown(1, 10, type=commands.BucketType.user) 
+async def fluff(ctx):
+    '''Picks a random fluff command and executes it'''
+
+    fluff=[
+        imNotAMember,
+        patLoli,
+        ayaya,
+        commitNotAlive,
+        giveAdvice,
+        ping,
+        ]
+
+    print("Command: fluff call recieved")
+
+    async with ctx.typing():
+        choice=random.choice(fluff)
+        await ctx.send(f"{choice}:")
+
+        return await ctx.invoke(choice)
+
 
 @bot.command()
 @inBotChannel()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def countMessages(ctx, name: str):
     '''Returns and reacts the number of messages in the target channel.
+    Counts today's messages only.
     Arguments: #mention a text channel or 'global' for the whole discord'''
 
     async def getAllMessages(channels: List[TextChannel])-> Generator[int, int, None]:
@@ -668,7 +717,7 @@ async def countMessages(ctx, name: str):
             return await ctx.send(f"Status report, Sir: {count} messages were sent today in our glorious vessel. {messageSuffix}")
 
 
-@bot.command()
+@bot.command(aliases=["p", "speed"])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def ping(ctx):
