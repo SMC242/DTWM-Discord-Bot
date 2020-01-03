@@ -169,11 +169,12 @@ async def help(ctx):
     return await ctx.send(embed=leaderMessage)
 
 
-@bot.command(aliases=['re', 'noRe', 'reactions', 'TR', 'nR'])
-@isLeader()
+@leader.command(aliases=['re', 'noRe', 'reactions', 'TR', 'nR'])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def toggleReactions(ctx):
+    '''Allow/disallow reactions to messages with terms in the white list'''
+
     print("Command: toggleReactions call recieved")
 
     botOverride=bot.get_cog('botOverrides')
