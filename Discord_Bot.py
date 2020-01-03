@@ -645,7 +645,7 @@ async def fluff(ctx):
         return await ctx.invoke(choice)
 
 
-@bot.command(enabled=False)
+@bot.command(enabled=False, aliases=['count', 'cm', 'getMessages'])
 @inBotChannel()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def countMessages(ctx, name: str):
@@ -768,23 +768,24 @@ async def ping(ctx):
     '''Check and react to how fast the bot is running'''
 
     async with ctx.typing():
+        #get difference
         startTime=time.time()
         await ctx.send('You summoned me, my Lord?')
         endTime=time.time()
         difference=endTime-startTime
 
-        if difference<1:
+        #react to result
+        if difference<0.1:
             suffixString="I came as fast as I could"
 
-        elif 1<=difference<2:
+        elif 0.1<=difference<0.5:
             suffixString="I polished your armour"
 
         else:
             suffixString="The Tyranids are coming! You must escape now and send word to Terra"
 
         print(f"Command: ping call recieved.\n   Process time: {difference} seconds\n   Latency: {bot.latency}")
-        await ctx.send(f"Latency: {bot.latency}")
-        return await ctx.send(f"I took {difference:.2f} seconds to get here. {suffixString}")
+        return await ctx.send(f"Latency: {bot.latency:.2f}\nI took {difference:.2f} seconds to get here. {suffixString}")
 
 
 
