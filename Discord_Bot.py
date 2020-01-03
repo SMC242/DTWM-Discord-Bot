@@ -122,9 +122,18 @@ async def help(ctx):
 
     print("Command: help call recieved")
 
+    #sort commands alphabetically
+    botCommandsDict={command.name : command for command in bot.walk_commands()}  #used to get the commands after sorting
+
+    botCommandNames=[key for key in botCommandsDict.keys()]  #returns unsorted list of string
+    botCommandNames=insertionSort(botCommandNames)  #returns sorted list of string
+    botCommands=[botCommandsDict[name] for name in botCommandNames]  #returns sorted list of Commands
+
     #show main and leader commands in separate messages
     mainMessage=Embed(title="Help - Main Commands", description="All of the commands of Inquisition. Invoke with ab!{commandName}",\
        colour=Colour(13908894))
+
+    mainMessage.set_thumbnail(url="https://images-ext-1.discordapp.net/external/3K5RIK7FKfthdHJl0ubKh8uUSKjEP8odoO4ks1evlzs/%3Fsize%3D128/https/cdn.discordapp.com/avatars/507206805621964801/3468cd3ed831a5b10b49d8e06c801418.png")
 
     leaderMessage=Embed(title="Help - Leader Commands",\
        description="Leader only commands. Invoke with ab!leader {commandName}\n>=Champion only",\
@@ -132,7 +141,7 @@ async def help(ctx):
 
     #iterate over all commands
     hitCommands=[]
-    for command in bot.walk_commands():
+    for command in botCommands:
         #check if leader command
         if command not in hitCommands:
             if isinstance(command, commands.Group):  #ignore groups
