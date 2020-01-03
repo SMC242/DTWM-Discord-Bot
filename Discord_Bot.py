@@ -1,7 +1,7 @@
 #authors: benmitchellmtb, ScreaminSteve, FasterNo1
 from discord import *
 from discord.ext import commands
-import threading, time, random, asyncio, time, inspect
+import threading, time, random, asyncio, time, inspect, traceback
 import datetime as D
 from typing import *
 
@@ -111,7 +111,6 @@ def inBotChannel():
 @isLeader()
 async def leader(ctx):
     if ctx.invoked_subcommand is None:
-        print('Command: leader command rejected. No sub command passed')
         return await ctx.send('Give me your orders, My Lord. I am but a lowly servitor, not a psyker')
 
 
@@ -136,17 +135,24 @@ async def help(ctx):
     for command in bot.walk_commands():
         #check if leader command
         if command not in hitCommands:
-            if command.parent is not None and command.parent.name=="leader":
-                leaderMessage.add_field(name=command.name, value=f"{command.help}\nAliases: {command.aliases}", inline=False)
-                hitCommands.append(command)
-
-            else:
-                if isinstance(command, commands.Group):  #ignore groups
+            if isinstance(command, commands.Group):  #ignore groups
                     continue
 
-                else:
-                    mainMessage.add_field(name=command.name, value=f"{command.help}\nAliases: {command.aliases}", inline=False)
-                    hitCommands.append(command)
+            elif command.parent is None:  #if ungrouped command
+                msg=mainMessage
+
+            elif command.parent.name=="leader":  #if leader command
+                msg=leaderMessage
+
+            response=f"{command.help}\nAliases: {command.aliases}"
+
+            #display enabled status
+            if not command.enabled:  #don't say when enabled
+                response+="\n**Currently disabled**"
+
+            #add text to final message
+            msg.add_field(name=command.name, value=response, inline=False)
+            hitCommands.append(command)
 
         else:
             continue
@@ -595,7 +601,7 @@ async def joinDTWM(ctx):
 
 @bot.command(aliases=["fun", "random"])
 @inBotChannel()
-@commands.cooldown(1, 10, type=commands.BucketType.user) 
+#@commands.cooldown(1, 10, type=commands.BucketType.user) 
 async def fluff(ctx):
     '''Picks a random fluff command and executes it'''
 
@@ -617,7 +623,7 @@ async def fluff(ctx):
         return await ctx.invoke(choice)
 
 
-@bot.command()
+@bot.command(enabled=False)
 @inBotChannel()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def countMessages(ctx, name: str):
@@ -634,7 +640,7 @@ async def countMessages(ctx, name: str):
 
             while count!=5000:  #ensuring that no more than 5k messages are processed per channel
                 try:
-                    await history.next()
+                    message=await history.next()
                     count+=1
 
                 except NoMoreItems:
@@ -646,7 +652,7 @@ async def countMessages(ctx, name: str):
             yield count
 
 
-    print("Command: countMessages call recieved")
+    print(f"Command: countMessages call recieved. Args = {name}")
 
     async with ctx.typing():
         server=None
@@ -660,9 +666,18 @@ async def countMessages(ctx, name: str):
         except:
             raise commands.MissingRequiredArgument(inspect.Parameter("name", inspect.Parameter.POSITIONAL_ONLY))
 
-        #find today
-        today=D.date.today()
-        after=D.datetime(today.year, today.month, today.day, hour=0, minute=0)
+        #create filter
+        today=D.datetime.today()
+        subtractor=D.datetime(today.year, today.month, today.day, 23, today.minute, today.second)  #24 hours
+
+        difference=today-subtractor  #difference in seconds and microseconds
+        seconds=difference.total_seconds()
+
+        hours=seconds//3600
+        minutes=hours//60
+        seconds=int(seconds%60)
+
+        after=D.datetime.fromtimestamp(D.time(hours, minutes, seconds))
 
         #get messages today
         count=0

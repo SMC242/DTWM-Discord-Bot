@@ -47,11 +47,46 @@ def createListFromFile(filePath, type=str):
     
     return varList  
 
+
+def insertionSort(unsorted: list)->list:
+    '''Sorts the input list and returns a sorted list
+    
+    Adapted from https://www.geeksforgeeks.org/python-program-for-insertion-sort/'''
+
+    for outerCount in range(1, len(unsorted)-1):
+        current=unsorted[outerCount]
+        innerCount=outerCount-1
+
+        while innerCount>=0 and current < unsorted[innerCount]:
+            unsorted[innerCount+1]=unsorted[innerCount]
+            innerCount-=1
+
+            unsorted[innerCount+1]=current
+
+    return unsorted
+
+
 class botOverrides(commands.Cog):
+    lastHit=D.datetime.now()  #for rate limiting
+    lastMsg=D.datetime.now()  #for rate limiting the rate limiter
+
     def __init__(self, bot: commands.Bot):
         '''Subclass of Cog to override certain functions of Bot'''
         self.bot=bot
 
+    async def checkLastHit(self, msg: Message):
+        if not (D.datetime.now() - self.lastHit).total_seconds() > 2:
+            if (D.datetime.now() - self.lastMsg).total_seconds() >3:
+                await msg.channel.send('Please give me time to think, Brother')
+
+                self.lastMsg=D.datetime.now()
+
+            return False
+
+        else:
+            return True
+
+            
     @commands.Cog.listener()
     async def on_command_error(self, ctx, exception):
         """Handle an exception raised during command invokation."""
@@ -86,7 +121,12 @@ class botOverrides(commands.Cog):
 
         elif isinstance(exception, NotLeaderError):
             await ctx.send("Only leaders may do that, brother. Go back to your company")
-            print("     Call rejected. Not leader")
+
+        elif isinstance(exception, commands.DisabledCommand):
+            await ctx.send("I cannot do that, My Lord. The Adepts are doing maintenance on this coroutine.")
+
+        elif isinstance(exception, RateLimited):
+            await ctx.send("Please give me room to think, Brother")
 
         #if bot can't access the channel
         elif isinstance(exception, Forbidden):
@@ -102,6 +142,19 @@ class botOverrides(commands.Cog):
             print(f"Occured at: {D.datetime.now().time()}")
 
             return await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  #give user feedback if internal error occurs
+
+
+    @commands.Cog.listener()
+    async def on_message(self, inputMessage: Message):
+        if await self.checkLastHit(inputMessage):
+
+            if "php" in inputMessage.content.lower():
+                emote=self.bot.get_emoji(662430179129294867)
+
+                self.lastHit=D.datetime.now()
+
+                await inputMessage.add_reaction(emote)
+                return await asyncio.sleep(2)
 
 class TerminalCommand:
     '''Class to wrap all information about a terminal command'''
@@ -194,8 +247,13 @@ class commandListener():
         botChannel=self.bot.get_channel(545818844036464670)
         await botChannel.send('The warp screams in my mind... I must go now')
 
-        await self.bot.logout()
-        self.bot.loop.stop()
+        try:
+            await self.bot.logout()
+            self.bot.loop.stop()
+
+        except concurrent.futures.CancelledError:
+            input("Press any key to exit")
+            sys.exit(0)
 
 
     async def listening(self):
@@ -312,4 +370,7 @@ class commandListener():
 
 
 class NotLeaderError(commands.CommandError):
+    pass
+
+class RateLimited(commands.CommandError):
     pass
