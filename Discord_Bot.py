@@ -123,11 +123,10 @@ async def help(ctx):
     print("Command: help call recieved")
 
     #sort commands alphabetically
-    botCommandsDict={command.name : command for command in bot.walk_commands()}  #used to get the commands after sorting
+    filterOut=commands.Group
+    notGroup={command.name : command for command in bot.walk_commands() if not isinstance(command, filterOut)}  #filter out Groups
 
-    botCommandNames=[key for key in botCommandsDict.keys()]  #returns unsorted list of string
-    botCommandNames=insertionSort(botCommandNames)  #returns sorted list of string
-    botCommands=[botCommandsDict[name] for name in botCommandNames]  #returns sorted list of Commands
+    botCommands=[notGroup[key] for key in sorted(notGroup)]
 
     #show main and leader commands in separate messages
     mainMessage=Embed(title="Help - Main Commands", description="All of the commands of Inquisition. Invoke with ab!{commandName}",\
@@ -645,7 +644,7 @@ async def fluff(ctx):
         return await ctx.invoke(choice)
 
 
-@bot.command(enabled=False, aliases=['count', 'cm', 'getMessages'])
+@bot.command(aliases=['count', 'cm', 'getMessages'])
 @inBotChannel()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def countMessages(ctx, name: str):
@@ -689,17 +688,7 @@ async def countMessages(ctx, name: str):
             raise commands.MissingRequiredArgument(inspect.Parameter("name", inspect.Parameter.POSITIONAL_ONLY))
 
         #create filter
-        today=D.datetime.today()
-        subtractor=D.datetime(today.year, today.month, today.day, 23, today.minute, today.second)  #24 hours
-
-        difference=today-subtractor  #difference in seconds and microseconds
-        seconds=difference.total_seconds()
-
-        hours=seconds//3600
-        minutes=hours//60
-        seconds=int(seconds%60)
-
-        after=D.datetime.fromtimestamp(D.time(hours, minutes, seconds))
+        after=D.datetime.today() - D.timedelta(1)
 
         #get messages today
         count=0
@@ -811,6 +800,10 @@ async def on_ready():
     #acknowledge startup
     botChannel=bot.get_channel(545818844036464670)
     await botChannel.send('I have awoken... I am at your service')
+
+    #set up on_message with the channel list
+    botOverride=bot.get_cog('botOverrides')
+    botOverride.getChannels()
 
     #set status
     status=Activity(name="Purging Heretics and Patting Lolis", type=ActivityType.playing)

@@ -66,6 +66,43 @@ def insertionSort(unsorted: list)->list:
     return unsorted
 
 
+def binarySearch(target, toSearch: list, returnIndex=True)->Union[int, bool]:
+    '''Search the input list for target
+
+    returnIndex: true=return index of target. False=return found bool
+
+    RAISES
+    ValueError: target not in toSearch'''
+
+    lower=0
+    length=len(toSearch)  #stored as local for more speed
+    upper=len(toSearch)-1
+    mid=(lower+upper)//2
+    found=False
+
+    while not found and lower<=length:
+        mid=(lower+upper)//2
+
+        if toSearch[mid]==target:
+            found=True
+
+        elif toSearch[mid]>target:
+            lower=mid+1
+
+        elif toSearch[mid]<target:
+            upper=mid-1
+
+    if found:
+        if returnIndex:
+            return mid
+
+        else:
+            return True
+
+    else:
+        raise ValueError('Target is not in toSearch')
+
+
 class botOverrides(commands.Cog):
     reactionsAllowed=True
 
@@ -74,20 +111,43 @@ class botOverrides(commands.Cog):
         self.bot=bot
 
         today=D.date.today()
-        self._lastHit=D.datetime(today.year, today.month, today.day)  #for rate limiting
-        self._lastMsg=self._lastHit  #for rate limiting the rate limiter
+        self._lastMsg=D.datetime(today.year, today.month, today.day)  #for rate limiting the rate limiter
+        
+
+    def getChannels(self):
+        '''Creates the dict of channels.
+        Cannot be done before on_ready'''
+
+        server= self.bot.get_guild(545422040644190220)
+        self._channelHits={tChannel : self._lastMsg for tChannel in server.text_channels}  #for rate limiting by channel
 
 
     async def checkLastHit(self, msg: Message):
-        if not (D.datetime.now() - self._lastHit).total_seconds() > 60:
-            if (D.datetime.now() - self._lastMsg).total_seconds() >65:
+        '''Check if rate limited'''
+
+        #search for channel
+        try:
+            lastHit=self._channelHits[msg.channel]
+
+        except KeyError:  #message in newly-created channel
+            self.getChannels()  #check the channels again
+            return False
+
+        except AttributeError:  #channel list not set up yet
+            return False
+
+        #check hit
+        timenow=D.datetime.now()
+        if not (timenow - lastHit).total_seconds() > 60:
+            if (timenow - self._lastMsg).total_seconds() >65:
                 await msg.channel.send('Please give me time to think, Brother')
 
-                self._lastMsg=D.datetime.now()
-
+                self._lastMsg=timenow
+                
             return False
 
         else:
+            self._channelHits[msg.channel]=timenow
             return True
 
             
@@ -160,12 +220,12 @@ class botOverrides(commands.Cog):
             if not isinstance(emote, Emoji):
                 emote=self.bot.get_emoji(emote)
 
-            self._lastHit=D.datetime.now()
+            self._channelHits[target.channel]=D.datetime.now()
 
             return await target.add_reaction(emote)
 
 
-        if inputMessage.author==self.bot.user:
+        if inputMessage.author==self.bot.user:  #don't respond to self
             return
 
         notRateLimit= await self.checkLastHit(inputMessage)
