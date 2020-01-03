@@ -454,9 +454,11 @@ async def doAttendance(ctx):
 @bot.command(aliases=["advice", "advise", "adviseMe"])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
-async def giveAdvice(ctx):
+async def giveAdvice(ctx, target: str=None):
     '''Gives you advice based on your roles
-    If you're a scout you will get mostly useful advice'''
+    If you're a scout you will get mostly useful advice
+    Arguments: **[optional]** the target role'''
+
     print("command: giveAdvice call recieved")
 
     mainRoleResponses={
@@ -572,6 +574,9 @@ async def giveAdvice(ctx):
         #check if bot is responding to itself
         if ctx.message.author!=bot.user.id: 
 
+            if target is not None:
+                return await ctx.send(random.choice(mainRoleResponses[target.lower()]))
+
             roleNames=[ctx.message.author.roles[i].name.lower()\
                for i in range(0, len(ctx.message.author.roles))]
 
@@ -587,12 +592,10 @@ async def giveAdvice(ctx):
                     if role in roleNames and responseCount<2: 
 
                         if role=="scout":
-                            await ctx.send("You will get serious advice as you are new here:")
-                            await ctx.send(random.choice(mainRoleResponses[role]))
-                            continue
+                            await ctx.send(f"You will get serious advice as you are new here:\n{random.choice(mainRoleResponses[role])}")
 
                         #1/2 chance to say something per role so that less messages are sent
-                        if random.choice([True, False]):
+                        elif random.choice([True, False]):
                             await ctx.send(random.choice(mainRoleResponses[role]))
                             responseCount+=1      
                             

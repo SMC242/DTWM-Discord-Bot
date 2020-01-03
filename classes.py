@@ -1,7 +1,7 @@
 #author: benmitchellmtb
 from discord.ext import commands
 from discord import *
-import threading, os, sys, traceback, asyncio
+import threading, os, sys, traceback, asyncio, re
 from typing import Callable, Union, Tuple, List
 import asyncio, concurrent
 import datetime as D
@@ -101,6 +101,16 @@ def binarySearch(target, toSearch: list, returnIndex=True)->Union[int, bool]:
 
     else:
         raise ValueError('Target is not in toSearch')
+
+
+def searchWord(word: str, msg: Union[Message, str])->bool:
+    '''Returns a bool based on whether the word is in the message'''
+
+    #ensuring msg is a string
+    if isinstance(msg, Message):
+        msg=msg.contents
+
+    return (re.compile(r'\b({0})\b'.format(word), flags=re.IGNORECASE).search(msg)) is not None
 
 
 class botOverrides(commands.Cog):
@@ -232,11 +242,14 @@ class botOverrides(commands.Cog):
         if notRateLimit==True and self.reactionsAllowed==True:
             msg=inputMessage.content.lower()
 
-            if "php" in msg:
+            if searchWord("php", msg):
                 await react(self, inputMessage, 662430179129294867)
 
-            elif "ayaya" in msg or "<:w_ayaya:622141714655870982>" in msg:
+            elif searchWord("ayaya", msg) or searchWord("<:w_ayaya:622141714655870982>", msg):
                 await react(self, inputMessage, 622141714655870982)
+
+            else:
+                return
 
 
 class TerminalCommand:
