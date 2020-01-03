@@ -171,6 +171,7 @@ async def help(ctx):
 
 
 @bot.command(aliases=['re', 'noRe', 'reactions', 'TR', 'nR'])
+@isLeader()
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def toggleReactions(ctx):
