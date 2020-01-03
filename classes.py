@@ -1,6 +1,6 @@
 #author: benmitchellmtb
 from discord.ext import commands
-from discord import Forbidden, Message
+from discord import *
 import threading, os, sys, traceback, asyncio
 from typing import Callable, Union, Tuple, List
 import asyncio, concurrent
@@ -67,21 +67,23 @@ def insertionSort(unsorted: list)->list:
 
 
 class botOverrides(commands.Cog):
-    lastHit=D.datetime.now()  #for rate limiting
-    lastMsg=D.datetime.now()  #for rate limiting the rate limiter
-
     reactionsAllowed=True
 
     def __init__(self, bot: commands.Bot):
         '''Subclass of Cog to override certain functions of Bot'''
         self.bot=bot
 
+        today=D.date.today()
+        self._lastHit=D.datetime(today.year, today.month, today.day)  #for rate limiting
+        self._lastMsg=self._lastHit  #for rate limiting the rate limiter
+
+
     async def checkLastHit(self, msg: Message):
-        if not (D.datetime.now() - self.lastHit).total_seconds() > 60:
-            if (D.datetime.now() - self.lastMsg).total_seconds() >65:
+        if not (D.datetime.now() - self._lastHit).total_seconds() > 60:
+            if (D.datetime.now() - self._lastMsg).total_seconds() >65:
                 await msg.channel.send('Please give me time to think, Brother')
 
-                self.lastMsg=D.datetime.now()
+                self._lastMsg=D.datetime.now()
 
             return False
 
@@ -148,14 +150,34 @@ class botOverrides(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, inputMessage: Message):
-        if await self.checkLastHit(inputMessage) and self.reactionsAllowed:
-            if "php" in inputMessage.content.lower():
-                emote=self.bot.get_emoji(662430179129294867)
+        '''React to certain messages'''
 
-                self.lastHit=D.datetime.now()
+        async def react(self, target: Message, emote: Union[Emoji, int]):
+            '''Wrapper for Message.add_reaction.
 
-                await inputMessage.add_reaction(emote)
-                return await asyncio.sleep(2)
+            Updates self.lastHit'''
+
+            if not isinstance(emote, Emoji):
+                emote=self.bot.get_emoji(emote)
+
+            self._lastHit=D.datetime.now()
+
+            return await target.add_reaction(emote)
+
+
+        if inputMessage.author==self.bot.user:
+            return
+
+        notRateLimit= await self.checkLastHit(inputMessage)
+        if notRateLimit==True and self.reactionsAllowed==True:
+            msg=inputMessage.content.lower()
+
+            if "php" in msg:
+                await react(self, inputMessage, 662430179129294867)
+
+            elif "ayaya" in msg or "<:w_ayaya:622141714655870982>" in msg:
+                await react(self, inputMessage, 622141714655870982)
+
 
 class TerminalCommand:
     '''Class to wrap all information about a terminal command'''

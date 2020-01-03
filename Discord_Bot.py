@@ -175,6 +175,8 @@ async def help(ctx):
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def toggleReactions(ctx):
+    print("Command: toggleReactions call recieved")
+
     botOverride=bot.get_cog('botOverrides')
     botOverride.reactionsAllowed= not botOverride.reactionsAllowed
 
@@ -780,7 +782,8 @@ async def ping(ctx):
         else:
             suffixString="The Tyranids are coming! You must escape now and send word to Terra"
 
-        print(f"Command: ping call recieved.\n   Ping: {difference} seconds")
+        print(f"Command: ping call recieved.\n   Process time: {difference} seconds\n   Latency: {bot.latency}")
+        await ctx.send(f"Latency: {bot.latency}")
         return await ctx.send(f"I took {difference:.2f} seconds to get here. {suffixString}")
 
 
