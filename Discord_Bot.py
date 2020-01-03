@@ -170,6 +170,16 @@ async def help(ctx):
     return await ctx.send(embed=leaderMessage)
 
 
+@bot.command(aliases=['re', 'noRe', 'reactions', 'TR', 'nR'])
+@inBotChannel()
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def toggleReactions(ctx):
+    botOverride=bot.get_cog('botOverrides')
+    botOverride.reactionsAllowed= not botOverride.reactionsAllowed
+
+    return await ctx.send(f"I {'will' if botOverride.reactionsAllowed else 'will not'} react to messages, My Lord")
+
+
 @leader.command()
 @inBotChannel()
 async def getInOps(ctx):

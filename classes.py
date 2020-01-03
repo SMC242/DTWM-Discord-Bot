@@ -70,13 +70,15 @@ class botOverrides(commands.Cog):
     lastHit=D.datetime.now()  #for rate limiting
     lastMsg=D.datetime.now()  #for rate limiting the rate limiter
 
+    reactionsAllowed=True
+
     def __init__(self, bot: commands.Bot):
         '''Subclass of Cog to override certain functions of Bot'''
         self.bot=bot
 
     async def checkLastHit(self, msg: Message):
-        if not (D.datetime.now() - self.lastHit).total_seconds() > 2:
-            if (D.datetime.now() - self.lastMsg).total_seconds() >3:
+        if not (D.datetime.now() - self.lastHit).total_seconds() > 60:
+            if (D.datetime.now() - self.lastMsg).total_seconds() >65:
                 await msg.channel.send('Please give me time to think, Brother')
 
                 self.lastMsg=D.datetime.now()
@@ -146,8 +148,7 @@ class botOverrides(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, inputMessage: Message):
-        if await self.checkLastHit(inputMessage):
-
+        if await self.checkLastHit(inputMessage) and self.reactionsAllowed:
             if "php" in inputMessage.content.lower():
                 emote=self.bot.get_emoji(662430179129294867)
 
