@@ -120,16 +120,16 @@ class botOverrides(commands.Cog):
         '''Subclass of Cog to override certain functions of Bot'''
         self.bot=bot
 
-        today=D.date.today()
-        self._lastMsg=D.datetime(today.year, today.month, today.day)  #for rate limiting the rate limiter
-        
 
     def getChannels(self):
         '''Creates the dict of channels.
         Cannot be done before on_ready'''
 
+        today=D.date.today()
+        tempHit=D.datetime(today.year, today.month, today.day)  #add placeholder datetime until there's a hit
+
         server= self.bot.get_guild(545422040644190220)
-        self._channelHits={tChannel : self._lastMsg for tChannel in server.text_channels}  #for rate limiting by channel
+        self._channelHits={tChannel : tempHit for tChannel in server.text_channels}  #for rate limiting by channel
 
 
     async def checkLastHit(self, msg: Message):
@@ -148,12 +148,7 @@ class botOverrides(commands.Cog):
 
         #check hit
         timenow=D.datetime.now()
-        if not (timenow - lastHit).total_seconds() > 60:
-            if (timenow - self._lastMsg).total_seconds() >65:
-                await msg.channel.send('Please give me time to think, Brother')
-
-                self._lastMsg=timenow
-                
+        if not (timenow - lastHit).total_seconds() > 60:                
             return False
 
         else:
@@ -239,6 +234,7 @@ class botOverrides(commands.Cog):
             return
 
         notRateLimit= await self.checkLastHit(inputMessage)
+
         if notRateLimit==True and self.reactionsAllowed==True:
             msg=inputMessage.content.lower()
 
