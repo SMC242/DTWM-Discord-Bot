@@ -901,7 +901,7 @@ async def changeStatus(ctx, status: str):
     print("Command: changeStatus call recieved")
 
     types={
-        "newvideo": "New propaganda on https://www.youtube.com/channel/UC7hEdOskMUNb3YTn6kn8poA",
+        "newvideo": "New propaganda on https://tinyurl.com/dtwmyt",
         "eventsoon" : "Ops soon. Hop in comms, brother",
         "gathering" : "Astartes gathering soon. Get in comms, brother",
         "meeting" : "Hush, the Watch Leaders are planning",
@@ -912,6 +912,7 @@ async def changeStatus(ctx, status: str):
     except KeyError:
         raise commands.BadArgument(inspect.Parameter("days", inspect.Parameter.POSITIONAL_ONLY))
 
+    await ctx.send("I shall get to it immediately, My Lord")
     return await bot.change_presence(activity=Activity(name=msg, type=ActivityType.playing))
 
 
