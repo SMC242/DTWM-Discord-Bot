@@ -900,19 +900,26 @@ async def changeStatus(ctx, status: str):
 
     print("Command: changeStatus call recieved")
 
+    #dict of name : Tuple[message, link]
     types={
-        "newvideo": "New propaganda on https://tinyurl.com/dtwmyt",
-        "eventsoon" : "Ops soon. Hop in comms, brother",
-        "gathering" : "Astartes gathering soon. Get in comms, brother",
-        "meeting" : "Hush, the Watch Leaders are planning",
+        "newvideo": ("New propaganda on our channel", "https://tinyurl.com/dtwmyt"),
+        "eventsoon" : ("Ops soon. Hop in comms, brother", None),
+        "gathering" : ("Astartes gathering soon. Get in comms, brother", None),
+        "meeting" : ("Hush, the Watch Leaders are planning", None),
     }
 
     try:
-        msg=types[status.lower()]
+        msg, link=types[status.lower()]
+
     except KeyError:
         raise commands.BadArgument(inspect.Parameter("days", inspect.Parameter.POSITIONAL_ONLY))
 
-    await ctx.send("I shall get to it immediately, My Lord")
+    #create embed
+    response=Embed(title=msg, url=link, colour=Colour(13908894), body=link)
+    response.set_thumbnail(url="https://images-ext-1.discordapp.net/external/3K5RIK7FKfthdHJl0ubKh8uUSKjEP8odoO4ks1evlzs/%3Fsize%3D128/https/cdn.discordapp.com/avatars/507206805621964801/3468cd3ed831a5b10b49d8e06c801418.png")
+
+    #send response and change status
+    await ctx.send(embed=response)
     return await bot.change_presence(activity=Activity(name=msg, type=ActivityType.playing))
 
 
@@ -954,9 +961,13 @@ async def on_ready():
 
     timenow=timenow.time()
 
-    if 2000<int(timenow.strftime("%H%M"))<2200:  #if started during an event
+    if 2000<int(timenow.strftime("%H%M"))<2130:  #if started during an event
         attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
-        failure=callAttendance(attendees)
+        try:
+            failure=callAttendance(attendees)
+
+        except TypeError:  #event started too late
+            pass
 
         if failure:
             await botChannel.send('We do not take roll call on Saturdays!')
@@ -973,7 +984,11 @@ async def on_ready():
         await getInOpsInner()  #ping people to get in ops
 
         attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
-        failure=callAttendance(attendees)
+        try:
+            failure=callAttendance(attendees)
+
+        except TypeError:  #event started too late
+            pass
 
         if failure:
             await botChannel.send('We do not take roll call on Saturdays!')
