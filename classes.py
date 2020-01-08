@@ -149,7 +149,6 @@ class botOverrides(commands.Cog):
             return False
 
         else:
-            self._channelHits[msg.channel]=timenow
             return True
 
             
