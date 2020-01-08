@@ -275,7 +275,12 @@ async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
 
         timenow=int(D.datetime.now().strftime("%H%M"))
 
-        for milestone in milestones:
+        #exit if out of event time
+        if timenow> milestones[-1]:
+            print("Scheduled Event ({func.name}): exited. Error: too late")
+            return
+
+        for milestone in milestones:  #check each 
             milestone=int(milestone)
 
             if milestone == int(timenow):
@@ -700,7 +705,7 @@ async def countMessages(ctx, name: str):
             yield count
 
 
-    print("Command: countMessages call recieve")
+    print("Command: countMessages call recieved")
 
     async with ctx.typing():
         server=None
@@ -790,7 +795,7 @@ async def ping(ctx):
            "The Tyranids are coming! You must escape now and send word to Terra")
 
 
-@bot.command(enabled=True, aliases=["nig", "black", "BLA", "BLATT", "B"])
+@leader.command(enabled=False, aliases=["nig", "black", "BLA", "BLATT", "B"])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def markAsblack(ctx, days: int=1, *target):
@@ -881,6 +886,35 @@ async def markAsblack(ctx, days: int=1, *target):
         raise CommandNotImplementedError()
 
 
+@leader.command(aliases=["CS"])
+@inBotChannel()
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def changeStatus(ctx, status: str):
+    '''Changes the status to the target status name.
+    Will be overridden within an hour by the normal status loop.
+    Arguments: ab!leader changeStatus {name}
+        newVideo: new youtube video is being uploaded
+        eventSoon: event in < 1 hour
+        gathering: gathering in < 1 hour
+        meeting: leaders in meeting, do not disturb'''
+
+    print("Command: changeStatus call recieved")
+
+    types={
+        "newvideo": "New propaganda on https://www.youtube.com/channel/UC7hEdOskMUNb3YTn6kn8poA",
+        "eventsoon" : "Ops soon. Hop in comms, brother",
+        "gathering" : "Astartes gathering soon. Get in comms, brother",
+        "meeting" : "Hush, the Watch Leaders are planning",
+    }
+
+    try:
+        msg=types[status.lower()]
+    except KeyError:
+        raise commands.BadArgument(inspect.Parameter("days", inspect.Parameter.POSITIONAL_ONLY))
+
+    return await bot.change_presence(activity=Activity(name=msg, type=ActivityType.playing))
+
+
 def main():
     '''Put all function calls in here.
     This function will add the function calls to the event loop
@@ -908,9 +942,9 @@ async def on_ready():
     botOverride=bot.get_cog('botOverrides')
     botOverride.getChannels()
 
-    #set status
-    status=Activity(name="Purging Heretics and Patting Lolis", type=ActivityType.playing)
-    await bot.change_presence(activity=status)
+    #start random statuses
+    loop=asyncio.get_event_loop()
+    loop.create_task(botOverride.chooseStatus())
 
     #scheduling the attendance function
     timenow=D.datetime.now()

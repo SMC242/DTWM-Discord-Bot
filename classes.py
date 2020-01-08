@@ -1,7 +1,7 @@
 #author: benmitchellmtb
 from discord.ext import commands
 from discord import *
-import threading, os, sys, traceback, asyncio, re
+import threading, os, sys, traceback, asyncio, re, random
 from typing import Callable, Union, Tuple, List
 import asyncio, concurrent
 import datetime as D
@@ -116,6 +116,54 @@ class botOverrides(commands.Cog):
         '''Subclass of Cog to override certain functions of Bot.
         getChannels must be called after on_ready to fully initialise this class'''
         self.bot=bot
+
+
+    async def chooseStatus(self):
+        '''Update random status hourly'''
+
+        playingStatuses=[
+            "Purging Heretics and Patting Lolis",
+            "raid: ben's hentai stash",
+            "Quest For The Tankist Role",
+            "Recruiting Blueberries",
+            "Ayaya",
+            "Zerging",
+            "Applying For DTWM Simulator",
+            "A Mad 0.1 KPM 0.2 KDR sesh 😤",
+            "Plotting A Split",
+            "Debating Best Girl",
+            "Spanking Guardsmen",
+            "Crusade Planning",
+            "Commander Cyrious: Keyboard Warrior",
+            "A Heated Gamer Moment",
+            "Editing A Sick Montage",
+            "With Slaaneshi Gathering",
+            "Waiting For the Council Meeting To End",
+            "Learning to Feel Pain",
+            "UwU",
+            "UmU",
+            "Heresy Detected",
+            '"Washing" My Body Pillow',
+            "Playing With My Waifu",
+            "Itadakimasu~!",
+            "Seals For Supper",
+        ]
+
+        watchingStatuses=[
+            "Ahegao Tutorials",
+            "Ayaya Intensifies"
+            ]
+
+        statuses=[Activity(name=msg, type=ActivityType.playing) for msg in playingStatuses]
+        watching=[Activity(name=msg, type=ActivityType.watching) for msg in watchingStatuses]
+
+        statuses+=watching
+
+        while True:
+            #set random status
+            await self.bot.change_presence(activity=random.choice(statuses))
+
+            await asyncio.sleep(3600)  #change presence every hour
 
 
     def getChannels(self):
