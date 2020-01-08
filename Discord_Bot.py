@@ -1,7 +1,7 @@
 #authors: benmitchellmtb, ScreaminSteve, FasterNo1
 from discord import *
 from discord.ext import commands
-import threading, time, random, asyncio, time, inspect, traceback
+import threading, time, random, asyncio, time, inspect, traceback, string
 import datetime as D
 from typing import *
 
@@ -183,7 +183,7 @@ async def toggleReactions(ctx):
     return await ctx.send(f"I {'will' if botOverride.reactionsAllowed else 'will not'} react to messages, My Lord")
 
 
-@leader.command()
+@leader.command(aliases=["V5", "INeedARide", "WaitUpLetMeHopIn"])
 @inBotChannel()
 async def getInOps(ctx):
     '''Pings every member that's playing PS2 but isn't in ops comms.'''
@@ -233,6 +233,27 @@ async def getInOpsInner():
                 await botChannel.send(f'{member.mention} an event is running right now, brother. Come join us in glory!')
 
         return "Nya~"  #end typing()
+
+
+async def reactToOutput(ctx: commands.Context, responses: Dict[Tuple[int, int], str], toCompare: int,
+    message: str=None, defaultResponse: str="", **relevantVars):
+    '''Sends a message from responses based on output.
+    If output is not in responses' keys, defaultResponse will be outputted.
+
+    responses: should be in this format:
+        range of values(min, max) : message to send.
+        The same value can be placed twice e.g (1, 1) for toCompare to be required to hit that value.
+    toCompare: the output of the command that calls this function. Compared against the ranges in responses.
+    message: the message from the command. The response will be appended to this
+    defaultResponse: what will be sent if output meets none of responses' criteria.
+    **relevantVars: any variables needed for the message'''
+
+    for comparisonRange, response in responses.items():
+        if comparisonRange[0] <= toCompare <= comparisonRange[1]:
+            return await ctx.send(message + response)
+
+    #if toCompare not hit
+    return await ctx.send(message + defaultResponse)
 
 
 async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
@@ -324,7 +345,7 @@ async def patLoli(ctx):
     return await ctx.send(random.choice(emotes))
 
 
-async def getAttendance(ctx: Union[commands.Context, Guild]):
+async def getAttendance(ctx: Union[commands.Context, Guild])-> List[str]:
     '''Returns a list of people in the ops/training channels'''
     #reads the channels to check from a file
     #appends the channel IDs to channels
@@ -457,7 +478,8 @@ async def doAttendance(ctx):
 async def giveAdvice(ctx, target: str=None):
     '''Gives you advice based on your roles
     If you're a scout you will get mostly useful advice
-    Arguments: **[optional]** the target role'''
+    Arguments: ab!giveAdvice {target}
+        **[optional]** the target role'''
 
     print("command: giveAdvice call recieved")
 
@@ -654,7 +676,8 @@ async def fluff(ctx):
 async def countMessages(ctx, name: str):
     '''Returns and reacts the number of messages in the target channel.
     Counts today's messages only.
-    Arguments: #mention a text channel or 'global' for the whole discord'''
+    Arguments: ab!countMessages {name}
+    #mention a text channel or 'global' for the whole discord'''
 
     async def getAllMessages(channels: List[TextChannel])-> Generator[int, int, None]:
         '''Generator for the entire server's messages'''
@@ -718,40 +741,28 @@ async def countMessages(ctx, name: str):
         
 
         #reacting
-        if server is not None:
-            if count<=600:
-                messageSuffix="A quiet day aboard Erioch"
+        if server is not None:  # if global
+            responses={
+                (0, 800) : "A quiet day aboard the Erioch",
+                (1200, 1400) : "A mild hull breach occurred. It's fixed now, My Lord",
+                (1400, 1500) : "Maintenance in the engine room occurred today. Many souls were lost",
+                (1500, 1600) : "We were planning to make war"
+            }
 
-            elif 600<count<800:
-                messageSuffix="A mild hull breach occurred. It's fixed now, My Lord"
+            return await reactToOutput(ctx, responses, count,\
+                f"Status report, Sir: {count} messages were conveyed across our glorious vessel. ",\
+                "We suffered an Eldar incursion")
 
-            elif 800<count<1000:
-                messageSuffix="Maintenance in the engine room occurred today. Many souls were lost"
+        else:  # if channel
+            responses={
+                (0, 100) : "Not much happened, My Lord",
+                (100, 200) : "The Guardsmen were arguing again",
+                (400, 500) : "A minor brawl. Nothing too serious, My Lord",
+                }
 
-            elif 1000<count<1200:
-                messageSuffix="We were planning to make war"
-
-            else:
-                messageSuffix="We suffered an Eldar incursion"
-
-        else:
-            if count<=100:
-                messageSuffix="Not much happened, My Lord"
-
-            elif count>200:
-                messageSuffix="The Guardsmen were arguing again"
-
-            elif 400<count<500:
-                messageSuffix="A minor brawl. Nothing too serious, My Lord"
-
-            else:  #if more than 300
-                messageSuffix="Chaos cultists were uprooted from their despicable congregation"
-
-        if server is None:
-            return await ctx.send(f"Status report, Sir: {count} messages were sent today in {channel.mention}. {messageSuffix}")
-
-        else:  #global is True
-            return await ctx.send(f"Status report, Sir: {count} messages were sent today in our glorious vessel. {messageSuffix}")
+            return await reactToOutput(ctx, responses, count, \
+                f"Status report, Sir: {count} messages were sent today in {channel.mention}. ",\
+                "Chaos cultists were uprooted from their despicable congregation")
 
 
 @bot.command(aliases=["p", "speed"])
@@ -768,18 +779,102 @@ async def ping(ctx):
         difference=endTime-startTime
 
         #react to result
-        if difference<0.1:
-            suffixString="I came as fast as I could"
-
-        elif 0.1<=difference<0.5:
-            suffixString="I polished your armour"
-
-        else:
-            suffixString="The Tyranids are coming! You must escape now and send word to Terra"
+        responses={
+            (0, 0.1) : "I came as fast as I could",
+            (0.1, 0.5) : "I polished your armour",
+        }
 
         print(f"Command: ping call recieved.\n   Process time: {difference} seconds\n   Latency: {bot.latency}")
-        return await ctx.send(f"Latency: {bot.latency:.2f}\nI took {difference:.2f} seconds to get here. {suffixString}")
+        return await reactToOutput(ctx, responses, difference,\
+           f"Latency: {bot.latency:.2f}\nI took {difference:.2f} seconds to get here. ",\
+           "The Tyranids are coming! You must escape now and send word to Terra")
 
+
+@leader.command(enabled=True, aliases=["nig", "black", "BLA", "BLATT", "B"])
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def markAsblack(ctx, days: int=1, *target):
+    '''Marks the target as black for X number of days.
+    Arguments: ab!leader markAsBlack {days} {target}
+        days = number of days to mark as black. Defaults to 1
+        target = copy the FULL nickname of the member
+        '''
+    #target: Tuple[str]
+
+    async def stripTag(name: str)-> str:
+        '''Strips out [TAG]s with a linear search.'''
+
+        if "]" in name:
+            #linear search for end of outfit tag and set name to name after tag
+            i=0
+            while True: 
+                if name[i] == "]":
+                    try:
+                        if name[i+1]==" ":  #some people put spaces
+                            i+=1
+
+                        return name[i+1:]
+
+                    except IndexError:  #tag at end of name
+                        return name
+
+                else:
+                    i+=1
+
+        else:
+            return name
+
+
+    async def removeSymbols(name: str)-> str:
+        '''Remove all the weird shit from people's names'''
+        letters=string.ascii_lowercase
+
+        for char in name:
+            if char not in letters:
+                name=name.replace(char, "")
+
+        return name
+
+
+    print("Command: markAsBlack call recieved")
+
+    async with ctx.typing():
+        #check args
+        if target is None or not any(target):
+            raise commands.MissingRequiredArgument(inspect.Parameter("target", inspect.Parameter.POSITIONAL_ONLY))
+
+        #rebuild name
+        targetName="".join(target)
+        targetName=targetName.lower()
+        targetName= await stripTag(targetName)
+        targetName= await removeSymbols(targetName)
+    
+        # verifying that the target exists
+        #create dict of members with letter-only names
+        names={}
+        for person in ctx.guild.members:
+            name=person.display_name.lower()
+
+            name=await stripTag(name)
+
+            name=await removeSymbols(name)
+
+            names[name] = person
+
+        sortedNames=sorted(names)  #sort names into list
+
+        exists=binarySearch(targetName, sortedNames, False)
+        if not exists:  #they don't exist
+            return await ctx.send("That person does not exist, My Lord")
+
+        else:
+            person=names[targetName]
+
+        #verifying that they're a memberz
+        if not await checkRoles((person,), ("Astartes", "Champion", "Watch Leader")):
+            return await ctx.send("That person is not one of ours, My Lord")
+
+        #markAsBlackOnSheet()
+        raise CommandNotImplementedError()
 
 
 def main():

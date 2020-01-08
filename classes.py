@@ -69,28 +69,24 @@ def insertionSort(unsorted: list)->list:
 def binarySearch(target, toSearch: list, returnIndex=True)->Union[int, bool]:
     '''Search the input list for target
 
-    returnIndex: true=return index of target. False=return found bool
-
-    RAISES
-    ValueError: target not in toSearch'''
+    returnIndex: true=return index of target. False=return found bool'''
 
     lower=0
-    length=len(toSearch)  #stored as local for more speed
     upper=len(toSearch)-1
-    mid=(lower+upper)//2
+    mid=lower + ((upper-lower) // 2)
     found=False
 
-    while not found and lower<=length:
-        mid=(lower+upper)//2
+    while not found and lower<=upper:
+        mid=lower + ((upper-lower) // 2)
 
-        if toSearch[mid]==target:
+        if toSearch[mid]==target:  #target is found
             found=True
 
-        elif toSearch[mid]>target:
-            lower=mid+1
-
-        elif toSearch[mid]<target:
+        elif toSearch[mid]>target:  #target is smaller than current
             upper=mid-1
+
+        else:  #target is larger than current
+            lower=mid+1
 
     if found:
         if returnIndex:
@@ -100,7 +96,7 @@ def binarySearch(target, toSearch: list, returnIndex=True)->Union[int, bool]:
             return True
 
     else:
-        raise ValueError('Target is not in toSearch')
+        return False
 
 
 def searchWord(word: str, msg: Union[Message, str])->bool:
@@ -117,7 +113,8 @@ class botOverrides(commands.Cog):
     reactionsAllowed=True
 
     def __init__(self, bot: commands.Bot):
-        '''Subclass of Cog to override certain functions of Bot'''
+        '''Subclass of Cog to override certain functions of Bot.
+        getChannels must be called after on_ready to fully initialise this class'''
         self.bot=bot
 
 
@@ -157,6 +154,48 @@ class botOverrides(commands.Cog):
 
             
     @commands.Cog.listener()
+    async def on_message(self, inputMessage: Message):
+        '''React to certain messages'''
+
+        async def react(self, target: Message, emote: Union[Emoji, int]):
+            '''Wrapper for Message.add_reaction.
+
+            Updates self.lastHit'''
+
+            if not isinstance(emote, Emoji):
+                emote=self.bot.get_emoji(emote)
+
+            self._channelHits[target.channel]=D.datetime.now()
+
+            return await target.add_reaction(emote)
+
+
+        if inputMessage.author==self.bot.user:  #don't respond to self
+            return
+        
+        #check rate limit
+        notRateLimit= await self.checkLastHit(inputMessage)
+
+        #if rate limit passes and reactions not disabled
+        if notRateLimit==True and self.reactionsAllowed==True:
+            msg=inputMessage.content.lower()
+
+            #check for whitelisted emotes
+            if searchWord("php", msg):
+                emoteID=662430179129294867
+
+            elif searchWord("ayaya", msg) or searchWord("<:w_ayaya:622141714655870982>", msg):
+                emoteID=622141714655870982
+
+            else:  #if not matched
+                return
+
+            #if matched
+            async with inputMessage.channel.typing():
+                return await react(self, inputMessage, emoteID)
+
+
+    @commands.Cog.listener()
     async def on_command_error(self, ctx, exception):
         """Handle an exception raised during command invokation."""
         # Only use this error handler if the current context does not provide its
@@ -189,13 +228,19 @@ class botOverrides(commands.Cog):
             pass
 
         elif isinstance(exception, NotLeaderError):
-            await ctx.send("Only leaders may do that, brother. Go back to your company")
+            return await ctx.send("Only leaders may do that, brother. Go back to your company")
 
         elif isinstance(exception, commands.DisabledCommand):
-            await ctx.send("I cannot do that, My Lord. The Adepts are doing maintenance on this coroutine.")
+            return await ctx.send("I cannot do that, My Lord. The Adepts are doing maintenance on this coroutine.")
+
+        elif isinstance(exception, commands.BadArgument):
+            return await ctx.send("I don't understand your orders, My Lord")
 
         elif isinstance(exception, RateLimited):
-            await ctx.send("Please give me room to think, Brother")
+            return await ctx.send("Please give me room to think, Brother")
+
+        elif isinstance(exception, CommandNotImplementedError):
+            return await ctx.send("The Adepts are yet to complete that command, Brother")
 
         #if bot can't access the channel
         elif isinstance(exception, Forbidden):
@@ -211,41 +256,6 @@ class botOverrides(commands.Cog):
             print(f"Occured at: {D.datetime.now().time()}")
 
             return await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  #give user feedback if internal error occurs
-
-
-    @commands.Cog.listener()
-    async def on_message(self, inputMessage: Message):
-        '''React to certain messages'''
-
-        async def react(self, target: Message, emote: Union[Emoji, int]):
-            '''Wrapper for Message.add_reaction.
-
-            Updates self.lastHit'''
-
-            if not isinstance(emote, Emoji):
-                emote=self.bot.get_emoji(emote)
-
-            self._channelHits[target.channel]=D.datetime.now()
-
-            return await target.add_reaction(emote)
-
-
-        if inputMessage.author==self.bot.user:  #don't respond to self
-            return
-
-        notRateLimit= await self.checkLastHit(inputMessage)
-
-        if notRateLimit==True and self.reactionsAllowed==True:
-            msg=inputMessage.content.lower()
-
-            if searchWord("php", msg):
-                await react(self, inputMessage, 662430179129294867)
-
-            elif searchWord("ayaya", msg) or searchWord("<:w_ayaya:622141714655870982>", msg):
-                await react(self, inputMessage, 622141714655870982)
-
-            else:
-                return
 
 
 class TerminalCommand:
@@ -462,7 +472,13 @@ class commandListener():
 
 
 class NotLeaderError(commands.CommandError):
+    '''If the Member is not >=Champion'''
     pass
 
 class RateLimited(commands.CommandError):
+    '''For the custom on_message rate limiter'''
+    pass
+
+class CommandNotImplementedError(commands.CommandError):
+    '''Command partially complete but not disabled for testing reasons'''
     pass
