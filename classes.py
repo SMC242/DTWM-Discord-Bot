@@ -145,7 +145,7 @@ class botOverrides(commands.Cog):
 
         #check hit
         timenow=D.datetime.now()
-        if not (timenow - lastHit).total_seconds() > 60:                
+        if not ((timenow - lastHit).total_seconds() > 60):                
             return False
 
         else:
@@ -172,27 +172,26 @@ class botOverrides(commands.Cog):
 
         if inputMessage.author==self.bot.user:  #don't respond to self
             return
-        
-        #check rate limit
-        notRateLimit= await self.checkLastHit(inputMessage)
 
         #if rate limit passes and reactions not disabled
-        if notRateLimit==True and self.reactionsAllowed==True:
+        if self.reactionsAllowed==True:
             msg=inputMessage.content.lower()
 
             #check for whitelisted emotes
             if searchWord("php", msg):
                 emoteID=662430179129294867
 
-            elif searchWord("ayaya", msg) or searchWord("<:w_ayaya:622141714655870982>", msg):
+            elif searchWord("ayaya", msg) or "<:w_ayaya:622141714655870982>" in msg:
                 emoteID=622141714655870982
 
             else:  #if not matched
                 return
 
             #if matched
-            async with inputMessage.channel.typing():
-                return await react(self, inputMessage, emoteID)
+            #check rate limit
+            if await self.checkLastHit(inputMessage):
+                async with inputMessage.channel.typing():
+                    return await react(self, inputMessage, emoteID)
 
 
     @commands.Cog.listener()

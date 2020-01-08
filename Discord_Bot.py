@@ -700,7 +700,7 @@ async def countMessages(ctx, name: str):
             yield count
 
 
-    print(f"Command: countMessages call recieved. Args = {name}")
+    print("Command: countMessages call recieve")
 
     async with ctx.typing():
         server=None
@@ -744,7 +744,7 @@ async def countMessages(ctx, name: str):
         if server is not None:  # if global
             responses={
                 (0, 800) : "A quiet day aboard the Erioch",
-                (1200, 1400) : "A mild hull breach occurred. It's fixed now, My Lord",
+                (800, 1400) : "A mild hull breach occurred. It's fixed now, My Lord",
                 (1400, 1500) : "Maintenance in the engine room occurred today. Many souls were lost",
                 (1500, 1600) : "We were planning to make war"
             }
@@ -790,10 +790,11 @@ async def ping(ctx):
            "The Tyranids are coming! You must escape now and send word to Terra")
 
 
-@leader.command(enabled=True, aliases=["nig", "black", "BLA", "BLATT", "B"])
+@bot.command(enabled=True, aliases=["nig", "black", "BLA", "BLATT", "B"])
+@inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def markAsblack(ctx, days: int=1, *target):
-    '''Marks the target as black for X number of days.
+    '''Marks the target on the sheet as black for X number of days.
     Arguments: ab!leader markAsBlack {days} {target}
         days = number of days to mark as black. Defaults to 1
         target = copy the FULL nickname of the member
@@ -841,6 +842,9 @@ async def markAsblack(ctx, days: int=1, *target):
         #check args
         if target is None or not any(target):
             raise commands.MissingRequiredArgument(inspect.Parameter("target", inspect.Parameter.POSITIONAL_ONLY))
+
+        if days<=0:
+            raise commands.BadArgument(inspect.Parameter("days", inspect.Parameter.POSITIONAL_ONLY))
 
         #rebuild name
         targetName="".join(target)
