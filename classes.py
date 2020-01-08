@@ -173,7 +173,7 @@ class botOverrides(commands.Cog):
             return
 
         #if rate limit passes and reactions not disabled
-        if self.reactionsAllowed==True:
+        if await self.checkLastHit(inputMessage) and self.reactionsAllowed:
             msg=inputMessage.content.lower()
 
             #check for whitelisted emotes
@@ -187,10 +187,8 @@ class botOverrides(commands.Cog):
                 return
 
             #if matched
-            #check rate limit
-            if await self.checkLastHit(inputMessage):
-                async with inputMessage.channel.typing():
-                    return await react(self, inputMessage, emoteID)
+            async with inputMessage.channel.typing():
+                return await react(self, inputMessage, emoteID)
 
 
     @commands.Cog.listener()
