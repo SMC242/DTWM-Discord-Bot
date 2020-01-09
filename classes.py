@@ -1,7 +1,7 @@
 #author: benmitchellmtb
 from discord.ext import commands
 from discord import *
-import threading, os, sys, traceback, asyncio, re, random
+import threading, os, sys, traceback, asyncio, re, random, csv
 from typing import Callable, Union, Tuple, List
 import asyncio, concurrent
 import datetime as D
@@ -117,6 +117,14 @@ class botOverrides(commands.Cog):
         getChannels must be called after on_ready to fully initialise this class'''
         self.bot=bot
 
+        with open("Text Files/trainingWeek.csv") as f:
+            for row in csv.reader(f, "excel"):
+                trainingWeekRow=row  #this will take the final row as the correct week
+
+        trainingWeekRow=map(int, trainingWeekRow)  #convert all to int
+
+        self.firstTrainingWeek=D.datetime(*trainingWeekRow)
+
 
     async def chooseStatus(self):
         '''Update random status hourly'''
@@ -137,7 +145,7 @@ class botOverrides(commands.Cog):
             "Commander Cyrious: Keyboard Warrior",
             "A Heated Gamer Moment",
             "Editing A Sick Montage",
-            "With Slaaneshi Gathering",
+            "Slaaneshi Gathering",
             "Waiting For the Council Meeting To End",
             "Learning to Feel Pain",
             "UwU",
@@ -198,6 +206,34 @@ class botOverrides(commands.Cog):
 
         else:
             return True
+
+
+    @property
+    def trainingWeek(self)-> str:
+        '''Get the current training week - air or armour
+        
+        THROWS
+        ValueError: firstTrainingWeek is not a monday = check trainingWeek.txt is a monday'''
+
+        #find this week's monday
+        today=D.date.today()
+        today=D.datetime(today.year, today.month, today.day)
+        today=today-D.timedelta(days=D.date.today().weekday())
+
+        #get distance from first week
+        difference=(self.firstTrainingWeek-today).days  #difference in days
+        week=difference/7  #difference in weeks
+        week=difference%2
+
+        #if remainder 1: 1 week has passed, if multiple of 2: 2 weeks has passed
+        if week==0:
+            return "aerial superiority"
+
+        elif week==1:
+            return "armour support"
+
+        else:
+            raise ValueError("firstTrainingWeek is not a Monday")
 
             
     @commands.Cog.listener()

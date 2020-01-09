@@ -923,6 +923,22 @@ async def changeStatus(ctx, status: str):
     return await bot.change_presence(activity=Activity(name=msg, type=ActivityType.playing))
 
 
+@bot.command(aliases=["week", "whatTraining", "trainingWeek", "armourOrAir"])
+@inBotChannel()
+@commands.cooldown(1, 5, type=commands.BucketType.user)
+async def getTrainingWeek(ctx):
+    '''Returns whether this week is armour or air trainings on Monday + Tuesday'''
+
+    botOverride=bot.get_cog('botOverrides')
+    botOverride.getChannels()
+
+    try:
+        return await ctx.send(f"This week, we will train for {botOverride.trainingWeek}, Brother")
+
+    except ValueError:  #if firstTrainingWeek is not a Monday
+        return ctx.send("My archives are corrupt! Please report this to the Adepts immediately")
+
+
 def main():
     '''Put all function calls in here.
     This function will add the function calls to the event loop
