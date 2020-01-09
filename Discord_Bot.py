@@ -929,6 +929,8 @@ async def changeStatus(ctx, status: str):
 async def getTrainingWeek(ctx):
     '''Returns whether this week is armour or air trainings on Monday + Tuesday'''
 
+    print("Command: getTrainingWeek call recieved")
+
     botOverride=bot.get_cog('botOverrides')
     botOverride.getChannels()
 

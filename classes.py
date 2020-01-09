@@ -152,7 +152,7 @@ class botOverrides(commands.Cog):
             "UmU",
             "Heresy Detected",
             '"Washing" My Body Pillow',
-            "Playing With My Waifu",
+            "With My Waifu",
             "Itadakimasu~!",
             "Seals For Supper",
         ]
@@ -208,34 +208,6 @@ class botOverrides(commands.Cog):
             return True
 
 
-    @property
-    def trainingWeek(self)-> str:
-        '''Get the current training week - air or armour
-        
-        THROWS
-        ValueError: firstTrainingWeek is not a monday = check trainingWeek.txt is a monday'''
-
-        #find this week's monday
-        today=D.date.today()
-        today=D.datetime(today.year, today.month, today.day)
-        today=today-D.timedelta(days=D.date.today().weekday())
-
-        #get distance from first week
-        difference=(self.firstTrainingWeek-today).days  #difference in days
-        week=difference/7  #difference in weeks
-        week=difference%2
-
-        #if remainder 1: 1 week has passed, if multiple of 2: 2 weeks has passed
-        if week==0:
-            return "aerial superiority"
-
-        elif week==1:
-            return "armour support"
-
-        else:
-            raise ValueError("firstTrainingWeek is not a Monday")
-
-            
     @commands.Cog.listener()
     async def on_message(self, inputMessage: Message):
         '''React to certain messages'''
@@ -274,6 +246,27 @@ class botOverrides(commands.Cog):
             async with inputMessage.channel.typing():
                 return await react(self, inputMessage, emoteID)
 
+
+    @property
+    def trainingWeek(self)-> str:
+        '''Get the current training week - air or armour
+        
+        THROWS
+        ValueError: firstTrainingWeek is not a monday = check trainingWeek.txt is a monday'''
+        #credit to auroram for rewrite
+
+        #find this week's monday
+        today=D.date.today()
+        
+        topics = ['Aerial Superiority', 'Armour Support']
+
+        _, week_num, _ = today.isocalendar()
+        # NOTE: 1st week: air, 2nd week: armour, 3rd week: air, etc.
+        # This scales with the number of actual topics, no changes needed!
+        topic = topics[week_num % len(topics) - 1]
+
+        return topic
+    
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, exception):
@@ -445,7 +438,6 @@ class commandListener():
         while True:
             try:
                 listenerInput= await self.bot.loop.run_in_executor(None, input)
-                #listenerInput=input()
                 listenerInput=listenerInput.lower()
 
             except KeyboardInterrupt:
