@@ -1,9 +1,9 @@
 #author: benmitchellmtb
 from discord.ext import commands
 from discord import *
-import threading, os, sys, traceback, asyncio, re, random, csv
+import threading, os, sys, traceback, asyncio, re, random, csv, string, concurrent
+from sheet import SheetHandler
 from typing import Callable, Union, Tuple, List
-import asyncio, concurrent
 import datetime as D
 
 def validateString(string: str, validAnswers: List[str]=None)-> bool:
@@ -124,6 +124,8 @@ class botOverrides(commands.Cog):
         trainingWeekRow=map(int, trainingWeekRow)  #convert all to int
 
         self.firstTrainingWeek=D.datetime(*trainingWeekRow)
+
+        self.sheetHandler = SheetHandler()
 
 
     async def chooseStatus(self):
@@ -318,6 +320,10 @@ class botOverrides(commands.Cog):
         #if bot can't access the channel
         elif isinstance(exception, Forbidden):
             return await ctx.send("I can't access one or more of those channels TwT")
+
+        #elif isinstance(exception, commands.NotFound):
+        #    #silence errors from instances being deleted partway through a command execution
+        #    pass
 
         else:  #if not caught by previous conditions, display error
             # NOTE: This is the default error handling behaviour, which is kept for

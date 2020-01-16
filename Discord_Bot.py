@@ -350,12 +350,28 @@ async def patLoli(ctx):
     return await ctx.send(random.choice(emotes))
 
 
+async def removeTitles(channelMembers: List[str]):
+    '''Removes the titles after people's nicknames'''
+
+    delimiters=createListFromFile("delimiters.txt")
+
+    attendees=[]
+    for name in channelMembers:
+        newName = name
+        for delimiter in delimiters:
+            if delimiter in newName:
+                newName, *null=newName.split(delimiter)
+    
+        attendees.append(newName)
+
+    return attendees
+
+
 async def getAttendance(ctx: Union[commands.Context, Guild])-> List[str]:
     '''Returns a list of people in the ops/training channels'''
     #reads the channels to check from a file
     #appends the channel IDs to channels
     channels=createListFromFile("channels.txt", type=int)
-    delimiters=createListFromFile("delimiters.txt")
 
     #for every channel in channels it gets the members  
     #sequentially and appends them to the list
@@ -377,29 +393,22 @@ async def getAttendance(ctx: Union[commands.Context, Guild])-> List[str]:
 
 
     #parsing the names
-    attendees=[]
-    for attendee in channelMembers:
-        for delimiter in delimiters:
-            try:
-                attendee, *null=attendee.split(delimiter)
-
-            except ValueError:  #if delimiter not in attendee
-                pass
-
-        attendees.append(attendee)
+    attendees = await removeTitles(channelMembers)
 
     print(f"Attendees at {D.datetime.now().strftime('%H%M')}: {attendees}")
 
     return attendees
 
-def callAttendance(attendees: List[str])-> bool:
+async def callAttendance(attendees: List[str])-> bool:
     '''Wrapper for writeattendance. Handles attendance being called on a Saturday.
     
     RETURNS
     False: if no failure
     True: if failure'''
+
+    botOverride=bot.get_cog('botOverrides')
     try:
-        writeattendance(attendees)
+        await botOverride.sheetHandler.writeAttendance(attendees)
         return False
 
     except KeyError:
@@ -411,7 +420,7 @@ async def attendanceWrapper(ctx):
     as doAttendance is a command object'''
     attendees=await getAttendance(ctx)
 
-    failure=callAttendance(attendees)
+    failure= await callAttendance(attendees)
 
     return attendees, failure
 
@@ -795,7 +804,7 @@ async def ping(ctx):
            "The Tyranids are coming! You must escape now and send word to Terra")
 
 
-@leader.command(enabled=False, aliases=["nig", "black", "BLA", "BLATT", "B"])
+@leader.command(aliases=["nig", "black", "BLA", "BLATT", "B"])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def markAsblack(ctx, days: int=1, *target):
@@ -832,7 +841,7 @@ async def markAsblack(ctx, days: int=1, *target):
 
     async def removeSymbols(name: str)-> str:
         '''Remove all the weird shit from people's names'''
-        letters=string.ascii_lowercase
+        letters=string.ascii_letters
 
         for char in name:
             if char not in letters:
@@ -842,6 +851,7 @@ async def markAsblack(ctx, days: int=1, *target):
 
 
     print("Command: markAsBlack call recieved")
+    await ctx.send("Yes, My Lord")
 
     async with ctx.typing():
         #check args
@@ -853,7 +863,7 @@ async def markAsblack(ctx, days: int=1, *target):
 
         #rebuild name
         targetName="".join(target)
-        targetName=targetName.lower()
+        targetName=targetName
         targetName= await stripTag(targetName)
         targetName= await removeSymbols(targetName)
     
@@ -861,7 +871,7 @@ async def markAsblack(ctx, days: int=1, *target):
         #create dict of members with letter-only names
         names={}
         for person in ctx.guild.members:
-            name=person.display_name.lower()
+            name=person.display_name
 
             name=await stripTag(name)
 
@@ -878,12 +888,21 @@ async def markAsblack(ctx, days: int=1, *target):
         else:
             person=names[targetName]
 
-        #verifying that they're a memberz
+        #verifying that they're a member
         if not await checkRoles((person,), ("Astartes", "Champion", "Watch Leader")):
             return await ctx.send("That person is not one of ours, My Lord")
 
-        #markAsBlackOnSheet()
-        raise CommandNotImplementedError()
+        #send to sheet
+        botOverride=bot.get_cog('botOverrides')
+        targetName = await removeTitles( (targetName, ) )
+
+        try:
+            await botOverride.sheetHandler.markAsBlackOnSheet(*targetName, days)
+
+        except ValueError as error:
+            return await ctx.send("He is unknown to us... *Hush, My Lord... We may have a Genestealer among us*")
+
+        return await ctx.send("His absence has been excused, My Lord")
 
 
 @leader.command(aliases=["CS"])
@@ -941,18 +960,6 @@ async def getTrainingWeek(ctx):
         return ctx.send("My archives are corrupt! Please report this to the Adepts immediately")
 
 
-def main():
-    '''Put all function calls in here.
-    This function will add the function calls to the event loop
-    to execute them.
-    Please avoid long periods of blocking
-    or the bot will run like shit.
-    Also runs extra threads'''
-
-    commandListener(bot)
-    bot.run(token)
-    
-
 @bot.listen()
 async def on_ready():
     print('\nLogged in as')
@@ -982,7 +989,7 @@ async def on_ready():
     if 2000<int(timenow.strftime("%H%M"))<2130:  #if started during an event
         attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
         try:
-            failure=callAttendance(attendees)
+            failure=await callAttendance(attendees)
 
         except TypeError:  #event started too late
             pass
@@ -1003,7 +1010,7 @@ async def on_ready():
 
         attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
         try:
-            failure=callAttendance(attendees)
+            failure= await callAttendance(attendees)
 
         except TypeError:  #event started too late
             pass
@@ -1011,6 +1018,7 @@ async def on_ready():
         if failure:
             await botChannel.send('We do not take roll call on Saturdays!')
 
+
 if __name__=="__main__":
-    main()
-    
+    commandListener(bot)
+    bot.run(token)
