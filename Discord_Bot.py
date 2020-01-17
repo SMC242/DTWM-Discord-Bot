@@ -915,7 +915,19 @@ async def changeStatus(ctx, status: str):
         newVideo: new youtube video is being uploaded
         eventSoon: event in < 1 hour
         gathering: gathering in < 1 hour
-        meeting: leaders in meeting, do not disturb'''
+        meeting: leaders in meeting, do not disturb
+        shitstorm: drama
+        chaos: weird stuff in forbidden knowledge'''
+
+    async def getLastFKMessage():
+        '''Gets the link to the most recent message of Forbidden Knowledge'''
+
+        #could be done in 1 line if last_message was reliable
+        FK = bot.get_channel(545809293841006603)
+        messages = await FK.history(limit=1).flatten()
+
+        return messages[0].jump_url
+
 
     print("Command: changeStatus call recieved")
 
@@ -925,6 +937,8 @@ async def changeStatus(ctx, status: str):
         "eventsoon" : ("Ops soon. Hop in comms, brother", None),
         "gathering" : ("Astartes gathering soon. Get in comms, brother", None),
         "meeting" : ("Hush, the Watch Leaders are planning", None),
+        "shitstorm" : ("Enjoying the drama", None),
+        "chaos" : ("Disrupting a cultist ritual", await getLastFKMessage())
     }
 
     try:
