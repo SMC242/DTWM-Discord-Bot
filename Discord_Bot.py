@@ -907,20 +907,20 @@ async def markAsblack(ctx, days: int=1, *target):
             raise commands.BadArgument(inspect.Parameter("days", inspect.Parameter.POSITIONAL_ONLY))
 
         #rebuild name
-        targetName="".join(target)
-        targetName=targetName
+        originalName = "".join(target)  #stored for later 
+        targetName=originalName.lower()
         targetName= await stripTag(targetName)
-        targetName= await removeSymbols(targetName)
+        targetName = await removeSymbols(targetName)
     
         # verifying that the target exists
         #create dict of members with letter-only names
         names={}
         for person in ctx.guild.members:
-            name=person.display_name
+            name=person.display_name.lower()
 
             name=await stripTag(name)
 
-            name=await removeSymbols(name)
+            name = await removeSymbols(name)
 
             names[name] = person
 
@@ -939,7 +939,7 @@ async def markAsblack(ctx, days: int=1, *target):
 
         #send to sheet
         botOverride=bot.get_cog('botOverrides')
-        targetName = await removeTitles( (targetName, ) )
+        targetName = await removeTitles( (originalName, ) )
 
         try:
             await botOverride.sheetHandler.markAsBlackOnSheet(*targetName, days)

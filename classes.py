@@ -6,6 +6,48 @@ from sheet import SheetHandler
 from typing import Callable, Union, Tuple, List
 import datetime as D
 
+def splitSearch(target, arr: list, indexOut: bool = False)-> Union[int, bool]:
+    '''Splits the input list into as many sub arrays as possible and binary searches them in parallel
+    
+    target: the object to be found in arr
+    arr: the list to search
+    indexOut: whether to output the index or the found status'''
+
+    async def binarySearch(target, arr: list, indexOut: bool) -> Union[int, bool]:
+        '''Standard binary search'''
+        found = False
+        i = 0
+        upperLimit = len(arr) - 1
+
+        while not found and i < upperLimit:
+            if arr[i] == target:
+                found = True
+
+            else:
+                i += 1
+
+        if indexOut and found:
+            return i
+
+        elif not indexOut and found:
+            return found
+
+        else:  # not found
+            raise ValueError("Target not in arr")
+
+    #split into list of sub arrays
+    indexes = len(arr)
+    subArrayCount = indexes // 2
+
+    subArrays = []
+    sliceLength = indexes // subArrayCount
+
+    for i in range(sliceLength, indexes + sliceLength, sliceLength):
+        subArrays.append(arr[i - sliceLength : i])
+
+    #search each
+
+
 def validateString(string: str, validAnswers: List[str]=None)-> bool:
     '''Check if the input is valid against basic checks and validAnswers, if not None
     
