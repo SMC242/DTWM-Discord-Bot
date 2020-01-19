@@ -693,26 +693,21 @@ async def countMessages(ctx, name: str):
     Arguments: ab!countMessages {name}
     #mention a text channel or 'global' for the whole discord'''
 
-    async def getAllMessages(channels: List[TextChannel])-> Generator[int, int, None]:
-        '''Generator for the entire server's messages'''
+    async def getAllMessages(channel):
+        history=channel.history(limit=5000, after=after)  #HistoryIterator isn't iterable (╯°□°）╯︵ ┻━┻
 
-        for channel in channels:
-            count=0
-            history=channel.history(limit=5000, after=after)
+        count = 0
+        #iterate over messages
+        while count!=5000:  #ensuring that no more than 5k messages are processed
+            try:
+                await history.next()
+                count+=1
 
-            while count!=5000:  #ensuring that no more than 5k messages are processed per channel
-                try:
-                    message=await history.next()
-                    count+=1
+            except NoMoreItems:
+                break
 
-                except NoMoreItems:
-                    break
-
-                except Forbidden:  #ignore channels that the bot can't read
-                    continue
-
-            yield count
-
+            except Forbidden:  #ignore channels that the bot can't read
+                continue
 
     print("Command: countMessages call recieved")
 
@@ -735,23 +730,11 @@ async def countMessages(ctx, name: str):
         count=0
 
         if server is None:
-            history=channel.history(limit=5000, after=after)  #HistoryIterator isn't iterable (╯°□°）╯︵ ┻━┻
-
-            #iterate over messages
-            while count!=5000:  #ensuring that no more than 5k messages are processed
-                try:
-                    await history.next()
-                    count+=1
-
-                except NoMoreItems:
-                    break
-
-                except Forbidden:  #ignore channels that the bot can't read
-                    continue
+            count = await getAllMessages(channel)
 
         else:  #if global check
-            async for channelMessageCount in getAllMessages(server.text_channels):
-                count+=channelMessageCount
+            for channel in server.text_channels:
+                count += await getAllMessages(channel)
         
 
         #reacting
@@ -777,6 +760,68 @@ async def countMessages(ctx, name: str):
             return await reactToOutput(ctx, responses, count, \
                 f"Status report, Sir: {count} messages were sent today in {channel.mention}. ",\
                 "Chaos cultists were uprooted from their despicable congregation")
+
+
+@bot.command(aliases = ["CR"])
+@inBotChannel()
+async def countReactions(ctx, name):
+    '''Counts all reactions in the target channel.
+    Arguments: ab!countReactions {name}
+        name: #mention a channel or global for the entire discord'''
+
+    async def getChannelReactions(channel):
+        history=channel.history(limit=5000, after=after)  #HistoryIterator isn't iterable (╯°□°）╯︵ ┻━┻
+
+        count = 0
+        #iterate over messages
+        while count!=5000:  #ensuring that no more than 5k messages are processed
+            try:
+                msg = await history.next()
+                for reaction in msg.reactions:
+                    count+=1
+
+            except NoMoreItems:
+                break
+
+            except Forbidden:  #ignore channels that the bot can't read
+                continue
+
+        return count
+
+
+    print("Command: countReactions call recieved")
+
+    async with ctx.typing():
+        server=None
+        try:
+            if name=="global":
+                server=ctx.bot.get_guild(545422040644190220)
+            
+            else:
+                channel=ctx.message.channel_mentions[0]
+
+        except:
+            raise commands.MissingRequiredArgument(inspect.Parameter("name", inspect.Parameter.POSITIONAL_ONLY))
+
+        #create filter
+        after=D.datetime.today() - D.timedelta(1)
+
+        #get messages today
+        count=0
+
+        if server is None:
+            count = await getChannelReactions(channel)
+
+        else:  #if global check
+            for channel in server.text_channels:
+                count += await getChannelReactions(channel)
+
+        #give feedback
+        if server is None:
+            return await ctx.send(f"{count} reactions were given today in {channel.mention}, My Lord")
+
+        else:
+            return await ctx.send(f"{count} reactions were given today, My Lord")
 
 
 @bot.command(aliases=["p", "speed"])
@@ -931,29 +976,35 @@ async def changeStatus(ctx, status: str):
 
     print("Command: changeStatus call recieved")
 
-    #dict of name : Tuple[message, link]
-    types={
-        "newvideo": ("New propaganda on our channel", "https://tinyurl.com/dtwmyt"),
-        "eventsoon" : ("Ops soon. Hop in comms, brother", None),
-        "gathering" : ("Astartes gathering soon. Get in comms, brother", None),
-        "meeting" : ("Hush, the Watch Leaders are planning", None),
-        "shitstorm" : ("Enjoying the drama", None),
-        "chaos" : ("Disrupting a cultist ritual", await getLastFKMessage())
+    types: Dict[str, Tuple[str, Optional[str], Optional[str], ActivityType]] = {
+        "newvideo": ("New propaganda on our channel", "https://tinyurl.com/dtwmyt", None, ActivityType.playing),
+
+        "eventsoon" : ("Ops soon. Hop in comms, brother", None, None, ActivityType.playing),
+
+        "gathering" : ("Astartes gathering soon. Get in comms, brother", None, None, ActivityType.playing),
+
+        "meeting" : ("Hush, the Watch Leaders are planning", None, None, ActivityType.playing),
+
+        "shitstorm" : ("The Drama", None, bot.get_channel(545817822870110208).mention, ActivityType.watching),  #guardsman hub
+
+        "chaos" : ("Disrupting A Cultist Ritual", None, bot.get_channel(545809293841006603).mention, ActivityType.playing),  #forbidden knowledge
     }
 
     try:
-        msg, link=types[status.lower()]
+        msg, link, body, activity = types[status.lower()]
 
     except KeyError:
         raise commands.BadArgument(inspect.Parameter("days", inspect.Parameter.POSITIONAL_ONLY))
 
     #create embed
-    response=Embed(title=msg, url=link, colour=Colour(13908894), body=link)
-    response.set_thumbnail(url="https://images-ext-1.discordapp.net/external/3K5RIK7FKfthdHJl0ubKh8uUSKjEP8odoO4ks1evlzs/%3Fsize%3D128/https/cdn.discordapp.com/avatars/507206805621964801/3468cd3ed831a5b10b49d8e06c801418.png")
+    response=Embed(title=msg, url=link, colour=Colour(13908894))
+
+    #these won't work as __init__ args for some reason
+    response.set_thumbnail(url = "https://images-ext-1.discordapp.net/external/3K5RIK7FKfthdHJl0ubKh8uUSKjEP8odoO4ks1evlzs/%3Fsize%3D128/https/cdn.discordapp.com/avatars/507206805621964801/3468cd3ed831a5b10b49d8e06c801418.png")
 
     #send response and change status
-    await ctx.send(embed=response)
-    return await bot.change_presence(activity=Activity(name=msg, type=ActivityType.playing))
+    await ctx.send(content = body, embed=response)
+    return await bot.change_presence(activity = Activity(name = msg, type = activity))
 
 
 @bot.command(aliases=["week", "whatTraining", "trainingWeek", "armourOrAir"])

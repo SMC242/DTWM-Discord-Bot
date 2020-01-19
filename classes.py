@@ -1,4 +1,4 @@
-#author: benmitchellmtb
+#author: benmitchellmtb, auroram
 from discord.ext import commands
 from discord import *
 import threading, os, sys, traceback, asyncio, re, random, csv, string, concurrent
@@ -246,7 +246,8 @@ class botOverrides(commands.Cog):
 
             #if matched
             async with inputMessage.channel.typing():
-                return await react(self, inputMessage, emoteID)
+                await react(self, inputMessage, emoteID)
+                return await inputMessage.channel.send("_", delete_after = 0.0000000000001)  #to end the typing
 
 
     @property
