@@ -1,7 +1,7 @@
 #authors: benmitchellmtb, ScreaminSteve, FasterNo1
 from discord import *
 from discord.ext import commands
-import threading, time, random, asyncio, time, inspect, traceback, string
+import threading, time, random, asyncio, time, inspect, traceback, string, unicodedata
 import datetime as D
 from typing import *
 
@@ -709,6 +709,9 @@ async def countMessages(ctx, name: str):
             except Forbidden:  #ignore channels that the bot can't read
                 continue
 
+        return count
+
+
     print("Command: countMessages call recieved")
 
     async with ctx.typing():
@@ -893,6 +896,22 @@ async def markAsblack(ctx, days: int=1, *target):
                 name=name.replace(char, "")
 
         return name
+
+    async def genocide(names: List[str]) -> List[str]:
+        '''Attempts to fix all the people with stupid names, removes them if too stupid'''
+        #credit to Auroram for rewrite
+
+        noTags = [await stripTag(name) for name in names]
+
+        #try to save them - convert accents to latin letters
+        latinNames = [unicodedata.normalize('NFKD', name).encode('ascii', 'ignore')\
+            for name in noTags]
+
+        #remove all surviving stupid characters
+        asciiNames = [name.encode('ascii', 'ignore') for name in latinNames]
+
+        #delete people whose names were all taken out
+        return list(asciiNames.filter("", asciiNames))
 
 
     print("Command: markAsBlack call recieved")
