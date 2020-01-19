@@ -207,9 +207,10 @@ class SheetHandler:
         if targetRow is None:
             raise ValueError('Target not in sheet')
 
-        # binary search for next boundary
+        # linear search for next boundary
         ranges = list(self.tableRanges.values())
 
+        nextBoundaryIndex = 0  #in case it's Sunday
         for i, day in enumerate(ranges):
             current = day["column"]
             if current >= currentCol:
