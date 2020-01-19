@@ -209,13 +209,16 @@ class SheetHandler:
 
         # linear search for next boundary
         ranges = list(self.tableRanges.values())
+        nextBoundaryIndex = None
 
-        nextBoundaryIndex = 0  #in case it's Sunday
         for i, day in enumerate(ranges):
             current = day["column"]
             if current >= currentCol:
                 nextBoundaryIndex = i -1  #start at current boundary
                 break
+
+        if nextBoundaryIndex is None:  #Sunday
+            nextBoundaryIndex = len(ranges) -1
 
         requestList = []
         currentDate = datetime.datetime.today()
