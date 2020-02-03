@@ -199,6 +199,8 @@ class botOverrides(commands.Cog):
             "With My Waifu",
             "Itadakimasu~!",
             "Seals For Supper",
+            "Regretting Starting An Open Platoon",
+            "Anywhere But The Waypoint",
         ]
 
         watchingStatuses=[

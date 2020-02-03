@@ -11,6 +11,8 @@ from sheet import *
 bot=commands.Bot(command_prefix="ab!", help_command=None, case_insensitive=True)
 bot.add_cog(botOverrides(bot))
 
+SCHEDULING_RAN = False
+
 if __name__=="__main__":
     with open("Text Files/token.txt") as f:
         line=f.readline()
@@ -1063,6 +1065,14 @@ async def on_ready():
     loop=asyncio.get_event_loop()
     loop.create_task(botOverride.chooseStatus())
 
+    # prevent duplicate queues
+    global SCHEDULING_RAN
+    if SCHEDULING_RAN:  
+        return
+
+    else:
+        SCHEDULING_RAN = True
+
     #scheduling the attendance function
     timenow=D.datetime.now()
     if timenow.weekday() == 5:  #no events on Saturday
@@ -1079,7 +1089,7 @@ async def on_ready():
             pass
 
         if failure:
-            await botChannel.send('We do not take roll call on Saturdays!')
+            pass
 
     else:  #wait until almost event time
         target=D.time(19, 59)
@@ -1100,7 +1110,7 @@ async def on_ready():
             pass
 
         if failure:
-            await botChannel.send('We do not take roll call on Saturdays!')
+            pass
 
 
 if __name__=="__main__":
