@@ -854,13 +854,13 @@ async def ping(ctx):
            "The Tyranids are coming! You must escape now and send word to Terra")
 
 
-@leader.command(aliases=["nig", "black", "BLA", "BLATT", "B"])
+@leader.command(aliases=["nig", "blue", "BLA", "BLATT", "B"])
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
-async def markAsblack(ctx, days: int=1, *target):
-    '''Marks the target on the sheet as black for X number of days.
-    Arguments: ab!leader markAsBlack {days} {target}
-        days = number of days to mark as black. Defaults to 1
+async def markAsBlue(ctx, days: int=1, *target):
+    '''Marks the target on the sheet as blue for X number of days.
+    Arguments: ab!leader markAsBlue {days} {target}
+        days = number of days to mark as blue. Defaults to 1
         target = copy the FULL nickname of the member
         '''
     #target: Tuple[str]
@@ -916,7 +916,7 @@ async def markAsblack(ctx, days: int=1, *target):
         return list(asciiNames.filter("", asciiNames))
 
 
-    print("Command: markAsBlack call recieved")
+    print("Command: markAsBlue call recieved")
     await ctx.send("Yes, My Lord")
 
     async with ctx.typing():
@@ -963,7 +963,7 @@ async def markAsblack(ctx, days: int=1, *target):
         targetName = await removeTitles( (originalName, ) )
 
         try:
-            await botOverride.sheetHandler.markAsBlackOnSheet(*targetName, days)
+            await botOverride.sheetHandler.markAsBlueOnSheet(*targetName, days)
 
         except ValueError as error:
             return await ctx.send("He is unknown to us... *Hush, My Lord... We may have a Genestealer among us*")

@@ -6,6 +6,7 @@ from typing import *
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from string import ascii_uppercase as LETTERSLIST
 
 class SheetHandler:
     '''Handles writing to the sheet'''
@@ -103,7 +104,7 @@ class SheetHandler:
         async def today():
             '''Fetches the current day and date
             
-            Make a function for performance'''
+            Made a function for performance'''
 
             currentDate = datetime.datetime.today()
 
@@ -123,7 +124,7 @@ class SheetHandler:
         colour: the RGBA code for the target colour
             red = (1, 0, 0, 1)
             green = (0, 1, 0, 1)
-            black = (0, 0, 0, 1)
+            blue = (0, 0, 1, 1)
         '''
 
         return {
@@ -155,30 +156,77 @@ class SheetHandler:
         }
 
 
-    @async_property
-    async def values(self):
+    async def values(self, targetRanges: list = None) -> dict:
         '''Get sheet's values'''
+
+        # if no arg
+        if not targetRanges:
+            targetRanges = self.range
 
         #Sheets API
         sheet = self.service.spreadsheets()
         sheetvals = sheet.values().get(spreadsheetId = self.spreadsheet_ID,
-                                    range = self.range).execute()
+                                    range = targetRanges).execute()
 
-        return sheetvals.get('values', [])
+        #return sheetvals.get('values', targetRanges)
+        return sheetvals
+
+
+    async def cell(self, targetRanges: list = None) -> dict:
+        '''Get cell data'''
+
+        if not targetRanges:
+            targetRanges = self.range
+
+        sheet = self.service.spreadsheets()
+        return sheet.get(spreadsheetId = self.spreadsheet_ID,
+                                    ranges = targetRanges, includeGridData = True).execute()
+
+
+    async def columnToString(self, column: int = None) -> str:
+        '''Convert column number to column A1 notation'''
+        
+        if not column:
+            column = await self.currentColumn()
+
+        # repeatedly check if column is within the alphabet
+        valid = False
+        i = 0
+        newColumn = ""
+        while not valid:
+            try:
+                newColumn = newColumn + newColumn.join(LETTERSLIST[column])
+                valid = True
+
+            except IndexError:
+                column -= 26
+                newColumn = newColumn.join(LETTERSLIST[i])
+                i += 1
+
+        return newColumn
 
 
     async def writeAttendance(self, Names):
         #Sheets API
-        values = await self.values
+        values = await self.values()
+        values = values["values"]
 
         #Requestlist for batchupdate (Cell Formatting)
         requestlist = []
 
         #Iterate over rows and check attendance
         targetColumn = await self.currentColumn()
+        strColumn =  await self.columnToString(targetColumn)
+
+        blue = {"blue" : 1}
 
         for id, row in enumerate(values):
-            if(row[0] in Names):
+            #  if marked as blue, skip
+            cellColour = await self.cellColour(f"Outfit Activity!{strColumn}{id + 5}")
+            if cellColour == {"blue" : 1}:
+                continue
+
+            if (row[0] in Names):
                 requestlist.append(self.getJSON(id+4, targetColumn, (0, 1, 0, 1)))
                 
             else:
@@ -190,16 +238,18 @@ class SheetHandler:
         }
 
         response = self.service.spreadsheets().batchUpdate(spreadsheetId = self.spreadsheet_ID, body= body).execute()
+        print(response)
 
-    async def markAsBlackOnSheet(self, name: str, days: int):
+
+    async def markAsBlueOnSheet(self, name: str, days: int):
         '''Marks the target player as away on the attendance sheet'''
 
-        values = await self.values
+        values = await self.values()
         currentCol = await self.currentColumn()
         
-        # binary search for name
+        # linear search for name
         targetRow = None
-        for id, row in enumerate(values):
+        for id, row in enumerate(values["values"]):
             if row[0] == name:
                 targetRow = id + 4 
                 break
@@ -222,7 +272,6 @@ class SheetHandler:
 
         requestList = []
         currentDate = datetime.datetime.today()
-        daysHit = 0  #counter to check for week overflow
 
         for i in range(0, days):
             #there is no Saturday event
@@ -235,7 +284,7 @@ class SheetHandler:
             if column >= 32:
                 return
 
-            json = self.getJSON(targetRow, column, (0, 0, 0, 1))
+            json = self.getJSON(targetRow, column, (0, 0, 1, 1))
             requestList.append(json)
 
             #prevent overflow
@@ -245,8 +294,6 @@ class SheetHandler:
 
             else:
                 nextBoundaryIndex += 1
-
-            daysHit += 1
             
         #Create request body and batchUpdate the spreadsheet
         body = {
@@ -254,6 +301,72 @@ class SheetHandler:
         }
 
         response = self.service.spreadsheets().batchUpdate(spreadsheetId = self.spreadsheet_ID, body = body).execute()
+
+
+    async def cellColour(self, range: str = None):
+        '''Return colour of cells in range'''
+
+        if not range: 
+            range = self.range
+
+        result = await self.cell(range)
+        return result["sheets"][0]["data"][0]["rowData"][0]["values"][0]["effectiveFormat"]["backgroundColor"]
+
+
+    async def addScout(self, name: str = "ben"):
+        '''Register new Scout to sheet'''
+
+        vals = await self.values()
+        nextRow = len(vals["values"])
+
+        requests = [
+            {
+                "appendDimension": {
+                    "sheetId": self.spreadsheet_ID,
+                    "dimension": "ROWS",
+                    "length": 34,
+                    "insertDataOption" : "INSERT_ROWS",
+                    "valueInputOption" : "USER_ENTERED",
+                }
+            },
+
+            {
+                "appendDimension": {
+                "dimension": "COLUMNS",
+                "length": 1,
+                "insertDataOption" : "INSERT_ROWS",
+                "valueInputOption" : "USER_ENTERED",
+                "sheetId" : self.spreadsheet_ID
+                }
+            }
+        ]
+
+        setToScout = {
+            "update" : {
+                "sheetId" : self.spreadsheet_ID,
+                "range" : f"Outfit Activity!{nextRow}:{nextRow}",
+                "majorDimension" : "ROWS",
+                "values" : [{
+                                "userEnteredValue" :{
+                                    "stringValue" : name
+                                },
+
+                                    "userEnteredFormat": {
+                                        "backgroundColor": {
+                                            "red": 0.30980393,
+                                            "green": 0.5058824,
+                                            "blue": 0.7411765
+                                        }
+                                    }
+                                }
+                    ]
+                }
+            }
+
+        vals = self.service.spreadsheets().values()
+        r = vals.batchUpdate(spreadsheetId = self.spreadsheet_ID,
+                             body = requests)
+        r.execute()
 
 
 def setgreen(row, column):
@@ -315,11 +428,9 @@ def setred(row, column):
 def main():
     sh= SheetHandler()
     loop = asyncio.get_event_loop()
-    task=loop.create_task(sh.writeAttendance(("benmitchellmtbV5",)))
+    task=loop.create_task(sh.addScout())
     loop.run_until_complete(task)
 
-    task=loop.create_task(sh.markAsBlackOnSheet("benmitchellmtbV5", 14))
-    loop.run_until_complete(task)
 
 if __name__ == '__main__':
     main()
