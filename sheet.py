@@ -315,7 +315,58 @@ class SheetHandler:
 
     async def addScout(self, name: str = "ben"):
         '''Register new Scout to sheet'''
-        pass
+
+        vals = await self.values()
+        nextRow = len(vals["values"])
+
+        requests = [
+            {
+                "appendDimension": {
+                    "sheetId": self.spreadsheet_ID,
+                    "dimension": "ROWS",
+                    "length": 34,
+                    "insertDataOption" : "INSERT_ROWS",
+                    "valueInputOption" : "USER_ENTERED",
+                }
+            },
+
+            {
+                "appendDimension": {
+                "dimension": "COLUMNS",
+                "length": 1,
+                "insertDataOption" : "INSERT_ROWS",
+                "valueInputOption" : "USER_ENTERED",
+                "sheetId" : self.spreadsheet_ID
+                }
+            }
+        ]
+
+        setToScout = {
+            "update" : {
+                "sheetId" : self.spreadsheet_ID,
+                "range" : f"Outfit Activity!{nextRow}:{nextRow}",
+                "majorDimension" : "ROWS",
+                "values" : [{
+                                "userEnteredValue" :{
+                                    "stringValue" : name
+                                },
+
+                                    "userEnteredFormat": {
+                                        "backgroundColor": {
+                                            "red": 0.30980393,
+                                            "green": 0.5058824,
+                                            "blue": 0.7411765
+                                        }
+                                    }
+                                }
+                    ]
+                }
+            }
+
+        vals = self.service.spreadsheets().values()
+        r = vals.batchUpdate(spreadsheetId = self.spreadsheet_ID,
+                             body = requests)
+        r.execute()
 
 
 def setgreen(row, column):

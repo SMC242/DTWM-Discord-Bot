@@ -3,50 +3,9 @@ from discord.ext import commands
 from discord import *
 import threading, os, sys, traceback, asyncio, re, random, csv, string, concurrent
 from sheet import SheetHandler
+from DB import AttendanceDBWriter
 from typing import Callable, Union, Tuple, List
 import datetime as D
-
-def splitSearch(target, arr: list, indexOut: bool = False)-> Union[int, bool]:
-    '''Splits the input list into as many sub arrays as possible and binary searches them in parallel
-    
-    target: the object to be found in arr
-    arr: the list to search
-    indexOut: whether to output the index or the found status'''
-
-    async def binarySearch(target, arr: list, indexOut: bool) -> Union[int, bool]:
-        '''Standard binary search'''
-        found = False
-        i = 0
-        upperLimit = len(arr) - 1
-
-        while not found and i < upperLimit:
-            if arr[i] == target:
-                found = True
-
-            else:
-                i += 1
-
-        if indexOut and found:
-            return i
-
-        elif not indexOut and found:
-            return found
-
-        else:  # not found
-            raise ValueError("Target not in arr")
-
-    #split into list of sub arrays
-    indexes = len(arr)
-    subArrayCount = indexes // 2
-
-    subArrays = []
-    sliceLength = indexes // subArrayCount
-
-    for i in range(sliceLength, indexes + sliceLength, sliceLength):
-        subArrays.append(arr[i - sliceLength : i])
-
-    #search each
-
 
 def validateString(string: str, validAnswers: List[str]=None)-> bool:
     '''Check if the input is valid against basic checks and validAnswers, if not None
@@ -151,6 +110,31 @@ def searchWord(word: str, msg: Union[Message, str])->bool:
     return (re.compile(r'\b({0})\b'.format(word), flags=re.IGNORECASE).search(msg)) is not None
 
 
+class MessageReactions(commands.Cog):
+    """Base class. Handles reacting to messages with on_message events."""
+
+    # ATTRIBUTES
+    reactionsAllowed=True
+
+    def __init__(self, bot: commands.Bot, cooldown: int, sharedCooldown: bool = False):
+        """cooldown is in seconds.
+        sharedCooldown: whether to share the channel cooldowns between all instances."""
+
+        self.bot = bot
+        self.cooldown = cooldown
+
+
+    def getChannels(self):
+        '''Creates the dict of channels.
+        Cannot be done before on_ready'''
+
+        today=D.date.today()
+        tempHit=D.datetime(today.year, today.month, today.day)  #add placeholder datetime until there's a hit
+
+        server= self.bot.get_guild(545422040644190220)
+        self._channelHits={tChannel : tempHit for tChannel in server.text_channels}  #for rate limiting by channel
+
+
 class botOverrides(commands.Cog):
     reactionsAllowed=True
 
@@ -158,6 +142,9 @@ class botOverrides(commands.Cog):
         '''Subclass of Cog to override certain functions of Bot.
         getChannels must be called after on_ready to fully initialise this class'''
         self.bot=bot
+        # add attendance Cogs
+        #self.bot.add_cog(AttendanceDBWriter(bot))
+        self.bot.add_cog(SheetHandler())
 
         with open("Text Files/trainingWeek.csv") as f:
             for row in csv.reader(f, "excel"):
@@ -270,6 +257,21 @@ class botOverrides(commands.Cog):
 
             return await target.add_reaction(emote)
 
+        pingResponses = responses = [
+            "Who ping?",
+            "Stop ping",
+            "What do you want?",
+            "Stop pinging me, cunt",
+            "<:w_all_might_ping:590815766895656984>",
+            "<:ping_wake_up_magi:597537421046841374>",
+            "<:ping6:685193730709389363>",
+            "<:ping5:685193730965504043>",
+            "<a:ping4:685194385511678056>",
+            "<a:ping3:685193731611295778>",
+            "<a:ping2:685193730877423727>",
+            "<a:ping1:685193730743074867>",
+            "<:ping:685193730701000843>"
+            ]
 
         if inputMessage.author==self.bot.user:  #don't respond to self
             return
@@ -284,6 +286,14 @@ class botOverrides(commands.Cog):
 
             elif searchWord("ayaya", msg) or "<:w_ayaya:622141714655870982>" in msg:
                 emoteID=622141714655870982
+
+            # get angry if ben was pinged
+            if 395598378387636234 in [mention.id for mention in msg.mentions]:
+                return await msg.channel.send(random.choice(pingResponses))
+
+            # respond to princess sheep
+            elif 326713068451004426 == msg.author.id:
+              return await msg.channel.send("Here's your bot function. BAAAAAAAAAAAAAAAAAAAA!")
 
             else:  #if not matched
                 return

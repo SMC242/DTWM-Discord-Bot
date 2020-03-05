@@ -185,6 +185,45 @@ async def toggleReactions(ctx):
     return await ctx.send(f"I {'will' if botOverride.reactionsAllowed else 'will not'} react to messages, My Lord")
 
 
+@leader.command(aliases = ["away", ], enabled = False)
+async def markAsAway(ctx, name: str):
+    """Mark a person as away. 
+    Arguments: ab!leadermarkAsAway {name}
+    name: Their player name"""
+
+    await ctx.send("It will be done, My Lord.")
+    async with typing():
+        cog_ = bot.get_cog("AttendanceDBWriter")
+        await cog_.markAsAway(name)
+        return await ctx.send("He has been excused. May he return to battle soon.")
+
+
+@leader.command()
+async def removeMember(ctx, name: str):
+    """Unregister the target member.
+    Arguments: ab!leader removeMember {name}
+    name: Their player name."""
+
+    await ctx.send("It will be done, My Lord.")
+    async with typing():
+        cog_ = bot.get_cog("AttendanceDBWriter")
+        await cog_.deleteMember(name)
+        return await ctx.send("Another brother wrenched away by Chaos...")
+
+
+@leader.command(enabled = False)
+async def addMember(ctx, name: str):
+    """Register the target member.
+    Arguments: ab!leader addMember {name}
+    name: Their player name."""
+
+    await ctx.send("It will be done, My Lord.")
+    async with typing():
+        cog_ = bot.get_cog("AttendanceDBWriter")
+        await cog_.addMember(name)
+        return await ctx.send(f"Welcome to the chapter, brother {name}!")
+
+
 @leader.command(aliases=["V5", "INeedARide", "WaitUpLetMeHopIn"])
 @inBotChannel()
 async def getInOps(ctx):
