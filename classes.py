@@ -144,7 +144,7 @@ class botOverrides(commands.Cog):
         self.bot=bot
         # add attendance Cogs
         #self.bot.add_cog(AttendanceDBWriter(bot))
-        self.bot.add_cog(SheetHandler())
+        self.sheetHandler = SheetHandler()
 
         with open("Text Files/trainingWeek.csv") as f:
             for row in csv.reader(f, "excel"):
