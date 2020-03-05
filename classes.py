@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import *
 import threading, os, sys, traceback, asyncio, re, random, csv, string, concurrent
 from sheet import SheetHandler
-from DB import AttendanceDBWriter
+#from DB import AttendanceDBWriter
 from typing import Callable, Union, Tuple, List
 import datetime as D
 
