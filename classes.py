@@ -110,6 +110,173 @@ def searchWord(word: str, msg: Union[Message, str])->bool:
     return (re.compile(r'\b({0})\b'.format(word), flags=re.IGNORECASE).search(msg)) is not None
 
 
+def checkCooldown(func):
+    """Decorator to only allow functions to execute if the cooldown has passed."""
+
+    async def inner(instance: 'MessageResponses', msg: Message, *args, **kwargs):
+        if msg.author==instance.bot.user:  #don't respond to self
+            return
+
+        if await instance.checkLastHit(msg) and instance.parent.reactionsAllowed:
+            return True
+
+        else:
+            return False
+
+    return commands.check(inner)
+
+
+class MessageResponses(commands.Cog):
+    """Base class. Handles reacting to messages with on_message events.
+    
+    getChannels must be run upon on_ready"""
+
+    def __init__(self, bot: commands.Bot, cooldown: int = 60):
+        """cooldown is in seconds."""
+
+        self.bot = bot
+        self.cooldown = cooldown
+        self.parent = None  # will be registered to a ReactionParent
+
+
+    async def getChannels(self):
+        '''Creates the dict of channels.
+        Cannot be done before on_ready'''
+
+        today=D.date.today()
+        tempHit=D.datetime(today.year, today.month, today.day)  #add placeholder datetime until there's a hit
+
+        server= self.bot.get_guild(545422040644190220)
+        self.channels = {tChannel : tempHit for tChannel in server.text_channels}  #for rate limiting by channel
+
+
+    async def checkLastHit(self, msg: Message):
+        '''Check if rate limited'''
+
+        #search for channel
+        try:
+            lastHit=self.channels[msg.channel]
+
+        except KeyError:  #message in newly-created channel
+            self.getChannels()  #check the channels again
+            return False
+
+        except AttributeError:  #channel list not set up yet
+            return False
+
+        #check hit
+        timenow=D.datetime.now()
+        if not ((timenow - lastHit).total_seconds() > self.cooldown):            
+            return False
+
+        else:
+            return True
+
+
+    def on_message(self, msg: Message):
+        raise NotImplementedError()
+
+
+class ReactionParent:
+    """Handles sharing settings between all MessageResponses Cogs."""
+
+    def __init__(self, children: List[MessageResponses]):
+        self.reactionsAllowed = True
+
+        # register children
+        for child in children:
+            child.parent = self
+
+        self.children = children
+
+
+    async def getChannels(self):
+        """Set up the channels attribute for all children."""
+
+        channels = await self.children[0].getChannels()
+        for child in self.children:
+            child.channels = channels
+
+
+class MessageReactions(MessageResponses):
+    """Manages adding reactionst to messages"""
+
+    def __init__(self, bot: commands.Bot, cooldown: int = 60):
+        super().__init__(bot, cooldown)
+
+
+    async def react(self, target: Message, emote: Union[Emoji, int]):
+        '''Wrapper for Message.add_reaction.
+
+        Updates self.lastHit'''
+
+        if not isinstance(emote, Emoji):
+            emote=self.bot.get_emoji(emote)
+
+        self._channelHits[target.channel]=D.datetime.now()
+
+        return await target.add_reaction(emote)
+
+
+    @checkCooldown
+    @commands.Cog.listener()
+    async def on_message(self, msg: Message):
+        msg=msg.content.lower()
+
+        #check for whitelisted emotes
+        if searchWord("php", msg):
+            emoteID=662430179129294867
+
+        elif searchWord("ayaya", msg) or "<:w_ayaya:622141714655870982>" in msg:
+            emoteID=622141714655870982
+
+        else:
+            return
+
+        #if matched
+        async with inputMessage.channel.typing():
+            await react(self, inputMessage, emoteID)
+            return await inputMessage.channel.send("_", delete_after = 0.0000000000001)  #to end the typing
+
+
+class MessageResponseMessages(MessageResponses):
+    """Handles sending messages in response to users."""
+
+    def __init__(self, bot: commands.Bot, cooldown: int = 300):
+        super().__init__(bot, cooldown)
+
+
+    @checkCooldown
+    @commands.Cog.listener()
+    async def on_message(self, msg: Message):
+        pingResponses = [
+            "Who ping?",
+            "Stop ping",
+            "What do you want?",
+            "Stop pinging me, cunt",
+            "<:w_all_might_ping:590815766895656984>",
+            "<:ping_wake_up_magi:597537421046841374>",
+            "<:ping6:685193730709389363>",
+            "<:ping5:685193730965504043>",
+            "<a:ping4:685194385511678056>",
+            "<a:ping3:685193731611295778>",
+            "<a:ping2:685193730877423727>",
+            "<a:ping1:685193730743074867>",
+            "<:ping:685193730701000843>",
+        ]
+
+        # get angry if ben was pinged
+        if 395598378387636234 in [mention.id for mention in msg.mentions]:
+            return await msg.channel.send(random.choice(pingResponses))
+
+        # respond to princess sheep
+        elif 326713068451004426 == msg.author.id:
+            return await msg.channel.send("Here's your bot function. BAAAAAAAAAAAAAAAAAAAA!")
+
+        else: 
+            return
+
+
 class botOverrides(commands.Cog):
     reactionsAllowed=True
 
@@ -118,8 +285,13 @@ class botOverrides(commands.Cog):
         getChannels must be called after on_ready to fully initialise this class'''
         self.bot=bot
         # add attendance Cogs
-        self.bot.add_cog(AttendanceDBWriter(bot))
-        self.bot.add_cog(BenBot(self.bot))
+        cogs = [AttendanceDBWriter(self.bot), MessageResponseMessages(self.bot),
+            MessageReactions(self.bot)]
+        for instance in cogs:
+            self.bot.add_cog(instance)
+
+        print([getattr(cog, "on_message", None) for cog in self.bot.cogs.values()])
+        self.reactionParent = ReactionParent(cogs[1:])
 
         with open("Text Files/trainingWeek.csv") as f:
             for row in csv.reader(f, "excel"):
@@ -180,103 +352,6 @@ class botOverrides(commands.Cog):
             await self.bot.change_presence(activity=random.choice(statuses))
 
             await asyncio.sleep(3600)  #change presence every hour
-
-
-    def getChannels(self):
-        '''Creates the dict of channels.
-        Cannot be done before on_ready'''
-
-        today=D.date.today()
-        tempHit=D.datetime(today.year, today.month, today.day)  #add placeholder datetime until there's a hit
-
-        server= self.bot.get_guild(545422040644190220)
-        self._channelHits={tChannel : tempHit for tChannel in server.text_channels}  #for rate limiting by channel
-
-
-    async def checkLastHit(self, msg: Message):
-        '''Check if rate limited'''
-
-        #search for channel
-        try:
-            lastHit=self._channelHits[msg.channel]
-
-        except KeyError:  #message in newly-created channel
-            self.getChannels()  #check the channels again
-            return False
-
-        except AttributeError:  #channel list not set up yet
-            return False
-
-        #check hit
-        timenow=D.datetime.now()
-        if not ((timenow - lastHit).total_seconds() > 60):                
-            return False
-
-        else:
-            return True
-
-
-    @commands.Cog.listener()
-    async def on_message(self, inputMessage: Message):
-        '''React to certain messages'''
-
-        async def react(self, target: Message, emote: Union[Emoji, int]):
-            '''Wrapper for Message.add_reaction.
-
-            Updates self.lastHit'''
-
-            if not isinstance(emote, Emoji):
-                emote=self.bot.get_emoji(emote)
-
-            self._channelHits[target.channel]=D.datetime.now()
-
-            return await target.add_reaction(emote)
-
-        pingResponses = responses = [
-            "Who ping?",
-            "Stop ping",
-            "What do you want?",
-            "Stop pinging me, cunt",
-            "<:w_all_might_ping:590815766895656984>",
-            "<:ping_wake_up_magi:597537421046841374>",
-            "<:ping6:685193730709389363>",
-            "<:ping5:685193730965504043>",
-            "<a:ping4:685194385511678056>",
-            "<a:ping3:685193731611295778>",
-            "<a:ping2:685193730877423727>",
-            "<a:ping1:685193730743074867>",
-            "<:ping:685193730701000843>"
-            ]
-
-        if inputMessage.author==self.bot.user:  #don't respond to self
-            return
-
-        #if rate limit passes and reactions not disabled
-        if await self.checkLastHit(inputMessage) and self.reactionsAllowed:
-            msg=inputMessage.content.lower()
-
-            #check for whitelisted emotes
-            if searchWord("php", msg):
-                emoteID=662430179129294867
-
-            elif searchWord("ayaya", msg) or "<:w_ayaya:622141714655870982>" in msg:
-                emoteID=622141714655870982
-
-            # get angry if ben was pinged
-            if 395598378387636234 in [mention.id for mention in msg.mentions]:
-                return await msg.channel.send(random.choice(pingResponses))
-
-            # respond to princess sheep
-            elif 326713068451004426 == msg.author.id:
-              return await msg.channel.send("Here's your bot function. BAAAAAAAAAAAAAAAAAAAA!")
-
-            else:  #if not matched
-                return
-
-            #if matched
-            async with inputMessage.channel.typing():
-                await react(self, inputMessage, emoteID)
-                return await inputMessage.channel.send("_", delete_after = 0.0000000000001)  #to end the typing
 
 
     @property

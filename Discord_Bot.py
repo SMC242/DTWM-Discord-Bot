@@ -180,12 +180,12 @@ async def toggleReactions(ctx):
     print("Command: toggleReactions call recieved")
 
     botOverride=bot.get_cog('botOverrides')
-    botOverride.reactionsAllowed= not botOverride.reactionsAllowed
+    botOverride.reactionParent.reactionsAllowed= not botOverride.reactionParent.reactionsAllowed
 
-    return await ctx.send(f"I {'will' if botOverride.reactionsAllowed else 'will not'} react to messages, My Lord")
+    return await ctx.send(f"I {'will' if botOverride.reactionParent.reactionsAllowed else 'will not'} react to messages, My Lord")
 
-
-@leader.command(aliases = ["away", ], enabled = False)
+@inBotChannel()
+@leader.command(aliases = ["away", ])
 async def markAsAway(ctx, name: str):
     """Mark a person as away. 
     Arguments: ab!leadermarkAsAway {name}
@@ -198,6 +198,7 @@ async def markAsAway(ctx, name: str):
         return await ctx.send("He has been excused. May he return to battle soon.")
 
 
+@inBotChannel()
 @leader.command()
 async def removeMember(ctx, name: str):
     """Unregister the target member.
@@ -211,7 +212,8 @@ async def removeMember(ctx, name: str):
         return await ctx.send("Another brother wrenched away by Chaos...")
 
 
-@leader.command(enabled = False)
+@inBotChannel()
+@leader.command()
 async def addMember(ctx, name: str):
     """Register the target member.
     Arguments: ab!leader addMember {name}
@@ -447,12 +449,12 @@ async def callAttendance(attendees: List[str])-> bool:
     False: if no failure
     True: if failure'''
 
-    botOverride=bot.get_cog('botOverrides')
+    DBWriter=bot.get_cog('AttendanceDBWriter')
     try:
-        await botOverride.sheetHandler.writeAttendance(attendees)
+        await DBWriter.sendAttToDB(attendees)
         return False
 
-    except KeyError:
+    except:
         return True
 
 
@@ -464,6 +466,7 @@ async def attendanceWrapper(ctx):
     failure= await callAttendance(attendees)
 
     return attendees, failure
+
 
 @bot.command(aliases=["weeb"])
 @inBotChannel()
@@ -1098,7 +1101,7 @@ async def on_ready():
 
     #set up on_message with the channel list
     botOverride=bot.get_cog('botOverrides')
-    botOverride.getChannels()
+    await botOverride.reactionParent.getChannels()
 
     #start random statuses
     loop=asyncio.get_event_loop()
