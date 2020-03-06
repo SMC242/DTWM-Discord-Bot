@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import *
 import threading, os, sys, traceback, asyncio, re, random, csv, string, concurrent
 from sheet import SheetHandler
-#from DB import AttendanceDBWriter
+from DB import AttendanceDBWriter
 from typing import Callable, Union, Tuple, List
 import datetime as D
 
@@ -110,31 +110,6 @@ def searchWord(word: str, msg: Union[Message, str])->bool:
     return (re.compile(r'\b({0})\b'.format(word), flags=re.IGNORECASE).search(msg)) is not None
 
 
-class MessageReactions(commands.Cog):
-    """Base class. Handles reacting to messages with on_message events."""
-
-    # ATTRIBUTES
-    reactionsAllowed=True
-
-    def __init__(self, bot: commands.Bot, cooldown: int, sharedCooldown: bool = False):
-        """cooldown is in seconds.
-        sharedCooldown: whether to share the channel cooldowns between all instances."""
-
-        self.bot = bot
-        self.cooldown = cooldown
-
-
-    def getChannels(self):
-        '''Creates the dict of channels.
-        Cannot be done before on_ready'''
-
-        today=D.date.today()
-        tempHit=D.datetime(today.year, today.month, today.day)  #add placeholder datetime until there's a hit
-
-        server= self.bot.get_guild(545422040644190220)
-        self._channelHits={tChannel : tempHit for tChannel in server.text_channels}  #for rate limiting by channel
-
-
 class botOverrides(commands.Cog):
     reactionsAllowed=True
 
@@ -143,8 +118,8 @@ class botOverrides(commands.Cog):
         getChannels must be called after on_ready to fully initialise this class'''
         self.bot=bot
         # add attendance Cogs
-        #self.bot.add_cog(AttendanceDBWriter(bot))
-        self.sheetHandler = SheetHandler()
+        self.bot.add_cog(AttendanceDBWriter(bot))
+        self.bot.add_cog(BenBot(self.bot))
 
         with open("Text Files/trainingWeek.csv") as f:
             for row in csv.reader(f, "excel"):
