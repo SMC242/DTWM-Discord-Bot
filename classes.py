@@ -3,7 +3,6 @@ from discord.ext import commands
 from discord import *
 import threading, os, sys, traceback, asyncio, re, random, csv, string, concurrent
 from sheet import SheetHandler
-from DB import AttendanceDBWriter
 from typing import Callable, Union, Tuple, List
 import datetime as D
 
@@ -32,7 +31,6 @@ def validateString(string: str, validAnswers: List[str]=None)-> bool:
         return None
 
     else:
-        return True
 
 
 def createListFromFile(filePath, type=str):
@@ -118,8 +116,8 @@ class botOverrides(commands.Cog):
         getChannels must be called after on_ready to fully initialise this class'''
         self.bot=bot
         # add attendance Cogs
-        self.bot.add_cog(AttendanceDBWriter(bot))
-        self.bot.add_cog(BenBot(self.bot))
+        #self.bot.add_cog(AttendanceDBWriter(bot))
+        self.sheetHandler = SheetHandler()
 
         with open("Text Files/trainingWeek.csv") as f:
             for row in csv.reader(f, "excel"):
