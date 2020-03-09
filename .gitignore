@@ -1,4 +1,4 @@
-
+*.suo
 __pycache__/sheet.cpython-37.pyc
 __pycache__/classes.cpython-37.pyc
 *.pyproj
