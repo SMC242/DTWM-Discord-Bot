@@ -1079,7 +1079,6 @@ async def getTrainingWeek(ctx):
     print("Command: getTrainingWeek call recieved")
 
     botOverride=bot.get_cog('botOverrides')
-    botOverride.getChannels()
 
     try:
         return await ctx.send(f"This week, we will train for {botOverride.trainingWeek}, Brother")
