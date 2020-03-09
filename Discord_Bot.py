@@ -192,7 +192,7 @@ async def markAsAway(ctx, name: str):
     name: Their player name"""
 
     await ctx.send("It will be done, My Lord.")
-    async with typing():
+    async with ctx.typing():
         cog_ = bot.get_cog("AttendanceDBWriter")
         await cog_.markAsAway(name)
         return await ctx.send("He has been excused. May he return to battle soon.")
@@ -206,7 +206,7 @@ async def removeMember(ctx, name: str):
     name: Their player name."""
 
     await ctx.send("It will be done, My Lord.")
-    async with typing():
+    async with ctx.typing():
         cog_ = bot.get_cog("AttendanceDBWriter")
         await cog_.deleteMember(name)
         return await ctx.send("Another brother wrenched away by Chaos...")
@@ -220,7 +220,7 @@ async def addMember(ctx, name: str):
     name: Their player name."""
 
     await ctx.send("It will be done, My Lord.")
-    async with typing():
+    async with ctx.typing():
         cog_ = bot.get_cog("AttendanceDBWriter")
         await cog_.addMember(name)
         return await ctx.send(f"Welcome to the chapter, brother {name}!")

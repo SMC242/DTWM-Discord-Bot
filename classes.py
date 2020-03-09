@@ -6,6 +6,7 @@ from sheet import SheetHandler
 from DB import AttendanceDBWriter
 from typing import Callable, Union, Tuple, List
 import datetime as D
+from functools import wraps
 
 def validateString(string: str, validAnswers: List[str]=None)-> bool:
     '''Check if the input is valid against basic checks and validAnswers, if not None
@@ -110,22 +111,6 @@ def searchWord(word: str, msg: Union[Message, str])->bool:
     return (re.compile(r'\b({0})\b'.format(word), flags=re.IGNORECASE).search(msg)) is not None
 
 
-def checkCooldown(func):
-    """Decorator to only allow functions to execute if the cooldown has passed."""
-
-    async def inner(instance: 'MessageResponses', msg: Message, *args, **kwargs):
-        if msg.author==instance.bot.user:  #don't respond to self
-            return
-
-        if await instance.checkLastHit(msg) and instance.parent.reactionsAllowed:
-            return True
-
-        else:
-            return False
-
-    return commands.check(inner)
-
-
 class MessageResponses(commands.Cog):
     """Base class. Handles reacting to messages with on_message events.
     
@@ -166,11 +151,11 @@ class MessageResponses(commands.Cog):
 
         #check hit
         timenow=D.datetime.now()
-        if not ((timenow - lastHit).total_seconds() > self.cooldown):            
-            return False
+        if (timenow - lastHit).total_seconds() > self.cooldown:            
+            return True
 
         else:
-            return True
+            return False
 
 
     def on_message(self, msg: Message):
@@ -193,7 +178,8 @@ class ReactionParent:
     async def getChannels(self):
         """Set up the channels attribute for all children."""
 
-        channels = await self.children[0].getChannels()
+        await self.children[0].getChannels()
+        channels = self.children[0].channels
         for child in self.children:
             child.channels = channels
 
@@ -213,15 +199,18 @@ class MessageReactions(MessageResponses):
         if not isinstance(emote, Emoji):
             emote=self.bot.get_emoji(emote)
 
-        self._channelHits[target.channel]=D.datetime.now()
-
         return await target.add_reaction(emote)
 
 
-    @checkCooldown
     @commands.Cog.listener()
-    async def on_message(self, msg: Message):
-        msg=msg.content.lower()
+    async def on_message(self, inputMsg: Message):
+        if inputMsg.author==self.bot.user:  #don't respond to self
+            return
+
+        if not (await self.checkLastHit(inputMsg) and self.parent.reactionsAllowed):
+            return
+
+        msg=inputMsg.content.lower()
 
         #check for whitelisted emotes
         if searchWord("php", msg):
@@ -234,9 +223,11 @@ class MessageReactions(MessageResponses):
             return
 
         #if matched
-        async with inputMessage.channel.typing():
-            await react(self, inputMessage, emoteID)
-            return await inputMessage.channel.send("_", delete_after = 0.0000000000001)  #to end the typing
+        channel = inputMsg.channel
+        async with channel.typing():
+            self.channels[channel]=D.datetime.now()
+            await self.react(inputMsg, emoteID)
+            return await channel.send("_", delete_after = 0.0000000000001)  #to end the typing
 
 
 class MessageResponseMessages(MessageResponses):
@@ -246,9 +237,14 @@ class MessageResponseMessages(MessageResponses):
         super().__init__(bot, cooldown)
 
 
-    @checkCooldown
     @commands.Cog.listener()
     async def on_message(self, msg: Message):
+        if msg.author==self.bot.user:  #don't respond to self
+            return
+
+        if not (await self.checkLastHit(msg) and self.parent.reactionsAllowed):
+            return
+
         pingResponses = [
             "Who ping?",
             "Stop ping",
@@ -266,15 +262,22 @@ class MessageResponseMessages(MessageResponses):
         ]
 
         # get angry if ben was pinged
-        if 395598378387636234 in [mention.id for mention in msg.mentions]:
-            return await msg.channel.send(random.choice(pingResponses))
+        mentioned = [mention.id for mention in msg.mentions]
+        if 395598378387636234 in mentioned or 507206805621964801 in mentioned:
+            output = random.choice(pingResponses)
 
         # respond to princess sheep
         elif 326713068451004426 == msg.author.id:
-            return await msg.channel.send("Here's your bot function. BAAAAAAAAAAAAAAAAAAAA!")
+            output = "Here's your bot function. BAAAAAAAAAAAAAAAAAAAA!"
 
         else: 
             return
+
+        # if matched
+        channel = msg.channel
+        async with channel.typing():
+            self.channels[channel]=D.datetime.now()
+            return await channel.send(output)
 
 
 class botOverrides(commands.Cog):
@@ -290,7 +293,6 @@ class botOverrides(commands.Cog):
         for instance in cogs:
             self.bot.add_cog(instance)
 
-        print([getattr(cog, "on_message", None) for cog in self.bot.cogs.values()])
         self.reactionParent = ReactionParent(cogs[1:])
 
         with open("Text Files/trainingWeek.csv") as f:
