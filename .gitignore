@@ -4,3 +4,6 @@ __pycache__/classes.cpython-37.pyc
 *.pyproj
 *.db
 *.pyc
+Text Files/token.txt
+Text Files/credentials.json
+*.sln
