@@ -6,7 +6,6 @@ import datetime as D
 from typing import *
 
 from classes import *
-from sheet import *
 
 bot=commands.Bot(command_prefix="ab!", help_command=None, case_insensitive=True)
 bot.add_cog(botOverrides(bot))
@@ -180,7 +179,7 @@ async def toggleReactions(ctx):
     print("Command: toggleReactions call recieved")
 
     botOverride=bot.get_cog('botOverrides')
-    botOverride.reactionParent.reactionsAllowed= not botOverride.reactionParent.reactionsAllowed
+    botOverride.reactionParent.reactionsAllowed = not botOverride.reactionParent.reactionsAllowed
 
     return await ctx.send(f"I {'will' if botOverride.reactionParent.reactionsAllowed else 'will not'} react to messages, My Lord")
 
@@ -507,7 +506,7 @@ async def commitNotAlive(ctx):
 @inBotChannel()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def doAttendance(ctx):
-    '''Records current attendees in the sheet.'''
+    '''Records current attendees in the db.'''
 
     print("Command: doAttendance call recieved")
     
@@ -896,7 +895,7 @@ async def ping(ctx):
            "The Tyranids are coming! You must escape now and send word to Terra")
 
 
-@leader.command(aliases=["nig", "blue", "BLA", "BLATT", "B"])
+@leader.command(aliases=["nig", "blue", "BLA", "BLATT", "B"], enabled = False)
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def markAsBlue(ctx, days: int=1, *target):

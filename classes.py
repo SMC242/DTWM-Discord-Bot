@@ -2,7 +2,6 @@
 from discord.ext import commands
 from discord import *
 import threading, os, sys, traceback, asyncio, re, random, csv, string, concurrent
-from sheet import SheetHandler
 from DB import AttendanceDBWriter
 from typing import Callable, Union, Tuple, List
 import datetime as D
@@ -178,8 +177,11 @@ class ReactionParent:
     async def getChannels(self):
         """Set up the channels attribute for all children."""
 
+        # get the channels dict
         await self.children[0].getChannels()
         channels = self.children[0].channels
+
+        # send it to each child
         for child in self.children:
             child.channels = channels
 
@@ -302,8 +304,6 @@ class botOverrides(commands.Cog):
         trainingWeekRow=map(int, trainingWeekRow)  #convert all to int
 
         self.firstTrainingWeek=D.datetime(*trainingWeekRow)
-
-        self.sheetHandler = SheetHandler()
 
 
     async def chooseStatus(self):
