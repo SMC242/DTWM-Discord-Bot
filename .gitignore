@@ -1,3 +1,10 @@
-
+*.suo
 __pycache__/sheet.cpython-37.pyc
 __pycache__/classes.cpython-37.pyc
+*.pyproj
+*.db
+*.pyc
+Text Files/token.txt
+Text Files/credentials.json
+*.sln
+token.pickle

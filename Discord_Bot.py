@@ -6,7 +6,6 @@ import datetime as D
 from typing import *
 
 from classes import *
-from sheet import *
 
 bot=commands.Bot(command_prefix="ab!", help_command=None, case_insensitive=True)
 bot.add_cog(botOverrides(bot))
@@ -180,24 +179,25 @@ async def toggleReactions(ctx):
     print("Command: toggleReactions call recieved")
 
     botOverride=bot.get_cog('botOverrides')
-    botOverride.reactionsAllowed= not botOverride.reactionsAllowed
+    botOverride.reactionParent.reactionsAllowed = not botOverride.reactionParent.reactionsAllowed
 
-    return await ctx.send(f"I {'will' if botOverride.reactionsAllowed else 'will not'} react to messages, My Lord")
+    return await ctx.send(f"I {'will' if botOverride.reactionParent.reactionsAllowed else 'will not'} react to messages, My Lord")
 
-
-@leader.command(aliases = ["away", ], enabled = False)
+@inBotChannel()
+@leader.command(aliases = ["away", ])
 async def markAsAway(ctx, name: str):
     """Mark a person as away. 
     Arguments: ab!leadermarkAsAway {name}
     name: Their player name"""
 
     await ctx.send("It will be done, My Lord.")
-    async with typing():
+    async with ctx.typing():
         cog_ = bot.get_cog("AttendanceDBWriter")
         await cog_.markAsAway(name)
         return await ctx.send("He has been excused. May he return to battle soon.")
 
 
+@inBotChannel()
 @leader.command()
 async def removeMember(ctx, name: str):
     """Unregister the target member.
@@ -205,20 +205,21 @@ async def removeMember(ctx, name: str):
     name: Their player name."""
 
     await ctx.send("It will be done, My Lord.")
-    async with typing():
+    async with ctx.typing():
         cog_ = bot.get_cog("AttendanceDBWriter")
         await cog_.deleteMember(name)
         return await ctx.send("Another brother wrenched away by Chaos...")
 
 
-@leader.command(enabled = False)
+@inBotChannel()
+@leader.command()
 async def addMember(ctx, name: str):
     """Register the target member.
     Arguments: ab!leader addMember {name}
     name: Their player name."""
 
     await ctx.send("It will be done, My Lord.")
-    async with typing():
+    async with ctx.typing():
         cog_ = bot.get_cog("AttendanceDBWriter")
         await cog_.addMember(name)
         return await ctx.send(f"Welcome to the chapter, brother {name}!")
@@ -447,12 +448,12 @@ async def callAttendance(attendees: List[str])-> bool:
     False: if no failure
     True: if failure'''
 
-    botOverride=bot.get_cog('botOverrides')
+    DBWriter=bot.get_cog('AttendanceDBWriter')
     try:
-        await botOverride.sheetHandler.writeAttendance(attendees)
+        await DBWriter.sendAttToDB(attendees)
         return False
 
-    except KeyError:
+    except:
         return True
 
 
@@ -464,6 +465,7 @@ async def attendanceWrapper(ctx):
     failure= await callAttendance(attendees)
 
     return attendees, failure
+
 
 @bot.command(aliases=["weeb"])
 @inBotChannel()
@@ -504,7 +506,7 @@ async def commitNotAlive(ctx):
 @inBotChannel()
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def doAttendance(ctx):
-    '''Records current attendees in the sheet.'''
+    '''Records current attendees in the db.'''
 
     print("Command: doAttendance call recieved")
     
@@ -893,7 +895,7 @@ async def ping(ctx):
            "The Tyranids are coming! You must escape now and send word to Terra")
 
 
-@leader.command(aliases=["nig", "blue", "BLA", "BLATT", "B"])
+@leader.command(aliases=["nig", "blue", "BLA", "BLATT", "B"], enabled = False)
 @inBotChannel()
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def markAsBlue(ctx, days: int=1, *target):
@@ -1076,7 +1078,6 @@ async def getTrainingWeek(ctx):
     print("Command: getTrainingWeek call recieved")
 
     botOverride=bot.get_cog('botOverrides')
-    botOverride.getChannels()
 
     try:
         return await ctx.send(f"This week, we will train for {botOverride.trainingWeek}, Brother")
@@ -1098,7 +1099,7 @@ async def on_ready():
 
     #set up on_message with the channel list
     botOverride=bot.get_cog('botOverrides')
-    botOverride.getChannels()
+    await botOverride.reactionParent.getChannels()
 
     #start random statuses
     loop=asyncio.get_event_loop()
