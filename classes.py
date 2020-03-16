@@ -32,7 +32,6 @@ def validateString(string: str, validAnswers: List[str]=None)-> bool:
         return None
 
     else:
-        return True
 
 
 def createListFromFile(filePath, type=str):
@@ -295,8 +294,10 @@ class botOverrides(commands.Cog):
         for instance in cogs:
             self.bot.add_cog(instance)
 
+        # start on_message handlers
         self.reactionParent = ReactionParent(cogs[1:])
-
+        
+        # handle training week
         with open("Text Files/trainingWeek.csv") as f:
             for row in csv.reader(f, "excel"):
                 trainingWeekRow=row  #this will take the final row as the correct week
