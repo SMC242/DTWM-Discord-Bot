@@ -87,7 +87,7 @@ class DBWriter:
         self.connection = sql.connect(self.path)
 
 
-    def doQuery(self, query: str, many: bool = False, vars: tuple = ()) -> Any:
+    def doQuery(self, query: str, vars: tuple = (), many: bool = False) -> Any:
         """Do one or many queries to the connection"""
 
         if not many:
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS Days(
     async def addMember(self, name: str):
         """Add a member to the database"""
 
-        self.doQuery("INSERT INTO Members(name) VALUES(?)", vars = name)
+        self.doQuery("INSERT INTO Members(name) VALUES(?)", vars = (name, ))
 
 
     @commands.Cog.listener()
@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS Days(
             from Discord_Bot import removeTitles
             name = await removeTitles((after.nick, ))
 
-            personExists = self.doQuery("SELECT name FROM Members WHERE name = ?", name)
+            personExists = self.doQuery("SELECT name FROM Members WHERE name = ?", vars = (name, ))
 
             if not personExists:
                 await self.addMember(name)
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS Days(
     async def deleteMember(self, name: str):
         """Delete a member from the database"""
 
-        self.doQuery("DELETE FROM Members WHERE name = ?", name)
+        self.doQuery("DELETE FROM Members WHERE name = ?", vars = (name, ))
 
 
     async def sendAttToDB(self, attendees: List[str]):
@@ -212,7 +212,7 @@ INSERT INTO Attendees (dayID, memberID, attended) VALUES
     async def markAsAway(self, name: str):
         """Mark someone as away for the month"""
 
-        self.doQuery("UPDATE Members SET away = 1 WHERE name = ?", name)
+        self.doQuery("UPDATE Members SET away = 1 WHERE name = ?", vars = (name, ))
 
 
     async def getMonthlyAtt(self):
@@ -238,10 +238,10 @@ SELECT AVG(attended) FROM Attendees, Members, Days
     WHERE 
         Members.memberID = Attendees.memberID AND Members.name = ? 
         AND Days.dayID = Attendees.dayID
-        AND Days.date LIKE '%/?/?';""", toInsert)
+        AND Days.date LIKE '%/?/?';""", vars = (toInsert, ))
 
         # get away statuses
-        aways = self.doQuery("SELECT away FROM Members where name = ?", members)
+        aways = self.doQuery("SELECT away FROM Members where name = ?", vars = (members, ))
         
         # convert to readable forms
         aways = [("Yes") if (value == 1) else ("No") for value in aways]
@@ -270,8 +270,8 @@ SELECT AVG(attended) FROM Attendees, Members, Days
 
         date = datetime.datetime.today().strftime("%d/%m/%Y")
         # if not exists check
-        if not self.doQuery("SELECT date FROM Days WHERE date = ?", date):
-            self.doQuery("INSERT INTO Days (date) VALUES (?)", date)
+        if not self.doQuery("SELECT date FROM Days WHERE date = ?", vars = (date, )):
+            self.doQuery("INSERT INTO Days (date) VALUES (?)", vars = (date, ))
 
 
     @staticmethod
@@ -279,6 +279,18 @@ SELECT AVG(attended) FROM Attendees, Members, Days
         """Get today's date in day/month/year format"""
 
         return datetime.datetime.today().date().strftime("%d/%m/%Y")
+
+
+    def removeMemberByID(self, id: int):
+        """Unregister a member from the DB with their ID."""
+
+        self.doQuery("DELETE FROM Members WHERE memberID = ?;", vars = (id,) )
+
+
+    def listMembers(self):
+        """Fetch all of the members from the DB and their IDs."""
+
+        return self.doQuery("SELECT memberID, name FROM Members;")
 
 
 if __name__ == "__main__":
