@@ -8,3 +8,4 @@ Text Files/token.txt
 Text Files/credentials.json
 *.sln
 token.pickle
+*.config
