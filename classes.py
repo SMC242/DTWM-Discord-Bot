@@ -338,11 +338,23 @@ class botOverrides(commands.Cog):
             "Seals For Supper",
             "Regretting Starting An Open Platoon",
             "Anywhere But The Waypoint",
+            "Crafting a Bastion",
+            "Ghostcapping",
+            'Getting Pop Dumped Again',
+            "Questing For a BHO Invite",
+            "Getting Max Crashed",
+            "A 1KD Max sesh",
+            "ben Forgot To await A function again",
+            "In A Max",
+            "Shotgun LA",
+            "Trying To Get Carapace",
         ]
 
         watchingStatuses=[
             "Ahegao Tutorials",
-            "Ayaya Intensifies"
+            "Ayaya Intensifies",
+            "The Capture Timer",
+            "Desu Desu Desu",
             ]
 
         statuses=[Activity(name=msg, type=ActivityType.playing) for msg in playingStatuses]
