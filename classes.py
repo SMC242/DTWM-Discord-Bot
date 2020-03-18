@@ -32,6 +32,7 @@ def validateString(string: str, validAnswers: List[str]=None)-> bool:
         return None
 
     else:
+        return True
 
 
 def createListFromFile(filePath, type=str):
@@ -287,17 +288,18 @@ class botOverrides(commands.Cog):
     def __init__(self, bot: commands.Bot):
         '''Subclass of Cog to override certain functions of Bot.
         getChannels must be called after on_ready to fully initialise this class'''
+
         self.bot=bot
+
         # add attendance Cogs
         cogs = [AttendanceDBWriter(self.bot), MessageResponseMessages(self.bot),
             MessageReactions(self.bot)]
         for instance in cogs:
             self.bot.add_cog(instance)
 
-        # start on_message handlers
         self.reactionParent = ReactionParent(cogs[1:])
-        
-        # handle training week
+
+        # get which training week it is
         with open("Text Files/trainingWeek.csv") as f:
             for row in csv.reader(f, "excel"):
                 trainingWeekRow=row  #this will take the final row as the correct week
@@ -305,6 +307,10 @@ class botOverrides(commands.Cog):
         trainingWeekRow=map(int, trainingWeekRow)  #convert all to int
 
         self.firstTrainingWeek=D.datetime(*trainingWeekRow)
+
+        # attendance rescheduler
+        self.startDay = D.datetime.today().date()
+        asyncio.get_event_loop().create_task(self.rescheduleAttendance())
 
 
     async def chooseStatus(self):
@@ -367,6 +373,19 @@ class botOverrides(commands.Cog):
             await self.bot.change_presence(activity=random.choice(statuses))
 
             await asyncio.sleep(3600)  #change presence every hour
+
+
+    async def rescheduleAttendance(self):
+        """
+        Infinitely check if a new day has passed. 
+        If a day has passed, reschedule attendance.
+        """
+
+        # check for a new day every 4 hours
+        while True:
+            await asyncio.sleep(14400)
+            from Discord_Bot import scheduleAttendance
+            await scheduleAttendance()
 
 
     @property
