@@ -1,3 +1,2 @@
 prettytables
 discord.py
-async_property
