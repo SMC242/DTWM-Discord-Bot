@@ -1092,14 +1092,20 @@ async def scheduleAttendance():
     global SCHEDULING_RAN
 
     # check if it's a new day
-    if bot.get_cog("botOverrides").startDay.day != D.datetime.today().date().day:
+    today = D.datetime.today().date().day
+    botOverride = bot.get_cog("botOverrides")
+    if botOverride.startDay.day != today:
+        # reschedule and update the starting day
         SCHEDULING_RAN = False
+        botOverride.startDay = today
 
     if SCHEDULING_RAN:  
         return
 
     else:
         SCHEDULING_RAN = True
+        # remove once this comes out of the testing phase
+        await bot.get_channel(545818844036464670).send("```css\nTemporary logging: Attendance scheduled```")
 
     #scheduling the attendance function
     timenow=D.datetime.now()
