@@ -7,5 +7,6 @@ __pycache__/classes.cpython-37.pyc
 Text Files/token.txt
 Text Files/credentials.json
 *.sln
+token.pkl
 token.pickle
 *.config
