@@ -1086,32 +1086,26 @@ async def getTrainingWeek(ctx):
         return ctx.send("My archives are corrupt! Please report this to the Adepts immediately")
 
 
-@bot.listen()
-async def on_ready():
-    print('\nLogged in as')
-    print(f"Username: {bot.user.name}")
-    print(f"User ID: {bot.user.id}")
-    print('------')
-
-    #acknowledge startup
-    botChannel=bot.get_channel(545818844036464670)
-    await botChannel.send('I have awoken... I am at your service')
-
-    #set up on_message with the channel list
-    botOverride=bot.get_cog('botOverrides')
-    await botOverride.reactionParent.getChannels()
-
-    #start random statuses
-    loop=asyncio.get_event_loop()
-    loop.create_task(botOverride.chooseStatus())
-
+async def scheduleAttendance():
+    
     # prevent duplicate queues
     global SCHEDULING_RAN
+
+    # check if it's a new day
+    today = D.datetime.today().date().day
+    botOverride = bot.get_cog("botOverrides")
+    if botOverride.startDay.day != today:
+        # reschedule and update the starting day
+        SCHEDULING_RAN = False
+        botOverride.startDay = today
+
     if SCHEDULING_RAN:  
         return
 
     else:
         SCHEDULING_RAN = True
+        # remove once this comes out of the testing phase
+        await bot.get_channel(545818844036464670).send("```css\nTemporary logging: Attendance scheduled```")
 
     #scheduling the attendance function
     timenow=D.datetime.now()
@@ -1152,6 +1146,28 @@ async def on_ready():
         if failure:
             pass
 
+
+@bot.listen()
+async def on_ready():
+    print('\nLogged in as')
+    print(f"Username: {bot.user.name}")
+    print(f"User ID: {bot.user.id}")
+    print('------')
+
+    #acknowledge startup
+    botChannel=bot.get_channel(545818844036464670)
+    await botChannel.send('I have awoken... I am at your service')
+
+    #set up on_message with the channel list
+    botOverride=bot.get_cog('botOverrides')
+    await botOverride.reactionParent.getChannels()
+
+    #start random statuses
+    loop=asyncio.get_event_loop()
+    loop.create_task(botOverride.chooseStatus())
+
+    # schedule attendance
+    await scheduleAttendance()
 
 if __name__=="__main__":
     commandListener(bot)
