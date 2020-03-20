@@ -4,7 +4,7 @@ from discord.ext import commands
 import threading, time, random, asyncio, time, inspect, traceback, string, unicodedata
 import datetime as D
 from typing import *
-
+from Extras.utils import *
 from classes import *
 
 bot=commands.Bot(command_prefix="ab!", help_command=None, case_insensitive=True)
@@ -16,65 +16,6 @@ if __name__=="__main__":
     with open("Text Files/token.txt") as f:
         line=f.readline()
         token=line.strip("\n")
-
-
-async def checkRoles(members: List[Member], target: List[Union[Role, str]])-> Union[bool, Generator[int, Tuple[bool, Member], None]]:
-    '''Generator checker if the Member is an outfit member
-
-    members: the target member(s)
-    target: the target role(s). Maybe be the name or the Role instance
-        
-    RETURNS
-    AsyncGenerator if multiple members
-    If generator returned, the Member associated with the check is also returned:
-    True(, Member): has target role
-    False(, Member): does not have target role'''
-
-    async def getRoles(members: List[Member], target: Union[List[str], List[Role]])-> List[Union[List[str], List[Role]]]:
-        #made coro to speed up performance
-        roles=[]
-
-        if isinstance(target[0], str):  #if role name passed
-            for member in members:
-                currentRoles=[member.roles[i].name for i in range(0, len(member.roles))]
-                roles.append(currentRoles)
-
-        else:  #if Role instance passed
-            for member in members:
-                roles.append(member.roles)
-
-        return roles
-
-    async def generator(members: List[Member], roles: Union[List[str], List[Role]])-> Generator[int, Tuple[bool, Member], None]:
-        hitMembers=[]
-
-        for i in range(0, len(members)-1):
-            success=False
-            for role in target:
-                if role in roles[i] and members[i] not in hitMembers:
-                    yield (True, members[i])
-                    hitMembers.append(members[i])  #stop the same person being hit 2 times if has multiple target roles
-
-            if not success:  #if not target
-                yield (False, members[i])
-
-
-    #fetch roles
-    roles=await getRoles(members, target)
-
-    #do check
-    isList=len(members)>1
-
-    if isList:  #if list of members: return generator
-        return generator(members, roles)
-
-    else:  #if single member: return bool
-        success=False
-        for role in target:
-            if role in roles[0]:
-                return True
-
-        return False #if not target
 
 
 def isLeader():
@@ -107,6 +48,7 @@ def inBotChannel():
             return True
 
     return commands.check(inner)
+
 
 @bot.group()
 @isLeader()
@@ -169,19 +111,6 @@ async def help(ctx):
     await ctx.send(embed=mainMessage)
     return await ctx.send(embed=leaderMessage)
 
-
-@leader.command(aliases=['re', 'noRe', 'reactions', 'TR', 'nR'])
-@inBotChannel()
-@commands.cooldown(1, 5, type=commands.BucketType.user)
-async def toggleReactions(ctx):
-    '''Allow/disallow reactions to messages with terms in the white list'''
-
-    print("Command: toggleReactions call recieved")
-
-    botOverride=bot.get_cog('botOverrides')
-    botOverride.reactionParent.reactionsAllowed = not botOverride.reactionParent.reactionsAllowed
-
-    return await ctx.send(f"I {'will' if botOverride.reactionParent.reactionsAllowed else 'will not'} react to messages, My Lord")
 
 @inBotChannel()
 @leader.command(aliases = ["away", ])
@@ -298,60 +227,6 @@ async def reactToOutput(ctx: commands.Context, responses: Dict[Tuple[int, int], 
     return await ctx.send(message + defaultResponse)
 
 
-async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
-    '''Infinitely checks if the time now is during
-   the event hours then executes the function if that's true.
-   Uses UTC time.
-
-   func: the AsyncCommand object to call on each milestone
-   milestones: the UTC times to execute at'''
-
-    print(f"Scheduled Event ({func.name}): beginning execution")
-
-    varList=[]
-    if milestones is None:
-        milestones = createListFromFile("milestones.txt", type=int)
-
-    while True:
-        success=False
-
-        timenow=int(D.datetime.now().strftime("%H%M"))
-
-        #exit if out of event time
-        if timenow> milestones[-1]:
-            print("Scheduled Event ({func.name}): exited. Error: too late")
-            return
-
-        for milestone in milestones:  #check each 
-            milestone=int(milestone)
-
-            if milestone == int(timenow):
-                print(f"Scheduled Event ({func.name}): milestone hit: {timenow}")
-                success=True
-
-                output= await func.call()
-
-                for element in output:
-                    if element not in varList:
-                        varList.append(element)
-
-                if timenow == milestones[-1]:
-                    print(f"Scheduled event ({func.name}): execution finished")
-                    return varList
-
-                else:
-                    try:
-                        milestones.remove(milestone)  #to stop the milestone from being hit again
-
-                    except ValueError:  #milestone already removed
-                        pass
-
-                await asyncio.sleep(35)     
-        
-        if not success:
-            await asyncio.sleep(35)
-
-
 @bot.command(aliases=["notMember", "notM"])
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def imNotAMember(ctx):
@@ -392,79 +267,34 @@ async def patLoli(ctx):
     return await ctx.send(random.choice(emotes))
 
 
-async def removeTitles(channelMembers: List[str]):
-    '''Removes the titles after people's nicknames'''
-
-    delimiters=createListFromFile("delimiters.txt")
-
-    attendees=[]
-    for name in channelMembers:
-        newName = name
-        for delimiter in delimiters:
-            if delimiter in newName:
-                newName, *null=newName.split(delimiter)
+@leader.command(aliases = ["byID"])
+@inBotChannel()
+async def removeMemberByID(ctx, id: int):
+    """Unregister a member from the database by their ID.
+    Arguments: ab!leader removeMemberByID {id}
+    id: Their id in the database."""
     
-        attendees.append(newName)
-
-    return attendees
-
-
-async def getAttendance(ctx: Union[commands.Context, Guild])-> List[str]:
-    '''Returns a list of people in the ops/training channels'''
-    #reads the channels to check from a file
-    #appends the channel IDs to channels
-    channels=createListFromFile("channels.txt", type=int)
-
-    #for every channel in channels it gets the members  
-    #sequentially and appends them to the list
-
-    #get guild
-    if not isinstance(ctx, Guild):
-        server=ctx.message.guild
-
-    else:
-        server=ctx
-    
-    #get list of names in ops
-    channelMembers=[]
-    for channel in channels:
-        channel=server.get_channel(channel)
-
-        for attendee in channel.members:
-            channelMembers.append(attendee.display_name)
+    async with ctx.typing():
+        bot.get_cog("AttendanceDBWriter").removeMemberByID(id)
+        await ctx.send("Another brother lost to the Warp...")
 
 
-    #parsing the names
-    attendees = await removeTitles(channelMembers)
+@leader.command()
+@inBotChannel()
+async def listMembers(ctx):
+    """List all the members in the database as a table of id, name."""
 
-    print(f"Attendees at {D.datetime.now().strftime('%H%M')}: {attendees}")
+    async with ctx.typing():
+        # query DB for members and their IDs
+        members: List[Tuple[int, str]] = bot.get_cog("AttendanceDBWriter").listMembers()
 
-    return attendees
+        # build the output message
+        table = prettytable.PrettyTable(["ID", "Name"])
+        for member_ in members:
+            table.add_row(member_)
 
-async def callAttendance(attendees: List[str])-> bool:
-    '''Wrapper for writeattendance. Handles attendance being called on a Saturday.
-    
-    RETURNS
-    False: if no failure
-    True: if failure'''
-
-    DBWriter=bot.get_cog('AttendanceDBWriter')
-    try:
-        await DBWriter.sendAttToDB(attendees)
-        return False
-
-    except:
-        return True
-
-
-async def attendanceWrapper(ctx):
-    '''This wrapper exists so that attendance can be called outside of doAttendance
-    as doAttendance is a command object'''
-    attendees=await getAttendance(ctx)
-
-    failure= await callAttendance(attendees)
-
-    return attendees, failure
+        # send the message
+        await ctx.send(f"They are ready to serve:\n```\n{table}```")
 
 
 @bot.command(aliases=["weeb"])
@@ -501,33 +331,6 @@ async def commitNotAlive(ctx):
     
     await ctx.send(random.choice(responses))
     
-
-@leader.command(aliases=["attendance","getAttendance", "att"])
-@inBotChannel()
-@commands.cooldown(1, 60, type=commands.BucketType.user)
-async def doAttendance(ctx):
-    '''Records current attendees in the db.'''
-
-    print("Command: doAttendance call recieved")
-    
-    #give user feedback
-    await ctx.send("It will be done, my Lord")
-
-    async with ctx.typing():
-        attendees, failure=await attendanceWrapper(ctx)
-
-        if failure:
-            await ctx.send('We do not take roll call on Saturdays!')
-
-        if attendees==[]:
-            await ctx.send("Nobody is there, My Liege. Our men have become complacent!")
-
-        else:
-            await ctx.send(f"Attendees: {attendees}")
-
-        await ctx.send("Attendance check completed **UmU**")
-
-
 
 @bot.command(aliases=["advice", "advise", "adviseMe"])
 @inBotChannel()
@@ -705,7 +508,7 @@ async def joinDTWM(ctx):
 
 @bot.command(aliases=["fun", "random"])
 @inBotChannel()
-#@commands.cooldown(1, 10, type=commands.BucketType.user) 
+@commands.cooldown(1, 10, type=commands.BucketType.user) 
 async def fluff(ctx):
     '''Picks a random fluff command and executes it'''
 

@@ -2,284 +2,8 @@
 from discord.ext import commands
 from discord import *
 import threading, os, sys, traceback, asyncio, re, random, csv, string, concurrent
-from DB import AttendanceDBWriter
 from typing import Callable, Union, Tuple, List
 import datetime as D
-from functools import wraps
-
-def validateString(string: str, validAnswers: List[str]=None)-> bool:
-    '''Check if the input is valid against basic checks and validAnswers, if not None
-    
-    CHECKS
-    length is not 0
-    string is not empty
-    string is in validAnswers if exists
-    
-    string: the input to be validated
-    validAsnwers: string must be in this list to be valid
-    
-    RETURNS
-    True: if valid
-    False: if not valid'''
-
-    if string == "":
-        return False
-
-    elif len(string) == 0:
-        return False
-
-    elif validAnswers is not None and string not in validAnswers:
-        return None
-
-    else:
-        return True
-
-
-def createListFromFile(filePath, type=str):
-    '''Returns a list populated by parsed lines from a text file.
-    Prefixes filePath with 'TextFiles/'.
-
-    filePath: string path of the file to be read
-    varList: output list
-    type: the type of variables to be read (str, int, float, etc)'''
-
-    with open("Text Files/"+filePath) as f:
-       varList=[type((line.strip("\n")).lower()) for line in f]
-    
-    return varList  
-
-
-def insertionSort(unsorted: list)->list:
-    '''Sorts the input list and returns a sorted list
-    
-    Adapted from https://www.geeksforgeeks.org/python-program-for-insertion-sort/'''
-
-    for outerCount in range(1, len(unsorted)-1):
-        current=unsorted[outerCount]
-        innerCount=outerCount-1
-
-        while innerCount>=0 and current < unsorted[innerCount]:
-            unsorted[innerCount+1]=unsorted[innerCount]
-            innerCount-=1
-
-            unsorted[innerCount+1]=current
-
-    return unsorted
-
-
-def binarySearch(target, toSearch: list, returnIndex=True)->Union[int, bool]:
-    '''Search the input list for target
-
-    returnIndex: true=return index of target. False=return found bool'''
-
-    lower=0
-    upper=len(toSearch)-1
-    mid=lower + ((upper-lower) // 2)
-    found=False
-
-    while not found and lower<=upper:
-        mid=lower + ((upper-lower) // 2)
-
-        if toSearch[mid]==target:  #target is found
-            found=True
-
-        elif toSearch[mid]>target:  #target is smaller than current
-            upper=mid-1
-
-        else:  #target is larger than current
-            lower=mid+1
-
-    if found:
-        if returnIndex:
-            return mid
-
-        else:
-            return True
-
-    else:
-        return False
-
-
-def searchWord(word: str, msg: Union[Message, str])->bool:
-    '''Returns a bool based on whether the word is in the message'''
-
-    #ensuring msg is a string
-    if isinstance(msg, Message):
-        msg=msg.contents
-
-    return (re.compile(r'\b({0})\b'.format(word), flags=re.IGNORECASE).search(msg)) is not None
-
-
-class MessageResponses(commands.Cog):
-    """Base class. Handles reacting to messages with on_message events.
-    
-    getChannels must be run upon on_ready"""
-
-    def __init__(self, bot: commands.Bot, cooldown: int = 60):
-        """cooldown is in seconds."""
-
-        self.bot = bot
-        self.cooldown = cooldown
-        self.parent = None  # will be registered to a ReactionParent
-
-
-    async def getChannels(self):
-        '''Creates the dict of channels.
-        Cannot be done before on_ready'''
-
-        today=D.date.today()
-        tempHit=D.datetime(today.year, today.month, today.day)  #add placeholder datetime until there's a hit
-
-        server= self.bot.get_guild(545422040644190220)
-        self.channels = {tChannel : tempHit for tChannel in server.text_channels}  #for rate limiting by channel
-
-
-    async def checkLastHit(self, msg: Message):
-        '''Check if rate limited'''
-
-        #search for channel
-        try:
-            lastHit=self.channels[msg.channel]
-
-        except KeyError:  #message in newly-created channel
-            self.getChannels()  #check the channels again
-            return False
-
-        except AttributeError:  #channel list not set up yet
-            return False
-
-        #check hit
-        timenow=D.datetime.now()
-        if (timenow - lastHit).total_seconds() > self.cooldown:            
-            return True
-
-        else:
-            return False
-
-
-    def on_message(self, msg: Message):
-        raise NotImplementedError()
-
-
-class ReactionParent:
-    """Handles sharing settings between all MessageResponses Cogs."""
-
-    def __init__(self, children: List[MessageResponses]):
-        self.reactionsAllowed = True
-
-        # register children
-        for child in children:
-            child.parent = self
-
-        self.children = children
-
-
-    async def getChannels(self):
-        """Set up the channels attribute for all children."""
-
-        # get the channels dict
-        await self.children[0].getChannels()
-        channels = self.children[0].channels
-
-        # send it to each child
-        for child in self.children:
-            child.channels = channels
-
-
-class MessageReactions(MessageResponses):
-    """Manages adding reactionst to messages"""
-
-    def __init__(self, bot: commands.Bot, cooldown: int = 60):
-        super().__init__(bot, cooldown)
-
-
-    async def react(self, target: Message, emote: Union[Emoji, int]):
-        '''Wrapper for Message.add_reaction.
-
-        Updates self.lastHit'''
-
-        if not isinstance(emote, Emoji):
-            emote=self.bot.get_emoji(emote)
-
-        return await target.add_reaction(emote)
-
-
-    @commands.Cog.listener()
-    async def on_message(self, inputMsg: Message):
-        if inputMsg.author==self.bot.user:  #don't respond to self
-            return
-
-        if not (await self.checkLastHit(inputMsg) and self.parent.reactionsAllowed):
-            return
-
-        msg=inputMsg.content.lower()
-
-        #check for whitelisted emotes
-        if searchWord("php", msg):
-            emoteID=662430179129294867
-
-        elif searchWord("ayaya", msg) or "<:w_ayaya:622141714655870982>" in msg:
-            emoteID=622141714655870982
-
-        else:
-            return
-
-        #if matched
-        channel = inputMsg.channel
-        async with channel.typing():
-            self.channels[channel]=D.datetime.now()
-            await self.react(inputMsg, emoteID)
-            return await channel.send("_", delete_after = 0.0000000000001)  #to end the typing
-
-
-class MessageResponseMessages(MessageResponses):
-    """Handles sending messages in response to users."""
-
-    def __init__(self, bot: commands.Bot, cooldown: int = 300):
-        super().__init__(bot, cooldown)
-
-
-    @commands.Cog.listener()
-    async def on_message(self, msg: Message):
-        if msg.author==self.bot.user:  #don't respond to self
-            return
-
-        if not (await self.checkLastHit(msg) and self.parent.reactionsAllowed):
-            return
-
-        pingResponses = [
-            "Who ping?",
-            "Stop ping",
-            "What do you want?",
-            "Stop pinging me, cunt",
-            "<:w_all_might_ping:590815766895656984>",
-            "<:ping_wake_up_magi:597537421046841374>",
-            "<:ping6:685193730709389363>",
-            "<:ping5:685193730965504043>",
-            "<a:ping4:685194385511678056>",
-            "<a:ping3:685193731611295778>",
-            "<a:ping2:685193730877423727>",
-            "<a:ping1:685193730743074867>",
-            "<:ping:685193730701000843>",
-        ]
-
-        # get angry if ben was pinged
-        mentioned = [mention.id for mention in msg.mentions]
-        if 395598378387636234 in mentioned or 507206805621964801 in mentioned:
-            output = random.choice(pingResponses)
-
-        # respond to princess sheep
-        elif 326713068451004426 == msg.author.id:
-            output = "Here's your bot function. BAAAAAAAAAAAAAAAAAAAA!"
-
-        else: 
-            return
-
-        # if matched
-        channel = msg.channel
-        async with channel.typing():
-            self.channels[channel]=D.datetime.now()
-            return await channel.send(output)
 
 
 class botOverrides(commands.Cog):
@@ -291,15 +15,13 @@ class botOverrides(commands.Cog):
 
         self.bot=bot
 
-        # add attendance Cogs
-        cogs = [AttendanceDBWriter(self.bot), MessageResponseMessages(self.bot),
-            MessageReactions(self.bot)]
-        for instance in cogs:
-            self.bot.add_cog(instance)
+        # load all Cogs
+        for file in os.listdir('./Cogs'):
+            # ensure they're py files
+            if file.endswith(".py"):
+                bot.load_extension(file[:-3])
 
-        self.reactionParent = ReactionParent(cogs[1:])
-
-        # get which training week it is
+        # handle training weeks
         with open("Text Files/trainingWeek.csv") as f:
             for row in csv.reader(f, "excel"):
                 trainingWeekRow=row  #this will take the final row as the correct week
@@ -307,10 +29,6 @@ class botOverrides(commands.Cog):
         trainingWeekRow=map(int, trainingWeekRow)  #convert all to int
 
         self.firstTrainingWeek=D.datetime(*trainingWeekRow)
-
-        # attendance rescheduler
-        self.startDay = D.datetime.today().date()
-        asyncio.get_event_loop().create_task(self.rescheduleAttendance())
 
 
     async def chooseStatus(self):
@@ -361,19 +79,6 @@ class botOverrides(commands.Cog):
             await self.bot.change_presence(activity=random.choice(statuses))
 
             await asyncio.sleep(3600)  #change presence every hour
-
-
-    async def rescheduleAttendance(self):
-        """
-        Infinitely check if a new day has passed. 
-        If a day has passed, reschedule attendance.
-        """
-
-        # check for a new day every 4 hours
-        while True:
-            await asyncio.sleep(14400)
-            from Discord_Bot import scheduleAttendance
-            await scheduleAttendance()
 
 
     @property
