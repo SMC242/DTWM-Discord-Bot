@@ -14,7 +14,8 @@ import discord
 from typing import Dict
 from discord.ext import commands, tasks
 from cogs.attendance import Attendance
-from cogs.checks import isLeader
+from cogs.dtwm import Dtwm
+from Extras.checks import isLeader
 from errors import NotLeaderError, CommandNotImplementedError, RateLimited
 
 

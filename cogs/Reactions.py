@@ -5,41 +5,8 @@ import datetime as D
 from discord import *
 from discord.ext import commands
 from .Extras.utils import searchWord
+from .Extras.checks import inBotChannel, isLeader
 import asyncio
-
-# checks
-def isLeader():
-    '''Decorator to allow only leaders to call the command'''
-    async def inner(ctx):
-        #checking if the user is a leader
-        success= await checkRoles((ctx.message.author,), ("Watch Leader", "Champion"))
-
-        if not success:
-            raise NotLeaderError()
-
-        return success
-
-    return commands.check(inner)
-
-
-def inBotChannel():
-    '''Checks if called in bot channel.
-    If not in bot channel, doesn't execute command and scolds.
-    Unless command is whitelisted'''
-
-    async def inner(ctx):
-        # log the command
-        print(f"command: {ctx.command.name} call recieved at {D.datetime.today().time().strftime('%H hours, %M minutes')}")
-        botChannel=ctx.bot.get_channel(545818844036464670)
-
-        if not botChannel==ctx.message.channel:
-            await ctx.send(f"These are matters for {botChannel.mention}, brother. Take it there and I will answer you")
-            return False
-
-        else:
-            return True
-
-    return commands.check(inner)
 
 
 @bot.group()
