@@ -14,6 +14,7 @@ import discord
 from typing import Dict
 from discord.ext import commands, tasks
 from cogs.attendance import Attendance
+from cogs.checks import isLeader
 from errors import NotLeaderError, CommandNotImplementedError, RateLimited
 
 
@@ -128,6 +129,13 @@ if __name__ == '__main__':
 
     # Instantiate the custom bot
     bot = BotOverride(command_prefix='ab!', case_insensitie=True)
+
+    # Add special sauce command
+    @bot.command()
+    @isLeader()
+    async def changeStatus(ctx, status: str):
+        act = discord.Activity(name=status, type=discord.ActivityType.playing)
+        await bot.change_presence(activity=act)
 
     # Add cogs
     bot.add_cog(Attendance(bot))
