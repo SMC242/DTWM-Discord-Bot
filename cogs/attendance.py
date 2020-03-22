@@ -1,6 +1,8 @@
+"""All of the attendance-related functions and commands."""
+
 import calendar
 import datetime
-from typing import List
+from typing import List, Tuple
 import prettytable
 import discord
 from discord.ext import commands, tasks
