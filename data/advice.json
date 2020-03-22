@@ -1,0 +1,93 @@
+{
+    "responsesByRole": {
+        "watch commander": [
+            "Learn to split <:splitwatch_marines:618120678708609054>",
+            "Become a dictator",
+            "Make good outfit EZ",
+            "If you don't have 70 KPM you can't be a leader 😤",
+            "Disband."
+        ],
+        "watch leader": [
+            "Why haven't you split yet?",
+            "Just zerg",
+            "Get more zerglings",
+            "Get a life",
+            "MMO mice are good investments",
+            "Recruit plox",
+            "Remember to take breaks from leading or you'll get burnt out"
+        ],
+        "watch captain": [
+            "Just get promoted lmao",
+            "Shhh don't tell ben: his hentai stash is at ---- Fuck he's coming! Help!",
+            "Get some sleep 👀"
+        ],
+        "champion": [
+            "Just get promoted lol",
+            "This is tankistrole get out!",
+            "Recruit plox",
+            "Go mentor someone",
+            "You have done well youngling... Your splitting power has grown but you're not there yet... Become a Watch Leader",
+            "You can't be a mentor if you've used a shotgun for 0.001% of your play time 😤"
+        ],
+        "keeper": [
+            "Green = gay lol",
+            "Go ask a >= Champion for training",
+            "Git gud",
+            "Get in zergling; we have a continent to cap!",
+            "Remember to V5 after killing good players",
+            "Teamkill best kill 😉"
+        ],
+        "scout": [
+            "You can ask anyone >= Champion for advice, mentorship, and 1 to 1 training",
+            "Do your basic trainings",
+            "Come to ops on Thursdays, Fridays, and Sundays at 2100 CEST",
+            "We have trainings from Monday to Wednesday at 2100 CEST. Come along!",
+            "Avoid cluttering comms",
+            "Remember to use cardinal directions not relative callouts! Use the format: '[cardinal direction/building call out] [target type]",
+            "To get promoted, you need to attend all 3 basic trainings and be noticed by >= Keepers as well-integrated into the community",
+        ],
+        "battle brother": [
+            "Come along to the joint ops with your outfit on Thursdays/Fridays at 2100 CEST",
+            "Friendship is great ❤ come join us in voice channels",
+            "You can join any of our ops on Thursdays, Fridays, and Sundays"
+        ],
+        "guardsman": [
+            "Join DTWM",
+            "You can join our ops on Thursdays and Fridays at 2100 CEST to get a taster of our play",
+            "Come hang out in the NC channel"
+        ],
+        "everyone": [
+            "V1",
+            "V2",
+            "V3",
+            "I need repairs!",
+            "V4",
+            "V5",
+            "V5",
+            "V5",
+            "I need a ride",
+            "Wait up! Let me hop in!",
+            "V6",
+            "V7",
+            "V8",
+            "V9",
+            "V0",
+            "I need a gunner!",
+            "Somebody hop in!!"
+        ],
+        "remembrancer": [
+            "Make something pretty for us, loyal Remembrancer",
+        ],
+        "primarch": [
+            f"You can find all relevant information to our co-ops pinned in {ctx.bot.get_channel(645695680731414578).mention}",
+        ],
+        "heretic": [
+            "HERESY DETECTED! COMMENCE VIRUS BOMBING!",
+            "I see you're a man of culture"
+        ],
+        "nitro booster": [
+            "Thanks for boosting! You are a loyal son of the Emperor",
+            "MMM here's a sloppy kiss just for you 💋 Thanks for boosting!"
+        ]
+    }
+}
