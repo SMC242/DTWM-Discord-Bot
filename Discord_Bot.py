@@ -10,11 +10,12 @@ import json
 import random
 import sys
 import traceback
-import discord
 from typing import Dict
+import discord
 from discord.ext import commands, tasks
-from cogs.attendance import Attendance
-from cogs.dtwm import Dtwm
+from cogs.Attendance import Attendance
+from cogs.Dtwm import Dtwm
+from cogs.Reactions import MessageReactions, MessageResponseMessages
 from Extras.checks import isLeader
 from errors import NotLeaderError, CommandNotImplementedError, RateLimited
 
@@ -140,6 +141,9 @@ if __name__ == '__main__':
 
     # Add cogs
     bot.add_cog(Attendance(bot))
+    bot.add_cog(Dtwm(bot))
+    bot.add_cog(MessageReactions(bot))
+    bot.add_cog(MessageResponseMessages(bot))
 
     # Run the bot
     bot.run(BOT_TOKEN)
