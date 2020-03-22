@@ -1,25 +1,20 @@
 """All on_message handlers."""
 
-from typing import *
+import asyncio
 import datetime as D
-from discord import *
+import random
+from typing import List, Union
+import discord
 from discord.ext import commands
 from .Extras.utils import searchWord
 from .Extras.checks import inBotChannel, isLeader
-import asyncio
-
-
-@bot.group()
-@isLeader()
-async def leader(ctx):
-    if ctx.invoked_subcommand is None:
-        return await ctx.send('Give me your orders, My Lord. I am but a lowly servitor, not a psyker')
 
 
 class MessageResponses(commands.Cog):
     """Base class. Handles reacting to messages with on_message events.
-    
-    getChannels must be run upon on_ready"""
+
+    getChannels must be run upon on_ready
+    """
 
     def __init__(self, bot: commands.Bot, cooldown: int = 60):
         """cooldown is in seconds."""
@@ -28,42 +23,44 @@ class MessageResponses(commands.Cog):
         self.cooldown = cooldown
         self.parent = None  # will be registered to a ReactionParent
 
-
     async def getChannels(self):
-        '''Creates the dict of channels.
-        Cannot be done before on_ready'''
+        """Creates the dict of channels.
 
-        today=D.date.today()
-        tempHit=D.datetime(today.year, today.month, today.day)  #add placeholder datetime until there's a hit
+        Cannot be done before on_ready
+        """
 
-        server= self.bot.get_guild(545422040644190220)
-        self.channels = {tChannel : tempHit for tChannel in server.text_channels}  #for rate limiting by channel
+        today = D.date.today()
+        # add placeholder datetime until there's a hit
+        tempHit = D.datetime(today.year, today.month, today.day)
 
+        server = self.bot.get_guild(545422040644190220)
+        # for rate limiting by channel
+        self.channels = {
+            tChannel: tempHit for tChannel in server.text_channels}
 
-    async def checkLastHit(self, msg: Message):
+    async def checkLastHit(self, msg: discord.Message):
         '''Check if rate limited'''
 
-        #search for channel
+        # search for channel
         try:
-            lastHit=self.channels[msg.channel]
+            lastHit = self.channels[msg.channel]
 
-        except KeyError:  #message in newly-created channel
-            self.getChannels()  #check the channels again
+        except KeyError:  # message in newly-created channel
+            self.getChannels()  # check the channels again
             return False
 
-        except AttributeError:  #channel list not set up yet
+        except AttributeError:  # channel list not set up yet
             return False
 
-        #check hit
-        timenow=D.datetime.now()
-        if (timenow - lastHit).total_seconds() > self.cooldown:            
+        # check hit
+        timenow = D.datetime.now()
+        if (timenow - lastHit).total_seconds() > self.cooldown:
             return True
 
         else:
             return False
 
-
-    def on_message(self, msg: Message):
+    def on_message(self, msg: discord.Message):
         raise NotImplementedError()
 
 
@@ -79,7 +76,6 @@ class ReactionParent:
 
         self.children = children
 
-
     async def getChannels(self):
         """Set up the channels attribute for all children."""
 
@@ -91,8 +87,7 @@ class ReactionParent:
         for child in self.children:
             child.channels = channels
 
-
-    @leader.command(aliases=['re', 'noRe', 'reactions', 'TR', 'nR'])
+    @commands.command(aliases=['re', 'noRe', 'reactions', 'TR', 'nR'])
     @inBotChannel()
     @commands.cooldown(1, 5, type=commands.BucketType.user)
     async def toggleReactions(self, ctx):
@@ -100,7 +95,7 @@ class ReactionParent:
 
         self.reactionsAllowed = not self.reactionsAllowed
 
-        return await ctx.send(f"I {'will' if botOverride.reactionParent.reactionsAllowed else 'will not'} react to messages, My Lord")
+        return await ctx.send(f"I {'will' if self.reactionsAllowed else 'will not'} react to messages, My Lord")
 
 
 class MessageReactions(MessageResponses):
@@ -109,44 +104,43 @@ class MessageReactions(MessageResponses):
     def __init__(self, bot: commands.Bot, cooldown: int = 60):
         super().__init__(bot, cooldown)
 
-
-    async def react(self, target: Message, emote: Union[Emoji, int]):
+    async def react(self, target: discord.Message, emote: Union[discord.Emoji, int]):
         '''Wrapper for Message.add_reaction.
 
         Updates self.lastHit'''
 
-        if not isinstance(emote, Emoji):
-            emote=self.bot.get_emoji(emote)
+        if not isinstance(emote, discord.Emoji):
+            emote = self.bot.get_emoji(emote)
 
         return await target.add_reaction(emote)
 
-
     @commands.Cog.listener()
-    async def on_message(self, inputMsg: Message):
-        if inputMsg.author==self.bot.user:  #don't respond to self
+    async def on_message(self, inputMsg: discord.Message):
+        if inputMsg.author == self.bot.user:  # don't respond to self
             return
 
         if not (await self.checkLastHit(inputMsg) and self.parent.reactionsAllowed):
             return
 
-        msg=inputMsg.content.lower()
+        msg = inputMsg.content.lower()
 
-        #check for whitelisted emotes
+        # check for whitelisted emotes
         if searchWord("php", msg):
-            emoteID=662430179129294867
+            emoteID = 662430179129294867
 
         elif searchWord("ayaya", msg) or "<:w_ayaya:622141714655870982>" in msg:
-            emoteID=622141714655870982
+            emoteID = 622141714655870982
 
         else:
             return
 
-        #if matched
+        # if matched
         channel = inputMsg.channel
         async with channel.typing():
-            self.channels[channel]=D.datetime.now()
+            self.channels[channel] = D.datetime.now()
             await self.react(inputMsg, emoteID)
-            return await channel.send("_", delete_after = 0.0000000000001)  #to end the typing
+            # to end the typing
+            return await channel.send("_", delete_after=0.0000000000001)
 
 
 class MessageResponseMessages(MessageResponses):
@@ -155,10 +149,9 @@ class MessageResponseMessages(MessageResponses):
     def __init__(self, bot: commands.Bot, cooldown: int = 300):
         super().__init__(bot, cooldown)
 
-
     @commands.Cog.listener()
-    async def on_message(self, msg: Message):
-        if msg.author==self.bot.user:  #don't respond to self
+    async def on_message(self, msg: discord.Message):
+        if msg.author == self.bot.user:  # don't respond to self
             return
 
         if not (await self.checkLastHit(msg) and self.parent.reactionsAllowed):
@@ -189,17 +182,11 @@ class MessageResponseMessages(MessageResponses):
         elif 326713068451004426 == msg.author.id:
             output = "Here's your bot function. BAAAAAAAAAAAAAAAAAAAA!"
 
-        else: 
+        else:
             return
 
         # if matched
         channel = msg.channel
         async with channel.typing():
-            self.channels[channel]=D.datetime.now()
+            self.channels[channel] = D.datetime.now()
             return await channel.send(output)
-
-
-# for the cog loader
-def setup(bot: commands.Bot):
-    bot.add_cog(MessageReactions(bot))
-    bot.add_cog(MessageResponseMessages(bot))
