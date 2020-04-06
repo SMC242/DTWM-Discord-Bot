@@ -282,10 +282,9 @@ SELECT AVG(attended) FROM Attendees, Members, Days
     WHERE 
         Members.memberID = Attendees.memberID AND Members.name = ?
         AND Days.dayID = Attendees.dayID
-        AND Days.date like ?;
-            """,
+        AND Days.date like ?;""",
             vars = [name, targetMonth]
-        ), 
+            )
         for name in members
         ]
 

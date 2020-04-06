@@ -507,6 +507,10 @@ class botOverrides(commands.Cog):
                                       exception.__traceback__, file=sys.stderr)
             print(f"Occured at: {D.datetime.now().time()}")
 
+            # dump error to a log file
+            with open("Text Files/errorLog.txt", "a+") as f:
+                f.write(traceback.format_exc())
+
             return await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  #give user feedback if internal error occurs
 
 
