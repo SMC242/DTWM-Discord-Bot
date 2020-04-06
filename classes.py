@@ -283,7 +283,10 @@ class MessageResponseMessages(MessageResponses):
 
 
 class botOverrides(commands.Cog):
+    """Handle any behvaiour changes for the bot"""
+
     reactionsAllowed=True
+    schedulingRan = False
 
     def __init__(self, bot: commands.Bot):
         '''Subclass of Cog to override certain functions of Bot.
@@ -310,7 +313,6 @@ class botOverrides(commands.Cog):
 
         # attendance rescheduler
         self.startDay = D.datetime.today().date()
-        asyncio.get_event_loop().create_task(self.rescheduleAttendance())
 
 
     async def chooseStatus(self):
@@ -371,9 +373,53 @@ class botOverrides(commands.Cog):
 
         # check for a new day every 4 hours
         while True:
+            await self.scheduleAttendance()
             await asyncio.sleep(14400)
-            from Discord_Bot import scheduleAttendance
-            await scheduleAttendance()
+
+
+    async def scheduleAttendance(self):
+        """Schedule attendance if it hasn't been scheduled today."""
+
+        # prevent duplicate queues
+        # by checking if it's a new day
+        today = D.datetime.today().day
+
+        if self.startDay != today:
+            self.schedulingRan = False
+            self.startDay = today
+
+        # exit if this already ran today
+        if self.schedulingRan:
+            return
+
+        else:
+            self.schedulingRan = True
+            # remove once this comes out of the testing phase
+            await self.bot.get_channel(545818844036464670).send("```css\nTemporary logging: Attendance scheduled```")
+
+        # getting the required functions
+        from Discord_Bot import executeOnEvents, callAttendance
+
+        #scheduling the attendance function
+        timenow=D.datetime.now()
+        if timenow.weekday() == 5:  #no events on Saturday
+            return
+
+        timenow=timenow.time()
+
+        # wait until the event time
+        target=D.time(19, 59)
+    
+        newTarget=D.datetime.combine(D.date.min, target)
+        oldTime=D.datetime.combine(D.date.min, timenow)
+        runInSeconds= (newTarget - oldTime).seconds
+
+        await asyncio.sleep(runInSeconds)
+
+        await getInOpsInner()  #ping people to get in ops
+
+        attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
+        ignored = await callAttendance(attendees)
 
 
     @property
