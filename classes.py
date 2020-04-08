@@ -398,7 +398,7 @@ class botOverrides(commands.Cog):
             await self.bot.get_channel(545818844036464670).send("```css\nTemporary logging: Attendance scheduled```")
 
         # getting the required functions
-        from Discord_Bot import executeOnEvents, callAttendance
+        from Discord_Bot import executeOnEvents, callAttendance, getInOpsInner
 
         #scheduling the attendance function
         timenow=D.datetime.now()

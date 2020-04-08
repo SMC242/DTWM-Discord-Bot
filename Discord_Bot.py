@@ -1,7 +1,7 @@
 #authors: benmitchellmtb, ScreaminSteve, FasterNo1
 from discord import *
 from discord.ext import commands
-import threading, time, random, asyncio, time, inspect, traceback, string, unicodedata
+import threading, time, random, asyncio, time, inspect, traceback, string, unicodedata, prettytable
 import datetime as D
 from typing import *
 

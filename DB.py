@@ -268,14 +268,6 @@ INSERT INTO Attendees (dayID, memberID, attended) VALUES
         year = date.strftime("%Y")
         targetMonth = f"%/{date.strftime('%m/%Y')}"
 
-        toInsert = ', '.join([f"'{name}'" for name in members])
-        attPerMember = self.doQuery("""
-SELECT AVG(attended) FROM Attendees, Members, Days 
-    WHERE 
-        Members.memberID = Attendees.memberID AND Members.name = ?
-        AND Days.dayID = Attendees.dayID
-        AND Days.date like ;""", vars = (toInsert, targetMonth))
-
         attPerMember = [
             self.doQuery("""
 SELECT AVG(attended) FROM Attendees, Members, Days 
@@ -283,9 +275,9 @@ SELECT AVG(attended) FROM Attendees, Members, Days
         Members.memberID = Attendees.memberID AND Members.name = ?
         AND Days.dayID = Attendees.dayID
         AND Days.date like ?;""",
-            vars = [name, targetMonth]
+            vars = (name, targetMonth)
             )
-        for name in members
+            for name in members
         ]
 
         # get away statuses
