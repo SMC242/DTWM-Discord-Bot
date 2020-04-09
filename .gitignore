@@ -9,3 +9,4 @@ Text Files/credentials.json
 *.sln
 token.pickle
 *.config
+Text Files/errorLog.txt
