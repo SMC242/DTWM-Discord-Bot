@@ -508,10 +508,15 @@ class botOverrides(commands.Cog):
             print(f"Occured at: {D.datetime.now().time()}")
 
             # dump error to a log file
+            tb = traceback.format_exc()
             with open("Text Files/errorLog.txt", "a+") as f:
-                f.write(traceback.format_exc())
+                f.write(tb)
 
-            return await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  #give user feedback if internal error occurs
+            # dump error to bot testing.errors
+            await bot.get_channel(697746979782000680).send(tb)
+
+            #give user feedback if internal error occurs
+            return await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  
 
 
 class TerminalCommand:
