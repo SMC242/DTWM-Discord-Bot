@@ -124,7 +124,7 @@ class AttendanceDBWriter(DBWriter, commands.Cog):
         self.createAttendanceTable()
         # print all registered members
         print("Registered members:")
-        print(self.doQuery("SELECT * FROM Members;"), end = "\n\n")
+        print(self.doQuery("SELECT memberID, name FROM Members;"), end = "\n\n")
         self.loop.create_task(self.newDay())
 
 
@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS Days(
             # check if they're already in the database
             from Discord_Bot import removeTitles
             name = await removeTitles((after.nick, ))
+            name = name[0]  # removeTitles returns a list
 
             personExists = self.doQuery("SELECT name FROM Members WHERE name = ?;", vars = (name, ))
 
@@ -268,7 +269,10 @@ INSERT INTO Attendees (dayID, memberID, attended) VALUES
         year = date.strftime("%Y")
         targetMonth = f"%/{date.strftime('%m/%Y')}"
 
-        attPerMember = [
+        # these loops are needed because executemany only supports modification
+        # I could use IN() however that would require opening the bot to an injection attack
+        # as that would require using string formatting
+        attPerMember: List[List[Tuple[int]]] = [
             self.doQuery("""
 SELECT AVG(attended) FROM Attendees, Members, Days 
     WHERE 
@@ -281,11 +285,22 @@ SELECT AVG(attended) FROM Attendees, Members, Days
         ]
 
         # get away statuses
-        aways = self.doQuery("SELECT away FROM Members where name = ?;", vars = (members, ))
+        aways: List[List[Tuple[int]]] = [
+                self.doQuery("SELECT away FROM Members where name = ?;", vars = [name])
+                for name in members
+                ]
+
+        attPerMember: List[int] = [row[0][0] for row in attPerMember]
+        aways: List[int] = [row[0][0] for row in aways]
         
         # convert to readable forms
-        aways = [("Yes") if (value == 1) else ("No") for value in aways]
-        attPerMember = [int(value * 100) for value in attPerMember]
+        try:
+            aways = [("Yes") if (value == 1) else ("No") for value in aways]
+            attPerMember = [int(value * 100) for value in attPerMember]
+
+        # handle empty DB
+        except TypeError:
+            return "There is no attendance data currently."
 
         # convert to PrettyTable
         table = prettytable.PrettyTable(["Name", "Attendance (%)," "Away"])

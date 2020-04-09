@@ -1039,5 +1039,4 @@ async def on_ready():
     loop.create_task(botOverride.rescheduleAttendance())
 
 if __name__=="__main__":
-    commandListener(bot)
     bot.run(token)

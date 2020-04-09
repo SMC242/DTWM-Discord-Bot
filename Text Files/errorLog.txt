@@ -1,0 +1,63 @@
+NoneType: None
+NoneType: None
+NoneType: None
+Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Discord_Bot.py", line 242, in fetchAttendance
+    return await ctx.send(await bot.get_cog("AttendanceDBWriter").fetchAttendance())
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\DB.py", line 285, in fetchAttendance
+    aways = self.doQuery("SELECT away FROM Members where name = ?;", vars = (members, ))
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\DB.py", line 94, in doQuery
+    self.cursor.execute(query, vars)
+
+sqlite3.InterfaceError: Error binding parameter 0 - probably unsupported type.
+Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Discord_Bot.py", line 242, in fetchAttendance
+    return await ctx.send(await bot.get_cog("AttendanceDBWriter").fetchAttendance())
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\DB.py", line 295, in fetchAttendance
+    attPerMember = [int(value * 100) for value in attPerMember]
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\DB.py", line 295, in <listcomp>
+    attPerMember = [int(value * 100) for value in attPerMember]
+
+TypeError: int() argument must be a string, a bytes-like object or a number, not 'list'
+Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Discord_Bot.py", line 242, in fetchAttendance
+    return await ctx.send(await bot.get_cog("AttendanceDBWriter").fetchAttendance())
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\DB.py", line 298, in fetchAttendance
+    attPerMember = [int(value * 100) for value in attPerMember]
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\DB.py", line 298, in <listcomp>
+    attPerMember = [int(value * 100) for value in attPerMember]
+
+TypeError: int() argument must be a string, a bytes-like object or a number, not 'tuple'
+Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Discord_Bot.py", line 242, in fetchAttendance
+    return await ctx.send(await bot.get_cog("AttendanceDBWriter").fetchAttendance())
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\DB.py", line 298, in fetchAttendance
+    attPerMember = [int(value * 100) for value in attPerMember]
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\DB.py", line 298, in <listcomp>
+    attPerMember = [int(value * 100) for value in attPerMember]
+
+TypeError: unsupported operand type(s) for *: 'NoneType' and 'int'
