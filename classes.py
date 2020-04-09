@@ -509,8 +509,10 @@ class botOverrides(commands.Cog):
             tbLines = traceback.format_exception(type(rootException), rootException,
                                       rootException.__traceback__)
             tb = "\n".join(tbLines)
+            tb = tb + f"Occured at: {D.datetime.now().time()}"
+
+            # dump to terminal
             print(tb)
-            print(f"Occured at: {D.datetime.now().time()}")
 
             # dump error to a log file
             with open("Text Files/errorLog.txt", "a+") as f:
