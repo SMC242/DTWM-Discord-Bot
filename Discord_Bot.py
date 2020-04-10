@@ -1036,7 +1036,7 @@ async def on_ready():
     loop.create_task(botOverride.chooseStatus())
 
     # start the attendance scheduler
-    loop.create_task(botOverride.rescheduleAttendance())
+    await botOverride.rescheduleAttendance()
 
 if __name__=="__main__":
     bot.run(token)
