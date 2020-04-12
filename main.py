@@ -24,11 +24,11 @@ bot = commands.Bot(
     )
 
 # load all of the Cogs. Credit to https://youtu.be/vQw8cFfZPx0?t=424
-for file in listdir("./Cogs"):
-    # ensure it's a Python file and ignore modules that aren't Cogs
-    with suppress(commands.errors.NoEntryPointError):
-        if file.endswith(".py"):
-            bot.load_extension(f"Cogs.{file[:-3]}")
+#for file in listdir("./Cogs"):
+#    # ensure it's a Python file and ignore modules that aren't Cogs
+#    with suppress(commands.errors.NoEntryPointError):
+#        if file.endswith(".py"):
+#            bot.load_extension(f"Cogs.{file[:-3]}")
 
 @bot.before_invoke
 async def log_command_info(ctx):
@@ -38,6 +38,7 @@ async def log_command_info(ctx):
     day = today.strftime("%d.%m.%Y")
     time = today.strftime("%H:%M")
     print(f"""Command: {ctx.command.qualified_name} called in #{ctx.channel} on {day} at {time}""")
+
 
 @bot.listen()
 async def on_ready():
@@ -52,7 +53,7 @@ async def on_ready():
     await common.bot_channel.send('I have awoken... I am at your service')
 
 if __name__ == "__main__":
-    # get token and start the bot
+    # get the token and start the bot
     with open("Text Files/token.txt") as f:
         token = f.readline().strip("\n")
     bot.run(token)
