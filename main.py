@@ -8,6 +8,10 @@ from contextlib import suppress
 from Utils import common
 from datetime import datetime
 
+# dev settings
+DEV_VERSION = True
+common.DEV_VERSION = DEV_VERSION
+
 # instantiate the bot
 description = """This bot was designed for the DTWM discord by [DTWM] benmitchellmtbV5.
 Special thanks to:
@@ -15,7 +19,7 @@ Special thanks to:
     The host, admin and debugging helper: [DTWM] ScreaminSteve
     Profile picture: [DTWM] BoeruChan"""
 bot = commands.Bot(
-    "dev!", 
+    f"{'dev' if DEV_VERSION else 'ab'}!", 
     help_command = commands.MinimalHelpCommand(),
     description = description, owner_id = 395598378387636234,
     activity = Activity(name = "Waking up...", url = "https://joindtwm.net",
@@ -50,7 +54,7 @@ async def on_ready():
     await common.load_bot(bot)
 
     #acknowledge startup in #servitors
-    await common.bot_channel.send('I have awoken... I am at your service')
+    await common.bot_channel.send(f'{"`[DEV VERSION]`" if DEV_VERSION else ""} I have awoken... I am at your service.')
 
 if __name__ == "__main__":
     # get the token and start the bot

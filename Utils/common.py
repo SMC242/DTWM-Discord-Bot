@@ -1,4 +1,6 @@
-"""This modules handles any functions or variables that all modules will access."""
+"""This modules handles any functions or variables that all modules will access.
+
+DEV_VERSION can be set to True to use the bot testing server."""
 
 from discord import *
 from discord.ext import commands
@@ -6,6 +8,7 @@ import unicodedata
 from typing import *
 from string import ascii_letters
 
+DEV_VERSION = False
 bot = commands.Bot(None)  # temporarily defining the bot
 bot_loaded = False  # flag for raising an error if the bot wasn't loaded already
 # channels
@@ -26,8 +29,13 @@ async def load_bot(target_bot: commands.Bot):
     bot_loaded = True
 
     # set up common variables
-    bot_channel = bot.get_channel(545818844036464670)
-    server = bot.get_guild(545422040644190220)
+    # use the bot testing server if it's a dev version
+    if DEV_VERSION:
+        bot_channel = bot.get_channel(660950914202599427)  # bot testing.general
+        server = bot.get_guild(660950914202599424)  # bot testing
+    else:
+        bot_channel = bot.get_channel(545818844036464670)  # DTWM.servitors
+        server = bot.get_guild(545422040644190220)  # DTWM
 
 def in_bot_channel() -> commands.check:
     """Check if the command was invoked in the bot channel."""
@@ -185,4 +193,4 @@ class NameParser:
         return name
 
 if __name__ == "__main__":
-    # test parser
+    print(NameParser("benmitchellmtbV5").parse())
