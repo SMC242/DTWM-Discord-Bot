@@ -16,7 +16,7 @@ common.DEV_VERSION = DEV_VERSION
 description = """This bot was designed for the DTWM discord by [DTWM] benmitchellmtbV5.
 Special thanks to:
     My mentors: Auroram, Stalkopat
-    The host, admin and debugging helper: [DTWM] ScreaminSteve
+    The host, admin, and debugging helper: [DTWM] ScreaminSteve
     Profile picture: [DTWM] BoeruChan"""
 bot = commands.Bot(
     f"{'dev' if DEV_VERSION else 'ab'}!",
@@ -53,7 +53,7 @@ async def on_ready():
     common.load_bot(bot)
 
     #acknowledge startup in #servitors
-    await common.bot_channel.send(f'{"`[DEV VERSION]`" if DEV_VERSION else ""} I have awoken... I am at your service.')
+    await common.bot_channel.send(f'{"`[DEV VERSION]` " if DEV_VERSION else ""}I have awoken... I am at your service.')
 
 if __name__ == "__main__":
     # get the token and start the bot
