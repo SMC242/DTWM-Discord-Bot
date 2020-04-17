@@ -20,7 +20,6 @@ Special thanks to:
     Profile picture: [DTWM] BoeruChan"""
 bot = commands.Bot(
     f"{'dev' if DEV_VERSION else 'ab'}!",
-    help_command = commands.DefaultHelpCommand(commands_heading = "ayaya"),
     description = description, owner_id = 395598378387636234,
     activity = Activity(name = "Waking up...", url = "https://joindtwm.net",
         type = ActivityType.playing, state = "Powering on...",
