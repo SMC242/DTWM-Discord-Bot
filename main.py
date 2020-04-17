@@ -19,8 +19,8 @@ Special thanks to:
     The host, admin and debugging helper: [DTWM] ScreaminSteve
     Profile picture: [DTWM] BoeruChan"""
 bot = commands.Bot(
-    f"{'dev' if DEV_VERSION else 'ab'}!", 
-    help_command = commands.MinimalHelpCommand(),
+    f"{'dev' if DEV_VERSION else 'ab'}!",
+    help_command = commands.DefaultHelpCommand(commands_heading = "ayaya"),
     description = description, owner_id = 395598378387636234,
     activity = Activity(name = "Waking up...", url = "https://joindtwm.net",
         type = ActivityType.playing, state = "Powering on...",
@@ -28,11 +28,11 @@ bot = commands.Bot(
     )
 
 # load all of the Cogs. Credit to https://youtu.be/vQw8cFfZPx0?t=424
-#for file in listdir("./Cogs"):
-#    # ensure it's a Python file and ignore modules that aren't Cogs
-#    with suppress(commands.errors.NoEntryPointError):
-#        if file.endswith(".py"):
-#            bot.load_extension(f"Cogs.{file[:-3]}")
+for file in listdir("./Cogs"):
+    # ensure it's a Python file and ignore modules that aren't Cogs
+    with suppress(commands.errors.NoEntryPointError):
+        if file.endswith(".py"):
+            bot.load_extension(f"Cogs.{file[:-3]}")
 
 @bot.before_invoke
 async def log_command_info(ctx):
@@ -41,7 +41,7 @@ async def log_command_info(ctx):
     today = datetime.today()
     day = today.strftime("%d.%m.%Y")
     time = today.strftime("%H:%M")
-    print(f"""Command: {ctx.command.qualified_name} called in #{ctx.channel} on {day} at {time}""")
+    print(f'Command: {ctx.command.qualified_name} called in "{ctx.guild.name}".{ctx.channel} on {day} at {time}')
 
 
 @bot.listen()
@@ -51,7 +51,7 @@ async def on_ready():
     print("I am ready.\n---")
 
     # load common
-    await common.load_bot(bot)
+    common.load_bot(bot)
 
     #acknowledge startup in #servitors
     await common.bot_channel.send(f'{"`[DEV VERSION]`" if DEV_VERSION else ""} I have awoken... I am at your service.')

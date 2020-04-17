@@ -18,7 +18,7 @@ leader_roles = member_roles[1:]
 bot_channel = None
 server = None
 
-async def load_bot(target_bot: commands.Bot):
+def load_bot(target_bot: commands.Bot):
     """
     Allow this module to use the Bot instance.
     The functions won't work and the variables will be None unless this has been called.
