@@ -257,7 +257,7 @@ class Attendance(commands.Cog):
         common.load_bot(bot)
 
     @commands.Cog.listener()
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def on_member_update(self, before: member, after: member):
         """Add new scouts to the Members table automatically"""
         # get the roles that were added
@@ -271,7 +271,7 @@ class Attendance(commands.Cog):
                 self.db.add_member(name)
 
     @commands.command(aliases = ["AAM"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def add_all_members(self):
         """Add all current members to the Members table."""
         # get all the outfit members
@@ -289,28 +289,28 @@ class Attendance(commands.Cog):
                 self.db.add_member(name)
 
     @commands.command(aliases = ["AM"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def add_member(self, ctx, name: str):
         """Register a member with their name."""
         self.db.add_member(name)
         await ctx.send(f"Welcome to the chapter, brother {name}!")
 
     @commands.command(aliases = ["RM"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def remove_member(self, ctx, name: str):
         """Unregister a member by their name."""
         self.db.delete_member_by_name(name)
         await ctx.send("Another brother lost to the warp...")
 
     @commands.command(aliases = ["RMI"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def remove_member_by_id(self, ctx, id: int):
         """Unregister a member by their id"""
         self.db.delete_member_by_id(id)
         await ctx.send("Another brother lost to the warp...")
 
     @commands.command(aliases = ["DATT"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def do_attendance(self, ctx):
         """Get the names of all people in the event voice channels
         then send it to the DB in 90 minutes."""
@@ -347,9 +347,9 @@ class Attendance(commands.Cog):
         return attendees
 
     @commands.command(aliases = ["LM"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def list_members(self, ctx):
-        """List all fo the registered members"""
+        """List all of the registered members"""
         # create a PrettyTable
         table = PrettyTable(["ID", "Name"])
         for row in self.db.list_members():
@@ -358,28 +358,28 @@ class Attendance(commands.Cog):
         await ctx.send(f"They are ready to serve, my lord:```\n{table.get_string()}```")
 
     @commands.command(aliases = ["att"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def get_att(self, ctx):
         """Get the average attendance per member for this month."""
         await ctx.send(f"""Here are the results for this month, my lord:```
 {self.db.get_att_per_member().get_string()}```""")
 
     @commands.command(aliases = ["Eatt"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def get_event_att(self, ctx):
         """Get the average attendance per event type for this month"""
         await ctx.send(f"""These are the results for this month's events, my lord:```
 {self.db.get_att_per_event().get_string()}```""")
 
     @commands.command(aliases = ["JA"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def joined_at(self, ctx, name: str):
         """Get the join date of a member by their name."""
         joined_at = self.db.get_join_date_by_name(name)
         await ctx.send(f"He joined our chapter on {joined_at.strftime('%d.%m')}")
 
     @commands.command(aliases = ["JAI"])
-    @commands.has_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     async def joined_at_by_id(self, ctx, id: int):
         """Get the join date of a member by their ID."""
         joined_at = self.db.get_join_date_by_id(id)

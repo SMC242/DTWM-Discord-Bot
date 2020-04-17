@@ -42,6 +42,14 @@ async def log_command_info(ctx):
     time = today.strftime("%H:%M")
     print(f'Command: {ctx.command.qualified_name} called in "{ctx.guild.name}".{ctx.channel} on {day} at {time}')
 
+@bot.command()
+@commands.is_owner()
+async def close(ctx):
+    """End me rightly."""
+    # shut down the bot
+    await ctx.send("Power core depleted. Shutting down...")
+    print(f"Ow! That hurt @{ctx.author}")
+    await bot.logout()
 
 @bot.listen()
 async def on_ready():
