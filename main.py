@@ -4,7 +4,6 @@ from discord import *
 from discord.ext import commands
 from typing import *
 from os import listdir
-from contextlib import suppress
 from Utils import common
 from datetime import datetime
 
@@ -23,15 +22,20 @@ bot = commands.Bot(
     description = description, owner_id = 395598378387636234,
     activity = Activity(name = "Waking up...", url = "https://joindtwm.net",
         type = ActivityType.playing, state = "Powering on...",
-        details = "The adepts have summoned me from my slumber.")
+        details = "The adepts have summoned me from my slumber."),
+    case_insensitive = True
     )
 
 # load all of the Cogs. Credit to https://youtu.be/vQw8cFfZPx0?t=424
 for file in listdir("./Cogs"):
     # ensure it's a Python file and ignore modules that aren't Cogs
-    with suppress(commands.errors.NoEntryPointError):
-        if file.endswith(".py"):
-            bot.load_extension(f"Cogs.{file[:-3]}")
+    if file.endswith(".py"):
+        cog_name = file[:-3]
+        try:
+            bot.load_extension(f"Cogs.{cog_name}")
+            print(f"Cog ({cog_name}) loaded sucessfully")
+        except commands.NoEntryPointError:
+            print(f"Cog ({cog_name}) failed to load")
 
 @bot.before_invoke
 async def log_command_info(ctx):

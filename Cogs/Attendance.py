@@ -143,26 +143,43 @@ class AttendanceDBWriter(db.DBWriter):
             to_insert, True
             )
 
-    def get_join_date_by_name(self, name: str) -> D.date:
-        """Get the join date of a member by their name."""
-        row = self.doQuery("SELECT joinedAt FROM Members WHERE name = ?;", [name])[0]
-        return D.datetime.strptime(row[0], "%Y-%m-%d").date()
+    def get_join_date_by_name(self, name: str) -> Optional[D.date]:
+        """Get the join date of a member by their name.
+        
+        RETURNS
+        None: the member wasn't found.
+        datetime.Date: the date that the member joined at."""
+        try:
+            row = self.doQuery("SELECT joinedAt FROM Members WHERE name = ?;", [name])[0]
+            return D.datetime.strptime(row[0], "%Y-%m-%d").date()
+        except IndexError:
+            return None
 
-    def get_join_date_by_id(self, id: int) -> D.date:
-        """Get the join date of a member by their name"""
-        row = self.doQuery("SELECT joinedAt FROM Members WHERE memberID = ?;", [id])[0]
-        return D.datetime.strptime(row[0], "%Y-%m-%d").date()
+    def get_join_date_by_id(self, id: int) -> Optional[D.date]:
+        """Get the join date of a member by their name
+        
+        RETURNS
+        None: the member wasn't found.
+        datetime.Date: the date that the member joined at."""
+        try:
+            row = self.doQuery("SELECT joinedAt FROM Members WHERE memberID = ?;", [id])[0]
+            return D.datetime.strptime(row[0], "%Y-%m-%d").date()
+        except IndexError:
+            return None
 
     def list_members(self) -> List[Tuple[int, str]]:
         """Get the memberID and name of all the registered members."""
         return self.doQuery("SELECT memberID, name FROM Members ORDER BY memberID ASC;")
 
-    def get_attendance_per_member(self) -> PrettyTable:
+    def get_att_per_member(self) -> PrettyTable:
         """Get this month's attendance.
         
         RETURNS
             A PrettyTable.
-            NOTE: A title must be added to the table."""
+            NOTE: A title must be added to the table.
+            
+        RAISES
+            ValueError: No attendance data returned from Attendees."""
         # get all members because executemany doesn't support SELECT
         members = [row[0] for row in self.doQuery("SELECT name FROM Members;")]
 
@@ -180,6 +197,11 @@ class AttendanceDBWriter(db.DBWriter):
                     vars = (member_, target_month)
                     )[0]
                 )
+
+        # handle no attendance data returned
+        # which looks like [(None, None)...]
+        if not list(filter(lambda row: row[0], rows)):
+            raise ValueError("No attendance data returned from Attendees.")
 
         # convert away and avg. attendance to more readable forms
         averages = [row[0] * 100 for row in rows]
@@ -202,7 +224,10 @@ class AttendanceDBWriter(db.DBWriter):
 
         RETURNS
             A PrettyTable.
-            NOTE: A title must be added to the table."""
+            NOTE: A title must be added to the table.
+            
+        RAISES
+            ValueError: No attendance data returned from Attendees."""
         # get the target month for the LIKE clause
         target_month = D.datetime.today().strftime("%Y-%m-") + "%"
 
@@ -218,12 +243,16 @@ class AttendanceDBWriter(db.DBWriter):
                     vars = (event, target_month)
                     )[0]
                 )
+
+        # handle no attendance data returned
+        # which looks like [(None, None)...]
+        if not list(filter(lambda row: row[0], rows)):
+            raise ValueError("No attendance data returned from Attendees.")
         
         # convert no average for an event type to (0%, event type) instead of (None, None)
         # and convert average from decimal to percentage
         rows = [(0, event_type) if row[0] is None else (row[0] * 100, row[1])
-               for event_type, row in zip(event_types, rows)]
-
+                for event_type, row in zip(event_types, rows)]
         # create and configure the table
         table = PrettyTable(["Event Type", "Average Attendance (%)"])
         # sort by attendance ascending
@@ -249,7 +278,9 @@ class Attendance(commands.Cog):
         get_att, att
         get_event_att, Eatt
         joined_at, JA
-        joined_at_by_ID, JAI"""
+        joined_at_by_ID, JAI
+    
+    New Scouts are automatically registered to the database."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -264,29 +295,35 @@ class Attendance(commands.Cog):
         new_role_names = [role_.name for role_ in after.roles if role_ not in before.roles]
         if "Scout" in new_role_names:
             # get their name
-            name = await memtils.NameParser(after.display_name).parse()
+            name = memtils.NameParser(after.display_name).parse()
 
             # only register them if they're not already registered
-            if not self.db.get_member_by_name():
+            if not self.db.get_member_by_name(name):
                 self.db.add_member(name)
+                print(f"New member detected: {name}")
 
     @commands.command(aliases = ["AAM"])
     @commands.has_any_role(*common.leader_roles)
-    async def add_all_members(self):
+    async def add_all_members(self, ctx):
         """Add all current members to the Members table."""
         # get all the outfit members
         in_outfit = []
         for person in common.server.members:
             # check if they have any of the member roles
             for role in common.member_roles:
-                if await memtils.check_roles(person, role):
-                    in_outfit.append(await memtils.NameParser(person.display_name).parse())
+                if memtils.check_roles(person, role):
+                    in_outfit.append(memtils.NameParser(person.display_name).parse())
                     break  # prevent double-adding a person if they have multiple member roles
 
         # register them if they're not already in the DB
+        count = 0  # count every person added to the DB
         for name in in_outfit:
-            if not await self.db.get_member_by_name(name):
+            if not self.db.get_member_by_name(name):
                 self.db.add_member(name)
+                count += 1
+
+        # give feedback
+        await ctx.send(f"{count} new brothers have been registered, my lord.")
 
     @commands.command(aliases = ["AM"])
     @commands.has_any_role(*common.leader_roles)
@@ -318,7 +355,8 @@ class Attendance(commands.Cog):
         return_time = (D.datetime.today() + D.timedelta(minutes = 90)).strftime("%H:%M")
         await ctx.send(f"I will return at {return_time}, my lord")
         attendees = await self.attendance_inner()
-        await ctx.send(f"Our men have been counted.\nAttendees: {attendees}")
+        print("outputting")
+        return await ctx.send(f"Our men have been counted.\nAttendees: {list(attendees)}")
 
     async def attendance_inner(self) -> List[str]:
         """Get the names of all people in the event voice channels
@@ -336,14 +374,16 @@ class Attendance(commands.Cog):
             # add each person in each event channel to attendees
             for channel in channels:
                 for name in [person.display_name for person in channel.members]:
-                    attendees.add(await memtils.NameParser(name).parsed())
+                    attendees.add(memtils.NameParser(name).parse())
 
             # sleep for 30 minutes 
+            print(attendees)
             await async_sleep(1800)
 
         # record the attendance
         self.db.record_att(attendees)
 
+        print("returning")
         return attendees
 
     @commands.command(aliases = ["LM"])
@@ -361,30 +401,59 @@ class Attendance(commands.Cog):
     @commands.has_any_role(*common.leader_roles)
     async def get_att(self, ctx):
         """Get the average attendance per member for this month."""
-        await ctx.send(f"""Here are the results for this month, my lord:```
-{self.db.get_att_per_member().get_string()}```""")
+        try:
+            await ctx.send(f"Here are the results for this month, my lord:```\n" +
+                           f"{self.db.get_att_per_member().get_string()}```")
+        # handle no attendance data
+        except ValueError:
+            await ctx.send("Our archives fail us... I cannot find any roll calls")
 
     @commands.command(aliases = ["Eatt"])
     @commands.has_any_role(*common.leader_roles)
     async def get_event_att(self, ctx):
         """Get the average attendance per event type for this month"""
-        await ctx.send(f"""These are the results for this month's events, my lord:```
-{self.db.get_att_per_event().get_string()}```""")
+        try:
+            await ctx.send(f"These are the results for this month's events, my lord:```\n" + 
+                           f"{self.db.get_att_per_event().get_string()}```")
+        # handle no attendance data
+        except ValueError:
+            await ctx.send("Our archives fail us... I cannot find any roll calls")
 
     @commands.command(aliases = ["JA"])
     @commands.has_any_role(*common.leader_roles)
     async def joined_at(self, ctx, name: str):
         """Get the join date of a member by their name."""
         joined_at = self.db.get_join_date_by_name(name)
-        await ctx.send(f"He joined our chapter on {joined_at.strftime('%d.%m')}")
+        # handle no member found
+        if not joined_at:
+            await ctx.send(f'Our archives do not know this "{name}"')
+        else:
+            await ctx.send(f"He joined our chapter on {joined_at.strftime('%d.%m')}")
 
     @commands.command(aliases = ["JAI"])
     @commands.has_any_role(*common.leader_roles)
     async def joined_at_by_id(self, ctx, id: int):
         """Get the join date of a member by their ID."""
         joined_at = self.db.get_join_date_by_id(id)
-        await ctx.send(f"He joined our chapter on {joined_at.strftime('%d.%m')}")
+        # handle no member found
+        if not joined_at:
+            await ctx.send(f'Our archives do not know this "{name}"')
+        else:
+            await ctx.send(f"He joined our chapter on {joined_at.strftime('%d.%m')}")
+
+    @commands.command(aliases = ["ND"])
+    @commands.is_owner()
+    async def new_day(self, ctx, event_type: str):
+        """Create a new day in the database. The event type must be one of the following:
+        air, armour, infantry, co-ops1, co-ops2, internal_ops"""
+        # it must be uppercase
+        event_type = event_type.upper()
+        # verify the event_type
+        if event_type not in ("AIR", "ARMOUR", "INFANTRY", "CO-OPS1", "CO-OPS2", "INTERNAL_OPS"):
+            return await ctx.send("We don't do that kind of event!")
+        else:
+            self.db.new_day(event_type)
+            await ctx.send("A new day has begun")
 
 def setup(bot):
     bot.add_cog(Attendance(bot))
-    print("Attendance set up successfully!")

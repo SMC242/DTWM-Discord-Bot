@@ -73,7 +73,7 @@ class NameParser:
         self.check_titles = check_titles
         self.case = case
 
-    async def parse(self) -> str:
+    def parse(self) -> str:
         """Return the parsed name. The name will be parsed according to the settings."""
         # don't modify the original
         name = self._original_name
@@ -88,7 +88,7 @@ class NameParser:
 
         # apply each setting if it's set
         for setting, method in settings:
-            name = await method(name) if setting else name
+            name = method(name) if setting else name
 
         # remove extra whitespace
         name = name.strip()
@@ -101,7 +101,7 @@ class NameParser:
         else:
             return name
 
-    async def remove_tag(self, name: str) -> str:
+    def remove_tag(self, name: str) -> str:
         """Remove [TAG]s from the name."""
         # exit if there is no tag
         if "]" in name:
@@ -124,7 +124,7 @@ class NameParser:
         else:
             return name
 
-    async def convert_to_english(self, name: str) -> str:
+    def convert_to_english(self, name: str) -> str:
         """Check for non-english characters. What happens to them
         is defined by remove_weird_chars."""
         if not self.remove_weird_chars:
@@ -139,11 +139,11 @@ class NameParser:
         char_gen = (char for char in name if char.isalnum())  # filter out the symbols
         return "".join(char_gen)  # convert back to string
 
-    async def remove_numbers(self, name: str) -> str:
+    def remove_numbers(self, name: str) -> str:
         """Remove numbers from the name."""
         return "".join( (char for char in name if char in ascii_letters) )
 
-    async def remove_titles(self, name: str) -> str:
+    def remove_titles(self, name: str) -> str:
         """Remove titles after a delimiter."""
         # get the valid delimiters
         with open("./Text Files/delimiters.txt") as f:
@@ -155,6 +155,6 @@ class NameParser:
 
         return name
 
-async def check_roles(person: member, role_name: str) -> bool:
+def check_roles(person: member, role_name: str) -> bool:
     """Check if the person has the role."""
     return role_name in [role.name for role in person.roles]

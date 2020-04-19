@@ -61,3 +61,70 @@ Traceback (most recent call last):
     attPerMember = [int(value * 100) for value in attPerMember]
 
 TypeError: unsupported operand type(s) for *: 'NoneType' and 'int'
+Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 357, in do_attendance
+    attendees = await self.attendance_inner()
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 376, in attendance_inner
+    attendees.add(memtils.NameParser(name).parsed())
+
+AttributeError: 'NameParser' object has no attribute 'parsed'
+Occured at: 16:17:49.295733Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 357, in do_attendance
+    attendees = await self.attendance_inner()
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 382, in attendance_inner
+    self.db.record_att(attendees)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 143, in record_att
+    to_insert, True
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\BenUtils\db.py", line 107, in doQuery
+    self.cursor.executemany(query, vars)
+
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+Occured at: 18:26:45.772552Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 357, in do_attendance
+    attendees = await self.attendance_inner()
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 382, in attendance_inner
+    self.db.record_att(attendees)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 143, in record_att
+    to_insert, True
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\BenUtils\db.py", line 107, in doQuery
+    self.cursor.executemany(query, vars)
+
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+Occured at: 18:26:46.202975Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 357, in do_attendance
+    attendees = await self.attendance_inner()
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 384, in attendance_inner
+    self.db.record_att(attendees)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 143, in record_att
+    to_insert, True
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\BenUtils\db.py", line 107, in doQuery
+    self.cursor.executemany(query, vars)
+
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+Occured at: 02:57:28.402955
