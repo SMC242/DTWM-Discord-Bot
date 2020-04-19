@@ -355,12 +355,11 @@ class Attendance(commands.Cog):
         return_time = (D.datetime.today() + D.timedelta(minutes = 90)).strftime("%H:%M")
         await ctx.send(f"I will return at {return_time}, my lord")
         attendees = await self.attendance_inner()
-        print("outputting")
         return await ctx.send(f"Our men have been counted.\nAttendees: {list(attendees)}")
 
     async def attendance_inner(self) -> List[str]:
-        """Get the names of all people in the event voice channels
-        then send it to the Attendees table in 90 minutes
+        """Get the names of all people in the event voice channels,
+        then send it to the Attendees table in 90 minutes,
         and return the attendees' names"""
         # get the event channels
         with open("./Text Files/channels.txt") as f:
@@ -377,13 +376,14 @@ class Attendance(commands.Cog):
                     attendees.add(memtils.NameParser(name).parse())
 
             # sleep for 30 minutes 
-            print(attendees)
-            await async_sleep(1800)
+            # but don't wait a fourth time
+            if i == 3:
+                break
+            else:
+                await async_sleep(1800)
 
         # record the attendance
         self.db.record_att(attendees)
-
-        print("returning")
         return attendees
 
     @commands.command(aliases = ["LM"])
