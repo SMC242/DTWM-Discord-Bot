@@ -25,7 +25,7 @@ def load_bot(target_bot: commands.Bot):
 
     This is due to needing access to the bot for some checks.
     """
-    global bot, bot_channel, server
+    global bot, bot_channel, server, bot_loaded
 
     # unlock all of the functions that need the bot
     bot = target_bot
@@ -48,5 +48,10 @@ def in_bot_channel() -> commands.check:
             raise ValueError("This check requires a bot. Use load_bot to unlock it.")
 
         # check if the bot is in #servitors
-        return ctx.channel == bot.get_channel()
+        if not ctx.channel == bot_channel:
+            await ctx.send(f"These are matters for {bot_channel.mention}, brother. "+
+                           "Take it there and I will answer you")
+            return False
+        else:
+            return True
     return commands.check(inner)

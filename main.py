@@ -34,7 +34,7 @@ for file in listdir("./Cogs"):
         try:
             bot.load_extension(f"Cogs.{cog_name}")
             print(f"Cog ({cog_name}) loaded sucessfully")
-        except commands.NoEntryPointError:
+        except (commands.NoEntryPointError, commands.errors.ExtensionNotFound):
             print(f"Cog ({cog_name}) failed to load")
 
 @bot.before_invoke

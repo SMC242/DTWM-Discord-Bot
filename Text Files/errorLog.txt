@@ -127,4 +127,58 @@ Occured at: 18:26:46.202975Traceback (most recent call last):
     self.cursor.executemany(query, vars)
 
 sqlite3.IntegrityError: FOREIGN KEY constraint failed
-Occured at: 02:57:28.402955
+Occured at: 02:57:28.402955Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 314, in add_all_members
+    in_outfit = memtils.get_in_outfit()
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Utils\memtils.py", line 166, in get_in_outfit
+    if not common.bot_loaded:
+
+NameError: name 'common' is not defined
+Occured at: 05:50:58.708899Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 318, in add_all_members
+    for name in in_outfit:
+
+TypeError: 'NoneType' object is not iterable
+Occured at: 05:51:54.203977Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 318, in add_all_members
+    for name in in_outfit:
+
+TypeError: 'NoneType' object is not iterable
+Occured at: 05:53:05.264850Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 319, in add_all_members
+    if not self.db.get_member_by_name(name):
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 76, in get_member_by_name
+    joined_at = D.datetime.strptime(rows[3], "%Y-%m-%d").date()
+
+IndexError: list index out of range
+Occured at: 05:54:12.549016Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 319, in add_all_members
+    if not self.db.get_member_by_name(name):
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 76, in get_member_by_name
+    joined_at = D.datetime.strptime(rows[3], "%Y-%m-%d").date()
+
+IndexError: list index out of range
+Occured at: 06:00:36.860467

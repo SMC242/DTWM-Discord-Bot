@@ -3,6 +3,7 @@
 from typing import *
 import unicodedata
 from discord import member
+from Utils import common
 
 class NameParser:
     """
@@ -156,5 +157,33 @@ class NameParser:
         return name
 
 def check_roles(person: member, role_name: str) -> bool:
-    """Check if the person has the role."""
-    return role_name in [role.name for role in person.roles]
+    """Check if the person has the role.
+    Not case-sensitive"""
+    return role_name.lower() in [role.name.lower() for role in person.roles]
+
+def get_in_outfit(return_members: bool = False) -> List[Union[member, str]]:
+    """Get all of the people in the outfit. Requires common.load_bot
+    
+    ARGUMENTS
+    return_members: return Discord.Members instead of their names"""
+    # throw an error if the bot hasn't been loaded
+    if not common.bot_loaded:
+        raise ValueError("You must use common.load_bot first")
+
+    # get all the outfit members
+    in_outfit = []
+    for person in common.server.members:
+        # check if they have any of the member roles
+        for role in common.member_roles:
+            if check_roles(person, role):
+                # don't add battle brothers
+                if check_roles(person, "Battle Brother"):
+                    break
+                else:
+                    if return_members:
+                        in_outfit.append(person)
+                    else:
+                        in_outfit.append(NameParser(person.display_name).parse())
+                    break  # prevent double-adding a person if they have multiple member roles
+
+    return in_outfit

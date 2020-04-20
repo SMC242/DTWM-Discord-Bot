@@ -83,6 +83,10 @@ class ErrorHandler(commands.Cog):
         elif isinstance(error, Forbidden):
             await ctx.send("I can't access one or more of those channels TwT")
 
+        # custom checks will handle their own failures
+        elif isinstance(error, commands.CheckFailure):
+            pass
+
         # if the error hasn't been handled
         else:
             # tell the user
