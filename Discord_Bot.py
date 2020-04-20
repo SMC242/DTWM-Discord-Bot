@@ -7,11 +7,11 @@ from typing import *
 
 from classes import *
 
+# initialise bot
 bot=commands.Bot(command_prefix="ab!", help_command=None, case_insensitive=True)
 bot.add_cog(botOverrides(bot))
 
-SCHEDULING_RAN = False
-
+# get the bot token
 if __name__=="__main__":
     with open("Text Files/token.txt") as f:
         line=f.readline()
@@ -182,7 +182,7 @@ async def toggleReactions(ctx):
     return await ctx.send(f"I {'will' if botOverride.reactionParent.reactionsAllowed else 'will not'} react to messages, My Lord")
 
 @inBotChannel()
-@leader.command(aliases = ["away", ])
+@leader.command(aliases = ["away"])
 async def markAsAway(ctx, name: str):
     """Mark a person as away. 
     Arguments: ab!leadermarkAsAway {name}
@@ -196,7 +196,7 @@ async def markAsAway(ctx, name: str):
 
 
 @inBotChannel()
-@leader.command()
+@leader.command(aliases = ["removeM", "RM"])
 async def removeMember(ctx, name: str):
     """Unregister the target member.
     Arguments: ab!leader removeMember {name}
@@ -210,7 +210,7 @@ async def removeMember(ctx, name: str):
 
 
 @inBotChannel()
-@leader.command()
+@leader.command(aliases = ["addM", "AM"])
 async def addMember(ctx, name: str):
     """Register the target member.
     Arguments: ab!leader addMember {name}
@@ -221,6 +221,23 @@ async def addMember(ctx, name: str):
         cog_ = bot.get_cog("AttendanceDBWriter")
         await cog_.addMember(name)
         return await ctx.send(f"Welcome to the chapter, brother {name}!")
+
+
+@inBotChannel()
+@leader.command(aliases = ["addAll"])
+async def addAllMembers(ctx):
+    """Add all current members to the database."""
+
+    await bot.get_cog("AttendanceDBWriter").addAllMembers()
+    return await ctx.send("Our chapter has been registered, My Lord")
+
+
+@inBotChannel()
+@leader.command(aliases = ["FA"])
+async def fetchAttendance(ctx):
+    """Fetch this month's attendance."""
+
+    return await ctx.send(await bot.get_cog("AttendanceDBWriter").fetchAttendance())
 
 
 @leader.command(aliases=["V5", "INeedARide", "WaitUpLetMeHopIn"])
@@ -399,7 +416,7 @@ async def removeMemberByID(ctx, id: int):
         await ctx.send("Another brother lost to the Warp...")
 
 
-@leader.command()
+@leader.command(aliases = ["LM", "listM"])
 @inBotChannel()
 async def listMembers(ctx):
     """List all the members in the database as a table of id, name."""
@@ -471,7 +488,7 @@ async def callAttendance(attendees: List[str])-> bool:
     
     RETURNS
     False: if no failure
-    True: if failure'''
+    True: if failure (it was called on a Saturday)'''
 
     DBWriter=bot.get_cog('AttendanceDBWriter')
     try:
@@ -979,67 +996,6 @@ async def getTrainingWeek(ctx):
         return ctx.send("My archives are corrupt! Please report this to the Adepts immediately")
 
 
-async def scheduleAttendance():
-    
-    # prevent duplicate queues
-    global SCHEDULING_RAN
-
-    # check if it's a new day
-    today = D.datetime.today().date().day
-    botOverride = bot.get_cog("botOverrides")
-    if botOverride.startDay.day != today:
-        # reschedule and update the starting day
-        SCHEDULING_RAN = False
-        botOverride.startDay = today
-
-    if SCHEDULING_RAN:  
-        return
-
-    else:
-        SCHEDULING_RAN = True
-        # remove once this comes out of the testing phase
-        await bot.get_channel(545818844036464670).send("```css\nTemporary logging: Attendance scheduled```")
-
-    #scheduling the attendance function
-    timenow=D.datetime.now()
-    if timenow.weekday() == 5:  #no events on Saturday
-        return
-
-    timenow=timenow.time()
-
-    if 2000<int(timenow.strftime("%H%M"))<2130:  #if started during an event
-        attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
-        try:
-            failure=await callAttendance(attendees)
-
-        except TypeError:  #event started too late
-            pass
-
-        if failure:
-            pass
-
-    else:  #wait until almost event time
-        target=D.time(19, 59)
-    
-        newTarget=D.datetime.combine(D.date.min, target)
-        oldTime=D.datetime.combine(D.date.min, timenow)
-        runInSeconds= (newTarget - oldTime).seconds
-
-        await asyncio.sleep(runInSeconds)
-
-        await getInOpsInner()  #ping people to get in ops
-
-        attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
-        try:
-            failure= await callAttendance(attendees)
-
-        except TypeError:  #event started too late
-            pass
-
-        if failure:
-            pass
-
-
 @bot.listen()
 async def on_ready():
     print('\nLogged in as')
@@ -1059,9 +1015,8 @@ async def on_ready():
     loop=asyncio.get_event_loop()
     loop.create_task(botOverride.chooseStatus())
 
-    # schedule attendance
-    await scheduleAttendance()
+    # start the attendance scheduler
+    await botOverride.rescheduleAttendance()
 
 if __name__=="__main__":
-    commandListener(bot)
     bot.run(token)

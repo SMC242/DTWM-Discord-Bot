@@ -283,7 +283,10 @@ class MessageResponseMessages(MessageResponses):
 
 
 class botOverrides(commands.Cog):
+    """Handle any behvaiour changes for the bot"""
+
     reactionsAllowed=True
+    schedulingRan = False
 
     def __init__(self, bot: commands.Bot):
         '''Subclass of Cog to override certain functions of Bot.
@@ -291,7 +294,7 @@ class botOverrides(commands.Cog):
 
         self.bot=bot
 
-        # add attendance Cogs
+        # add all other Cogs
         cogs = [AttendanceDBWriter(self.bot), MessageResponseMessages(self.bot),
             MessageReactions(self.bot)]
         for instance in cogs:
@@ -310,7 +313,6 @@ class botOverrides(commands.Cog):
 
         # attendance rescheduler
         self.startDay = D.datetime.today().date()
-        asyncio.get_event_loop().create_task(self.rescheduleAttendance())
 
 
     async def chooseStatus(self):
@@ -375,9 +377,53 @@ class botOverrides(commands.Cog):
 
         # check for a new day every 4 hours
         while True:
+            await self.scheduleAttendance()
             await asyncio.sleep(14400)
-            from Discord_Bot import scheduleAttendance
-            await scheduleAttendance()
+
+
+    async def scheduleAttendance(self):
+        """Schedule attendance if it hasn't been scheduled today."""
+
+        # prevent duplicate queues
+        # by checking if it's a new day
+        today = D.datetime.today().day
+
+        if self.startDay != today:
+            self.schedulingRan = False
+            self.startDay = today
+
+        # exit if this already ran today
+        if self.schedulingRan:
+            return
+
+        else:
+            self.schedulingRan = True
+            # remove once this comes out of the testing phase
+            await self.bot.get_channel(545818844036464670).send("```css\nTemporary logging: Attendance scheduled```")
+
+        # getting the required functions
+        from Discord_Bot import executeOnEvents, callAttendance, getInOpsInner
+
+        #scheduling the attendance function
+        timenow=D.datetime.now()
+        if timenow.weekday() == 5:  #no events on Saturday
+            return
+
+        timenow=timenow.time()
+
+        # wait until the event time
+        target=D.time(19, 59)
+    
+        newTarget=D.datetime.combine(D.date.min, target)
+        oldTime=D.datetime.combine(D.date.min, timenow)
+        runInSeconds= (newTarget - oldTime).seconds
+
+        await asyncio.sleep(runInSeconds)
+
+        await getInOpsInner()  #ping people to get in ops
+
+        attendees=await executeOnEvents(AsyncCommand(getAttendance, name="getAttendance", arguments=(bot.get_guild(545422040644190220),)))
+        ignored = await callAttendance(attendees)
 
 
     @property
@@ -461,11 +507,26 @@ class botOverrides(commands.Cog):
             # development purposes for the time being, but will be disabled at a later
             # point
             print(f'Ignoring exception in command {ctx.command}:', file=sys.stderr)
-            traceback.print_exception(type(exception), exception,
-                                      exception.__traceback__, file=sys.stderr)
-            print(f"Occured at: {D.datetime.now().time()}")
 
-            return await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  #give user feedback if internal error occurs
+            # fetch exception and convert it to one string
+            rootException = exception.original  # fetch the original error
+            tbLines = traceback.format_exception(type(rootException), rootException,
+                                      rootException.__traceback__)
+            tb = "\n".join(tbLines)
+            tb = tb + f"Occured at: {D.datetime.now().time()}"
+
+            # dump to terminal
+            print(tb)
+
+            # dump error to a log file
+            with open("Text Files/errorLog.txt", "a+") as f:
+                f.write(tb)
+
+            # dump error to bot testing.errors
+            await self.bot.get_channel(697746979782000680).send(f"```\n{tb}```")
+
+            #give user feedback if internal error occurs
+            return await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")  
 
 
 class TerminalCommand:
@@ -538,146 +599,6 @@ class ThreadCommand(TerminalCommand):
 
     def call(self):
         return self.thread.start()
-
-class commandListener():
-    '''Class for handling console commands'''
-
-    def help(self):
-        '''Display all console commands'''
-        print("Commands list:\n")
-
-        for command in self.commands:
-            print(command.details)
-
-    
-    async def close(self):
-        '''Command to throw pummel at bot'''
-
-        print("Ow that hurts... Closing now :,(")
-
-        #acknowledge shutdown
-        botChannel=self.bot.get_channel(545818844036464670)
-        await botChannel.send('The warp screams in my mind... I must go now')
-
-        try:
-            await self.bot.logout()
-            self.bot.loop.stop()
-
-        except concurrent.futures.CancelledError:
-            input("Press any key to exit")
-            sys.exit(0)
-
-
-    async def listening(self):
-        '''always listening for commands from the console'''
-
-        #constantly checking if a command name is inputted
-        while True:
-            try:
-                listenerInput= await self.bot.loop.run_in_executor(None, input)
-                listenerInput=listenerInput.lower()
-
-            except KeyboardInterrupt:
-                continue
-
-            if listenerInput=="" or listenerInput==" " or listenerInput=="\n":
-                continue
-
-            for command in self.commands:
-                if listenerInput == command.name:
-                    try:
-                        if isinstance(command, AsyncCommand):
-                            await command.call()
-
-                        else:
-                            command.call()
-
-                    except KeyboardInterrupt:
-                        continue
-
-                    except Exception as error:
-                        print(f'Error occured:', file=sys.stderr)
-                        traceback.print_exception(type(error), error,
-                                                    error.__traceback__, file=sys.stderr)
-
-
-    async def scheduleEvent(self):
-        '''Take in a function from Discord_Bot.py and schedule it
-        Doesn't support arguments'''
-
-        async def getAttendanceArguments(self):
-            #get the DTWM guild
-            #if URGE rewrite: get 2nd guild
-            return self.bot.get_guild(545422040644190220)
-
-        validModules={
-            "attendanceWrapper": await getAttendanceArguments(self),
-            }
-
-        #set to None if no args
-        print(f"Valid modules:\n{list(validModules.keys())}\n")
-
-        #validating
-        success=False
-        while not success:
-            eventInput=input("Enter the name of the module to execute\n")
-
-            success=validateString(eventInput, list(validModules.keys()))
-                
-        import Discord_Bot
-        func=getattr(Discord_Bot, eventInput)
-        
-        #valdating time
-        success=False
-        while not success:
-            time=input("Enter the time to execute at. Separate multiple times with spaces\n")
-
-            if validateString(time):
-                fail=False
-                times=time.split(" ")
-
-                for time in times:
-                    if len(time) != 4:
-                        fail=True
-
-                if not fail:
-                    success=True
-
-        asyncio.ensure_future(Discord_Bot.executeOnEvents(AsyncCommand(func, name=eventInput, arguments=validModules[eventInput]),\
-           times), loop=self.loop)
-        print(f"Event ({eventInput}) scheduled")
-
-
-    async def __ainit__(self, loop, bot):
-        self.commands=[
-        AsyncCommand(self.close, name="close",\
-           description='Ends the bot rightly. Use for closing the bot without causing problems.'),
-        TerminalCommand(os._exit, name="die",\
-            description='Instantly kills the bot. For emergencies only. Use "close" outside of emergencies',\
-            arguments=(0,)),
-        TerminalCommand(self.help, name="help", description="Displays all terminal commands"),
-        AsyncCommand(self.scheduleEvent, name="schedule", description="Schedule a function to execute at a custom time/set of times"),
-        ]
-
-        self.bot=bot
-        self.loop=loop
-        
-        #printing the terminal commands list to the terminal user
-        print('Command listener active... Commands list:')
-        for command in self.commands:
-            print(command.details)
-
-        await self.listening()
-
-    def __init__(self, bot: commands.Bot):
-        '''Loop: the asyncio event loop.
-        threads: a list of active threads '''
-
-        loop=asyncio.get_event_loop()
-
-        coro=self.__ainit__(loop, bot)
-
-        bot.loop.create_task(coro)
 
 
 class NotLeaderError(commands.CommandError):

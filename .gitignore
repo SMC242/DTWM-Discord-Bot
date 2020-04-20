@@ -12,3 +12,5 @@ Text\ Files/credentials.json
 token.pkl
 token.pickle
 *.config
+Text Files/errorLog.txt
+"Text Files/errorLog.txt"

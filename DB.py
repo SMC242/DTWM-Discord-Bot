@@ -3,7 +3,7 @@
 from discord import *
 from discord.ext import commands
 import sqlite3 as sql
-import os, logging, asyncio, datetime, calendar
+import os, logging, asyncio, datetime, calendar, prettytable
 from typing import *
 from sys import exc_info
 
@@ -124,7 +124,7 @@ class AttendanceDBWriter(DBWriter, commands.Cog):
         self.createAttendanceTable()
         # print all registered members
         print("Registered members:")
-        print(self.doQuery("SELECT * FROM Members;"), end = "\n\n")
+        print(self.doQuery("SELECT memberID, name FROM Members;"), end = "\n\n")
         self.loop.create_task(self.newDay())
 
 
@@ -152,7 +152,18 @@ CREATE TABLE IF NOT EXISTS Days(
     async def addMember(self, name: str):
         """Add a member to the database"""
 
-        self.doQuery("INSERT INTO Members(name) VALUES(?)", vars = (name, ))
+        self.doQuery("INSERT INTO Members(name) VALUES(?);", vars = (name, ))
+
+    async def getMemberByName(self, name: str) -> Tuple[int, str, int]:
+        """Fetch a member's row by their name."""
+
+        return self.doQuery("SELECT memberID, name, away FROM Members WHERE name = ?;", vars = [name])
+
+
+    async def getMemberByID(self, id: int) -> Tuple[int, str, int]:
+        """Get a member's row by their ID."""
+
+        return self.doQuery("SELECT memberID, name, away FROM Members WHERE memberID = ?;", vars = [id])
 
 
     @commands.Cog.listener()
@@ -167,8 +178,9 @@ CREATE TABLE IF NOT EXISTS Days(
             # check if they're already in the database
             from Discord_Bot import removeTitles
             name = await removeTitles((after.nick, ))
+            name = name[0]  # removeTitles returns a list
 
-            personExists = self.doQuery("SELECT name FROM Members WHERE name = ?", vars = (name, ))
+            personExists = self.doQuery("SELECT name FROM Members WHERE name = ?;", vars = (name, ))
 
             if not personExists:
                 await self.addMember(name)
@@ -179,27 +191,31 @@ CREATE TABLE IF NOT EXISTS Days(
         from Discord_Bot import removeTitles
         from Discord_Bot import checkRoles
 
+        # get all server members
         serverMembers = self.bot.get_guild(545422040644190220).members
         memberGenerator = await checkRoles(serverMembers, ("Astartes", "Watch Leader"))
         
+        # check if they're in the outfit
         members = [person async for isMember, person in memberGenerator if isMember]
         filteredNames = await removeTitles([person.nick if person.nick else person.name for person in members])
-        sqlReadyNames = [(name, ) for name in filteredNames]  # each element must be a tuple
+        filteredNames = list(filter(None, filteredNames))
 
-        self.doQuery("INSERT INTO Members(name) VALUES(?)", vars = sqlReadyNames, many = True)
+        # add each member to the DB if they're not in it
+        for name in filteredNames:
+            if not await self.getMemberByName(name):
+                self.doQuery("INSERT INTO Members(name) VALUES(?);", vars = [name])
 
 
     async def deleteMember(self, name: str):
         """Delete a member from the database"""
 
-        self.doQuery("DELETE FROM Members WHERE name = ?", vars = (name, ))
-
+        self.doQuery("DELETE FROM Members WHERE name = ?;", vars = (name, ))
 
     async def sendAttToDB(self, attendees: List[str]):
         """Send attendees to DB"""
 
         # prepare for query
-        date = self.date().strftime("%d/%m/%Y")
+        date = datetime.datetime.today().date().strftime("%d/%m/%Y")
         toInsert = [(date, name) for name in attendees]
 
         # mark as absent
@@ -212,7 +228,7 @@ INSERT INTO Attendees (dayID, memberID, attended) VALUES
     async def markAsAway(self, name: str):
         """Mark someone as away for the month"""
 
-        self.doQuery("UPDATE Members SET away = 1 WHERE name = ?", vars = (name, ))
+        self.doQuery("UPDATE Members SET away = 1 WHERE name = ?;", vars = (name, ))
 
 
     async def getMonthlyAtt(self):
@@ -225,44 +241,72 @@ INSERT INTO Attendees (dayID, memberID, attended) VALUES
         date = datetime.datetime.today().date()
         firstDayOfMonth = calendar.monthrange(date.year, date.month)[0]
         if not date == datetime.date(date.year, date.month, firstDayOfMonth):
-            return # we don't care unless it's the last day
+            return  # we don't care unless it's the last day
         
-        # get attendance for each member
-        members = self.doQuery("SELECT name FROM Members;")
-        month = date.strftime("%m")
-        year = date.strftime("%Y")
-
-        toInsert = [(name, month, year) for name in members]
-        attPerMember = self.doQuery("""
-SELECT AVG(attended) FROM Attendees, Members, Days 
-    WHERE 
-        Members.memberID = Attendees.memberID AND Members.name = ? 
-        AND Days.dayID = Attendees.dayID
-        AND Days.date LIKE '%/?/?';""", vars = (toInsert, ))
-
-        # get away statuses
-        aways = self.doQuery("SELECT away FROM Members where name = ?", vars = (members, ))
-        
-        # convert to readable forms
-        aways = [("Yes") if (value == 1) else ("No") for value in aways]
-        attPerMember = [int(value * 100) for value in attPerMember]
+        # get attendance for the month
+        table = await self.fetchAttendance()
 
         # output to #command-chat
-        # iterate over members and build output table
-        output = f"__Attendance for {date.strftime('%m/%Y')}__"
-        output += "\n```"
 
-        for i in range(0, len(members)-1):
-            output += f"| Name: {members[i]} | Attendance: {attPerMember[i]}% | Away during the month: {aways[i]} |"
-
-        output += "```"
-
-        # send message
         commandChat = self.bot.get_channel(545809020754067463)
-        await commandChat.send(output)
+        await commandChat.send(table)
 
         # remove away statuses
         self.doQuery("UPDATE Members SET away = 0;")
+
+
+    async def fetchAttendance(self) -> str:
+        """
+        Fetch the attendance averages for all members
+       for this month as a PrettyTable converted to a string."""
+
+        # get attendance for each member
+        date = datetime.datetime.today().date()
+        members = self.doQuery("SELECT name FROM Members;")
+        members = [member[0] for member in members]  # convert from tuple to str
+        month = date.strftime("%m")
+        year = date.strftime("%Y")
+        targetMonth = f"%/{date.strftime('%m/%Y')}"
+
+        # these loops are needed because executemany only supports modification
+        # I could use IN() however that would require opening the bot to an injection attack
+        # as that would require using string formatting
+        attPerMember: List[List[Tuple[int]]] = [
+            self.doQuery("""
+SELECT AVG(attended) FROM Attendees, Members, Days 
+    WHERE 
+        Members.memberID = Attendees.memberID AND Members.name = ?
+        AND Days.dayID = Attendees.dayID
+        AND Days.date like ?;""",
+            vars = (name, targetMonth)
+            )
+            for name in members
+        ]
+
+        # get away statuses
+        aways: List[List[Tuple[int]]] = [
+                self.doQuery("SELECT away FROM Members where name = ?;", vars = [name])
+                for name in members
+                ]
+
+        attPerMember: List[int] = [row[0][0] for row in attPerMember]
+        aways: List[int] = [row[0][0] for row in aways]
+        
+        # convert to readable forms
+        try:
+            aways = [("Yes") if (value == 1) else ("No") for value in aways]
+            attPerMember = [int(value * 100) for value in attPerMember]
+
+        # handle empty DB
+        except TypeError:
+            return "There is no attendance data currently."
+
+        # convert to PrettyTable
+        table = prettytable.PrettyTable(["Name", "Attendance (%)," "Away"])
+        for name, att, away in zip(members, attPerMember, aways):
+            table.add_row((name, att, away))
+
+        return table.get_string(title = f"Attendance for {date.strftime('%m/%Y')}")
 
 
     async def newDay(self):
@@ -270,8 +314,8 @@ SELECT AVG(attended) FROM Attendees, Members, Days
 
         date = datetime.datetime.today().strftime("%d/%m/%Y")
         # if not exists check
-        if not self.doQuery("SELECT date FROM Days WHERE date = ?", vars = (date, )):
-            self.doQuery("INSERT INTO Days (date) VALUES (?)", vars = (date, ))
+        if not self.doQuery("SELECT date FROM Days WHERE date = ?;", vars = (date, )):
+            self.doQuery("INSERT INTO Days (date) VALUES (?);", vars = (date, ))
 
 
     @staticmethod
@@ -291,7 +335,3 @@ SELECT AVG(attended) FROM Attendees, Members, Days
         """Fetch all of the members from the DB and their IDs."""
 
         return self.doQuery("SELECT memberID, name FROM Members;")
-
-
-if __name__ == "__main__":
-    i = AttendanceDBWriter(commands.Bot("ab"))
