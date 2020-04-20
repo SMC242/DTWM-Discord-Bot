@@ -320,7 +320,7 @@ class botOverrides(commands.Cog):
 
         playingStatuses=[
             "Purging Heretics and Patting Lolis",
-            "raid: ben's hentai stash",
+            "Raid: ben's Hentai Stash",
             "Quest For The Tankist Role",
             "Recruiting Blueberries",
             "Ayaya",
@@ -346,11 +346,15 @@ class botOverrides(commands.Cog):
             "Seals For Supper",
             "Regretting Starting An Open Platoon",
             "Anywhere But The Waypoint",
+            "Making ben Sigh",
+            "With A Bastion",
+            "In A 10-hour TI Fight",
         ]
 
         watchingStatuses=[
             "Ahegao Tutorials",
-            "Ayaya Intensifies"
+            "Ayaya Intensifies",
+            "The SL Rage-quit",
             ]
 
         statuses=[Activity(name=msg, type=ActivityType.playing) for msg in playingStatuses]

@@ -97,6 +97,8 @@ def inBotChannel():
     Unless command is whitelisted'''
 
     async def inner(ctx):
+        # log the command
+        print(f"command: {ctx.command.name} call recieved at {D.datetime.today().time().strftime('%H hours, %M minutes')}")
         botChannel=ctx.bot.get_channel(545818844036464670)
 
         if not botChannel==ctx.message.channel:
@@ -120,8 +122,6 @@ async def leader(ctx):
 @commands.cooldown(1, 10, type=commands.BucketType.user)
 async def help(ctx):
     '''Displays all of the commands'''
-
-    print("Command: help call recieved")
 
     #sort commands alphabetically
     filterOut=commands.Group
@@ -175,8 +175,6 @@ async def help(ctx):
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def toggleReactions(ctx):
     '''Allow/disallow reactions to messages with terms in the white list'''
-
-    print("Command: toggleReactions call recieved")
 
     botOverride=bot.get_cog('botOverrides')
     botOverride.reactionParent.reactionsAllowed = not botOverride.reactionParent.reactionsAllowed
@@ -246,7 +244,6 @@ async def fetchAttendance(ctx):
 @inBotChannel()
 async def getInOps(ctx):
     '''Pings every member that's playing PS2 but isn't in ops comms.'''
-    print("Command: getInOps call recieved")
     await getInOpsInner()
 
 
@@ -373,7 +370,6 @@ async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def imNotAMember(ctx):
     '''Reacts to whether you're a member of DTWM'''
-    print('Command: imNotAMember call recieved')
 
     if not await checkRoles((ctx.message.author,), ("Astartes", "Watch Leader")):
         await ctx.send('Join DTWM on Miller NC')
@@ -405,7 +401,6 @@ async def patLoli(ctx):
         "<:BTS_pat:661014543765602314>",
         ]
 
-    print("Command: patLoli call recieved")
     return await ctx.send(random.choice(emotes))
 
 
@@ -537,7 +532,6 @@ async def ayaya(ctx):
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def commitNotAlive(ctx):
     '''Tell the bot to kill itself'''
-    print("Command: commitNotAlive call recieved")
 
     responses=[
         "no u",
@@ -554,8 +548,6 @@ async def commitNotAlive(ctx):
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def doAttendance(ctx):
     '''Records current attendees in the db.'''
-
-    print("Command: doAttendance call recieved")
     
     #give user feedback
     await ctx.send("It will be done, my Lord")
@@ -584,8 +576,6 @@ async def giveAdvice(ctx, target: str=None):
     If you're a scout you will get mostly useful advice
     Arguments: ab!giveAdvice {target}
         **[optional]** the target role'''
-
-    print("command: giveAdvice call recieved")
 
     mainRoleResponses={
         "watch commander" : ["Learn to split <:splitwatch_marines:618120678708609054>",
@@ -746,7 +736,7 @@ async def giveAdvice(ctx, target: str=None):
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def joinDTWM(ctx):
     '''Posts the invite link to the discord'''
-    print("Command: joindtwm call recieved")
+
     await ctx.send('Come quickly, brother! We can always use new Astartes. https://joindtwm.net/join')
 
 
@@ -764,8 +754,6 @@ async def fluff(ctx):
         giveAdvice,
         ping,
         ]
-
-    print("Command: fluff call recieved")
 
     async with ctx.typing():
         choice=random.choice(fluff)
@@ -801,8 +789,6 @@ async def countMessages(ctx, name: str):
 
         return count
 
-
-    print("Command: countMessages call recieved")
 
     async with ctx.typing():
         server=None
@@ -882,8 +868,6 @@ async def countReactions(ctx, name):
         return count
 
 
-    print("Command: countReactions call recieved")
-
     async with ctx.typing():
         server=None
         try:
@@ -936,7 +920,7 @@ async def ping(ctx):
             (0.1, 0.5) : "I polished your armour",
         }
 
-        print(f"Command: ping call recieved.\n   Process time: {difference} seconds\n   Latency: {bot.latency}")
+        print(f"   Process time: {difference} seconds\n   Latency: {bot.latency}")
         return await reactToOutput(ctx, responses, difference,\
            f"Latency: {bot.latency:.2f}\nI took {difference:.2f} seconds to get here. ",\
            "The Tyranids are coming! You must escape now and send word to Terra")
@@ -965,8 +949,6 @@ async def changeStatus(ctx, status: str):
 
         return messages[0].jump_url
 
-
-    print("Command: changeStatus call recieved")
 
     types: Dict[str, Tuple[str, Optional[str], Optional[str], ActivityType]] = {
         "newvideo": ("New propaganda on our channel", "https://tinyurl.com/dtwmyt", None, ActivityType.playing),
@@ -1004,8 +986,6 @@ async def changeStatus(ctx, status: str):
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def getTrainingWeek(ctx):
     '''Returns whether this week is armour or air trainings on Monday + Tuesday'''
-
-    print("Command: getTrainingWeek call recieved")
 
     botOverride=bot.get_cog('botOverrides')
 

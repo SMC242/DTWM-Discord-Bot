@@ -1,0 +1,2 @@
+prettytables
+discord.py
