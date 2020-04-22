@@ -402,12 +402,14 @@ class Attendance(commands.Cog):
 
             # sleep for 30 minutes 
             # but don't wait a fourth time
+            print(f"{attendees} at {i}")
             if i == 3:
                 break
             else:
                 await async_sleep(1800)
 
         # record the attendance
+        print(f"Recording attendees: {attendees}")
         self.db.record_att(attendees)
         return attendees
 

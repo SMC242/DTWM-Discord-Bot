@@ -14,11 +14,14 @@ from traceback import print_exc
 class RepeatingTasks(commands.Cog):
     """Any repeating tasks."""
 
+    # ATTRIBUTES
+    EVENT_START_TIME = D.time(19, 00)  # in UTC
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         # for the rescheduler
         self.scheduled = False  
-        self.start_day = D.datetime.today().date().day
+        self.start_day = D.datetime(2020, 1, 1)
         common.load_bot(bot)
 
         # start a dummy instance of Attendance
@@ -48,36 +51,29 @@ class RepeatingTasks(commands.Cog):
         try:
             # check that it hasn't been scheduled already
             if self.scheduled:
+                print("tried to schedule but already scheduled")
                 return
+            else:  # begin scheduling
+                self.scheduled = True
 
             # get time now
             now = D.datetime.today().time()
-
-            # handle starting during an event
-            if 2000 < int(now.strftime("%H%M")) < 2130:  #if started during an event
-                await self.bot.get_cog("Attendance").attendance_inner()
             # wait until the event
-            else:
-                # read the start time from the text file
-                with open("./Text Files/milestones.txt") as f:
-                    target = int(f.readline().strip("\n"))
-                    target = (target[:-2], target[2:])
+            # calculate seconds to event start
+            new_target = D.datetime.combine(D.date.min, self.EVENT_START_TIME)
+            old_time = D.datetime.combine(D.date.min, now)
+            run_in_seconds = (new_target - old_time).seconds
 
-                target = D.time(19, 00)  # in UTC
+            # wait until event time
+            print("Scheduled")
+            await async_sleep(run_in_seconds)
 
-                # calculate seconds to event start
-                new_target = D.datetime.combine(D.date.min, target)
-                old_time = D.datetime.combine(D.date.min, now)
-                run_in_seconds = (new_target - old_time).seconds
+            #ping people to get in ops
+            await self.att.get_in_ops_inner()
 
-                # wait until event time
-                await async_sleep(run_in_seconds)
-
-                #ping people to get in ops
-                await self.att.get_in_ops_inner()
-
-                # do attendance
-                await self.att.attendance_inner()
+            # do attendance
+            print("attendance starting")
+            await self.att.attendance_inner()
 
         except:
             print_exc()
@@ -95,8 +91,11 @@ class RepeatingTasks(commands.Cog):
                 self.start_day = D.datetime.today().date().day
                 self.scheduled = False
 
-                self._schedule_att()
+                print("scheduling")
+                await self._schedule_att()
 
+            else:
+                print("tried to schedule but a day hasn't passed")
         except:
             print_exc()
 
@@ -172,14 +171,14 @@ class RepeatingTasks(commands.Cog):
             for name in in_outfit:
                 if name not in registered:
                     self.att.db.add_member(name)
-                    print(f'"{name}" was detected by the cleanup check.' + 
+                    print(f'"{name}" was detected by the cleanup check. ' + 
                           "I have registered him.")
 
             # remove those who are registered but not in in_outfit
             for name in registered:
                 if name not in in_outfit:
                     self.att.db.delete_member(name)
-                    print(f'"{name}" was detected by the cleanup check.' + 
+                    print(f'"{name}" was detected by the cleanup check. ' + 
                           "I have un-registered him.")
         except:
             print_exc()

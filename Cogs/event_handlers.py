@@ -56,7 +56,7 @@ class ErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.MissingAnyRole):
             # create a grammatically correct list of the required roles
-            missing_roles = list(*error.missing_roles)  # ensure it's a list for join()
+            missing_roles = list(error.missing_roles)  # ensure it's a list for join()
             await ctx.send("You need to be " +
                            f"{'an ' if missing_roles[0][0].lower() in 'aeiou' else 'a '}" +
                            f"{', '.join(missing_roles[:-2] + [' or '.join(missing_roles[-2:])])}")
