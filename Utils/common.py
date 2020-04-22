@@ -40,6 +40,7 @@ def load_bot(target_bot: commands.Bot):
         bot_channel = bot.get_channel(545818844036464670)  # DTWM.servitors
         server = bot.get_guild(545422040644190220)  # DTWM
 
+
 def in_bot_channel() -> commands.check:
     """Check if the command was invoked in the bot channel."""
     async def inner(ctx):

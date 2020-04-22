@@ -281,10 +281,10 @@ class AttendanceDBWriter(db.DBWriter):
                         )
 
         # handle no attended events
-        if not rows:
+        if not rows or not rows[0][0]:
             return None
         else:
-            return f"{rows[0]}%"
+            return f"{rows[0][0]}%"
 
     def get_all_members(self) -> List[Tuple[int, str, str]]:
         """Get the memberID, name, joinedAt of all registered members in the Members table."""
@@ -487,7 +487,7 @@ class Attendance(commands.Cog):
             await ctx.send("A new day has begun")
 
     @commands.command(aliases = ["MATT"])
-    @commands.has_any_role(common.member_roles)
+    @commands.has_any_role(*common.member_roles)
     @common.in_bot_channel()
     async def get_my_attendance(self, ctx):
         """Get your attendance %"""
@@ -499,7 +499,7 @@ class Attendance(commands.Cog):
             await ctx.send(f"Brother, your attendance ratio is: {ratio}")
 
     @commands.command(aliases = ["V5", "hop_in"])
-    @commands.has_any_role(common.leader_roles)
+    @commands.has_any_role(*common.leader_roles)
     @common.in_bot_channel()
     async def get_in_ops(self, ctx):
         """Pings everyone currently playing Planetside 2 to get in ops."""
@@ -540,40 +540,6 @@ class Attendance(commands.Cog):
                     await common.bot_channel.send(
                         f"Come quickly, brother, an event is starting {person.mention}!")
 
-class TrainingWeeks(commands.Cog):
-    """Handles the bi-weekly trainings."""
-
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-
-    @property
-    def training_type(self) -> str:
-        """
-        Get whether the week will be air or armour.
-
-        RETURNS
-        'Aerial Superiority': it's an air week
-        'Aerial Superiority': it's an armour week
-        """
-        #credit to auroram for rewrite
-        #find this week's monday
-        today=D.date.today()
-        
-        topics = ['aerial superiority', 'armour support']
-
-        _, week_num, _ = today.isocalendar()
-        # NOTE: 1st week: air, 2nd week: armour, 3rd week: air, etc.
-        # This scales with the number of actual topics, no changes needed!
-        topic = topics[week_num % len(topics) - 1]
-
-        return topic
-
-    @commands.command()
-    @common.in_bot_channel()
-    async def get_training_week(self, ctx):
-        """Get the training types for this week"""
-        await ctx.send(f"Today we will train {self.training_type}, brother")
 
 def setup(bot):
     bot.add_cog(Attendance(bot))
-    bot.add_cog(TrainingWeeks(bot))

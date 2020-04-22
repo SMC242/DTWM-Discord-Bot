@@ -6,10 +6,12 @@ from typing import *
 from os import listdir
 from Utils import common
 from datetime import datetime
+from traceback import print_exc
 
 # dev settings
 DEV_VERSION = True
 common.DEV_VERSION = DEV_VERSION
+LOG_LOAD_ERROR = False
 
 # instantiate the bot
 description = """This bot was designed for the DTWM discord by [DTWM] benmitchellmtbV5.
@@ -31,11 +33,19 @@ for file in listdir("./Cogs"):
     # ensure it's a Python file and ignore modules that aren't Cogs
     if file.endswith(".py"):
         cog_name = file[:-3]
+        # ignore __init__ because it's not a Cog but it must be in the directory
+        if cog_name == "__init__":
+            continue
+
         try:
             bot.load_extension(f"Cogs.{cog_name}")
             print(f"Cog ({cog_name}) loaded sucessfully")
-        except (commands.NoEntryPointError, commands.errors.ExtensionNotFound):
+
+        except:
             print(f"Cog ({cog_name}) failed to load")
+            # log loading tracebacks if lod_load_error is True or if it's not set but dev_version is True
+            if (LOG_LOAD_ERROR is not None and LOG_LOAD_ERROR) or (LOG_LOAD_ERROR is None and DEV_VERSION):
+                print_exc()
 
 @bot.before_invoke
 async def log_command_info(ctx):

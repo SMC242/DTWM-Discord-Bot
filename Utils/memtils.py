@@ -156,12 +156,12 @@ class NameParser:
 
         return name
 
-def check_roles(person: member, role_name: str) -> bool:
+def check_roles(person: member.Member, role_name: str) -> bool:
     """Check if the person has the role.
     Not case-sensitive"""
     return role_name.lower() in [role.name.lower() for role in person.roles]
 
-def get_in_outfit(return_members: bool = False) -> List[Union[member, str]]:
+def get_in_outfit(return_members: bool = False) -> List[Union[member.Member, str]]:
     """Get all of the people in the outfit. Requires common.load_bot
     
     ARGUMENTS
