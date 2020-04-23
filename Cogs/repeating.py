@@ -62,7 +62,7 @@ class RepeatingTasks(commands.Cog):
             # calculate seconds to event start
             new_target = D.datetime.combine(D.date.min, self.EVENT_START_TIME)
             old_time = D.datetime.combine(D.date.min, now)
-            run_in_seconds = (new_target - old_time).seconds
+            run_in_seconds = (new_target - old_time).total_seconds()
 
             # wait until event time
             print("Scheduled")
