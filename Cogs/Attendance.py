@@ -498,7 +498,7 @@ class Attendance(commands.Cog):
         if ratio is None:
             await ctx.send("You haven't attended any events, brother. Please join our future wars!")
         else:
-            await ctx.send(f"Brother, your attendance ratio is: {ratio}")
+            await ctx.send(f"{memtils.get_title(ctx.author)}, your attendance ratio is: {ratio}")
 
     @commands.command(aliases = ["V5", "hop_in"])
     @commands.has_any_role(*common.leader_roles)

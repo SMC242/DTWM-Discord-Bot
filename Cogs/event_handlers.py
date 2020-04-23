@@ -11,10 +11,6 @@ from random import choice
 
 # errors, message reactions
 # custom error types
-class RateLimited(commands.CommandError):
-    """Raise this if an action is on cooldown."""
-    pass
-
 class CommandNotImplementedError(commands.CommandError):
     """Raise this if a command is a work in progress"""
     pass
@@ -41,46 +37,47 @@ class ErrorHandler(commands.Cog):
                 ctx.cog.cog_command_error) is not None:
             return
 
+        # decide on their title
+        title = memtils.get_title(ctx.author)
+
         #if command on cooldown
         if isinstance(error, commands.CommandOnCooldown):
-          await ctx.send(f"Hold on, {'my lord' if memtils.has_role(common.leader_roles) else 'brother'}" + 
-                                ". I must gather my energy before another\n" +
-                                "Try again in {int(error.retry_after)} seconds!")
+          await ctx.send(f"Hold on, {title}. " + 
+                                "I must gather my energy before another\n" +
+                                f"Try again in {int(error.retry_after)} seconds!")
         #if command is unknown
         elif isinstance(error, commands.CommandNotFound):
             if '@' in ctx.invoked_with :
                 await ctx.send("How dare you try to use me to annoy others!")
             else:
-                await ctx.send('Sorry My Lord, the archives do not know of this' +
+                await ctx.send(f'Sorry {title}, the archives do not know of this' +
                                     f'"{ctx.invoked_with}" you speak of')
 
         elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send("Your command is incomplete, brother! You must tell me my target")
+            await ctx.send(f"Your command is incomplete, {title}! You must tell me my target")
 
         elif isinstance(error, commands.MissingAnyRole):
             # create a grammatically correct list of the required roles
             missing_roles = list(error.missing_roles)  # ensure it's a list for join()
             await ctx.send("You need to be " +
                            f"{'an ' if missing_roles[0][0].lower() in 'aeiou' else 'a '}" +
-                           f"{', '.join(missing_roles[:-2] + [' or '.join(missing_roles[-2:])])}")
+                           f"{', '.join(missing_roles[:-2] + [' or '.join(missing_roles[-2:])])}" +
+                           "to use that command!")
 
         elif isinstance(error, commands.DisabledCommand):
-            await ctx.send("I cannot do that, brother. The Adepts are doing maintenance on this coroutine.")
+            await ctx.send(f"I cannot do that, {title}. The Adepts are doing maintenance on this coroutine.")
 
         elif isinstance(error, commands.NotOwner):
             await ctx.send("Only my alter-ego can do that!")
 
         elif isinstance(error, commands.BadArgument):
-            await ctx.send("I don't understand your orders, brother")
+            await ctx.send(f"I don't understand your orders, {title}")
 
         elif isinstance(error, commands.UnexpectedQuoteError):
-            await ctx.send("Your orders are garbled, brother")
-
-        elif isinstance(error, RateLimited):
-            await ctx.send("Please give me room to think, Brother")
+            await ctx.send(f"Your orders are garbled, {title}")
 
         elif isinstance(error, CommandNotImplementedError):
-            await ctx.send("The Adepts are yet to complete that command, brother")
+            await ctx.send(f"The Adepts are yet to complete that command, {title}")
 
         #if bot can't access the channel
         elif isinstance(error, Forbidden):
@@ -93,7 +90,7 @@ class ErrorHandler(commands.Cog):
         # if the error hasn't been handled
         else:
             # tell the user
-            await ctx.send("Warp energies inhibit me... I cannot do that, My Lord")
+            await ctx.send("Warp energies inhibit me... I cannot do that, {title}")
 
             # get the original error from the CommandError
             # and convert its traceback to a string

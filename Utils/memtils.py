@@ -187,3 +187,12 @@ def get_in_outfit(return_members: bool = False) -> List[Union[member.Member, str
                     break  # prevent double-adding a person if they have multiple member roles
 
     return in_outfit
+
+def get_title(person: member.Member) -> str:
+    """Return 'my lord' if they're a leader, otherwise return 'brother'."""
+    title = "brother"
+    for role_ in common.leader_roles:
+        if check_roles(person, role_):
+            title = "my lord"
+
+    return title
