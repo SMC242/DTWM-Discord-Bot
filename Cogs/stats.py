@@ -8,7 +8,10 @@ from Utils import common
 
 # count messages, count reactions
 class TrainingWeeks(commands.Cog):
-    """Handles the bi-weekly trainings."""
+    """Handles the bi-weekly trainings.
+    
+    Commands and their alias:
+        get_training_week, week"""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -42,6 +45,8 @@ class TrainingWeeks(commands.Cog):
         await ctx.send(f"This week we will train {self.training_type}, brother")
 
 
+class ServerStats(commands.Cog):
+    """Displays stats about the server."""
 def setup(bot: commands.Bot):
     bot.add_cog(TrainingWeeks(bot))
 

@@ -115,6 +115,9 @@ class ReactionParent(commands.Cog):
     """The base class for on_message handlers.
     NOTE: cooldowns are shared across all children."""
 
+    # ATTRIBUTES
+    enabled = True
+
     def __init__(self, bot: commands.Bot, cooldown: float = 60.0):
         """ARGUMENTS
         bot:
@@ -167,6 +170,22 @@ class ReactionParent(commands.Cog):
         return (re.compile(r'\b({0})\b'.format( target_word.lower() ), flags=re.IGNORECASE).search(
             contents.lower() )) is not None
 
+
+class ReactionController(commands.Cog):
+    """Handles commands relating to ReactionParent.
+    
+    This is necessary because adding these commands to ReactionParent
+    would cause a double registration error when the children were added to the bot."""
+
+    @common.in_bot_channel()
+    @commands.has_any_role(*common.leader_roles)
+    @commands.command(aliases = ["TR"])
+    async def toggle_reactions(self, ctx):
+        """Enable or disable reactios to messages."""
+        parent = ReactionParent
+        parent.enabled = not parent.enabled
+        await ctx.send(f"I will {'not' if not parent.enabled else ''} react to messages, my lord.")
+
 class TextReactions(ReactionParent):
     """Handles sending messages in response to messages."""
 
@@ -180,6 +199,10 @@ class TextReactions(ReactionParent):
         """
         # don't respond to the bot
         if self.bot.user == msg.author:
+            return
+
+        # don't respond if reactions are disabled
+        if not self.enabled:
             return
 
         # don't respond if the channel is on cooldown
@@ -214,6 +237,10 @@ class ReactReactions(ReactionParent):
 
         # don't respond to the bot
         if self.bot.user == msg.author:
+            return
+
+        # don't respond if reactions are disabled
+        if not self.enabled:
             return
 
         # don't respond if the channel is on cooldown
@@ -251,6 +278,7 @@ def setup(bot):
         ErrorHandler,
         ReactReactions,
         TextReactions,
+        ReactionController,
         )
     for cog in cogs:
         bot.add_cog( cog(bot) )

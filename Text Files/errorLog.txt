@@ -181,4 +181,40 @@ Occured at: 05:54:12.549016Traceback (most recent call last):
     joined_at = D.datetime.strptime(rows[3], "%Y-%m-%d").date()
 
 IndexError: list index out of range
-Occured at: 06:00:36.860467
+Occured at: 06:00:36.860467Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Event_handlers.py", line 183, in toggle_reactions
+    super().enabled = not self.enabled
+
+AttributeError: 'super' object has no attribute 'enabled'
+Occured at: 03:48:20.730702Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Event_handlers.py", line 183, in toggle_reactions
+    super().enabled = not self.enabled
+
+AttributeError: 'super' object has no attribute 'enabled'
+Occured at: 03:48:37.132197Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Event_handlers.py", line 184, in toggle_reactions
+    parent.enabled = not self.enabled
+
+AttributeError: 'super' object has no attribute 'enabled'
+Occured at: 03:49:17.054536Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Event_handlers.py", line 185, in toggle_reactions
+    super().enabled = not self.enabled
+
+AttributeError: 'super' object has no attribute 'enabled'
+Occured at: 03:50:38.792807
