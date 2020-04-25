@@ -90,7 +90,7 @@ class ErrorHandler(commands.Cog):
         # if the error hasn't been handled
         else:
             # tell the user
-            await ctx.send("Warp energies inhibit me... I cannot do that, {title}")
+            await ctx.send(f"Warp energies inhibit me... I cannot do that, {title}")
 
             # get the original error from the CommandError
             # and convert its traceback to a string

@@ -217,4 +217,46 @@ Occured at: 03:49:17.054536Traceback (most recent call last):
     super().enabled = not self.enabled
 
 AttributeError: 'super' object has no attribute 'enabled'
-Occured at: 03:50:38.792807
+Occured at: 03:50:38.792807Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 555, in mark_as_away
+    self._db.mark_away(name)
+
+AttributeError: 'Attendance' object has no attribute '_db'
+Occured at: 04:30:20.243583Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 555, in mark_as_away
+    self.db.mark_away(name)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 295, in mark_away
+    print(self.cursor.execute("UPDATE Members SET away = 1 WHERE name = ?;", name).fetchall())
+
+sqlite3.ProgrammingError: Incorrect number of bindings supplied. The current statement uses 1, and there are 7 supplied.
+Occured at: 04:37:49.253206Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 555, in mark_as_away
+    self.db.mark_away(name)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 295, in mark_away
+    print(self.cursor.execute("UPDATE Members SET away = 1 WHERE name = ?;", name).fetchall())
+
+sqlite3.ProgrammingError: Incorrect number of bindings supplied. The current statement uses 1, and there are 7 supplied.
+Occured at: 04:38:46.012422Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 596, in is_away
+    _, _, away, *_ = self.db.get_member_by_name(name)
+
+TypeError: 'NoneType' object is not iterable
+Occured at: 06:02:09.460820

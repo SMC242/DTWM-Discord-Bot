@@ -9,6 +9,8 @@ from Utils import common, memtils
 from contextlib import suppress
 from prettytable import PrettyTable
 from asyncio import sleep as async_sleep
+from functools import wraps, partial
+from inspect import signature
 
 class AttendanceDBWriter(db.DBWriter):
     """Handles the attendance database and accessing it."""
@@ -286,9 +288,25 @@ class AttendanceDBWriter(db.DBWriter):
         else:
             return f"{rows[0][0]}%"
 
-    def get_all_members(self) -> List[Tuple[int, str, str]]:
+    def get_all_members(self) -> List[Tuple[int, str, bool, D.date]]:
         """Get the memberID, name, joinedAt of all registered members in the Members table."""
-        return self.doQuery("SELECT memberID, name, away, joinedAt FROM Members;")
+        rows = self.doQuery("SELECT memberID, name, away, joinedAt FROM Members;")
+        return [ ( row[0], row[1], bool(row[2]), D.datetime.strptime(row[3], "%Y-%m-%d").date() ) 
+                for row in rows ]
+
+    def mark_away(self, name: str) -> bool:
+        '''
+        Mark the person as away in the Members table.
+        
+        RETURNS
+        True: a member was found and modified.
+        False: " "     "  not "  "   "
+        '''
+        # count the number of changes and use it to see if a member was hit
+        changes_before = self.connection.total_changes
+        self.doQuery("UPDATE Members SET away = 1 WHERE name = ?;", [name])
+        return self.connection.total_changes > changes_before
+
 
 class Attendance(commands.Cog):
     """Commands relating to attendance.
@@ -351,14 +369,23 @@ class Attendance(commands.Cog):
     @common.in_bot_channel()
     async def add_member(self, ctx, name: str):
         """Register a member with their name."""
-        self.db.add_member(name)
-        await ctx.send(f"Welcome to the chapter, brother {name}!")
+        # parse the name
+        name = memtils.NameParser(name).parse()
+        
+        # check that the name isn't registered
+        if name not in [row[1] for row in self.db.get_all_members()]:
+            self.db.add_member(name)
+            await ctx.send(f"Welcome to the chapter, brother {name}!")
+        else:
+            await ctx.send(f"{name} is already registered!")
 
     @commands.command(aliases = ["RM"])
     @commands.has_any_role(*common.leader_roles)
     @common.in_bot_channel()
     async def remove_member(self, ctx, name: str):
         """Unregister a member by their name."""
+        # parse the name
+        name = memtils.NameParser(name).parse()
         self.db.delete_member(name)
         await ctx.send("Another brother lost to the warp...")
 
@@ -454,6 +481,8 @@ class Attendance(commands.Cog):
     @common.in_bot_channel()
     async def joined_at(self, ctx, name: str):
         """Get the join date of a member by their name."""
+        # parse the name
+        name = memtils.NameParser(name).parse()
         joined_at = self.db.get_join_date_by_name(name)
         # handle no member found
         if not joined_at:
@@ -542,6 +571,36 @@ class Attendance(commands.Cog):
                     await common.bot_channel.send(
                         f"Come quickly, brother, an event is starting {person.mention}!")
 
+    @commands.command(aliases = ["away", "A"])
+    @commands.has_any_role(*common.leader_roles)
+    @common.in_bot_channel()
+    async def mark_as_away(self, ctx, name: str):
+        """Mark the target as away in the database."""
+        # parse the name
+        name = memtils.NameParser(name).parse()
+        member_found = self.db.mark_away(name)
+
+        # report whether the query was successful
+        if member_found:
+            await ctx.send("May he return to action soon, my lord.")
+        else:
+            await ctx.send(f'''Our archives don't know of this "{name}", my lord.''')
+
+    @commands.command(aliases = ["IA"])
+    @commands.has_any_role(*common.leader_roles)
+    @common.in_bot_channel()
+    async def is_away(self, ctx, name: str):
+        """Get whether the person is away."""
+        # parse the name
+        name = memtils.NameParser(name).parse()
+        row = self.db.get_member_by_name(name)
+        if row:
+            await ctx.send(f'''{name} is marked as {"not" if not row[2] else ""} away in our archives, my lord.''')
+        else:
+            await ctx.send(f'''Our archives don't know of this "{name}", my lord.''')
 
 def setup(bot):
     bot.add_cog(Attendance(bot))
+
+if __name__ == "__main__":
+    setup(commands.Bot("TEST"))
