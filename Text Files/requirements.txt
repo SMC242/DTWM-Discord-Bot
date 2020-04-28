@@ -1,2 +1,16 @@
 prettytables
-discord.py
+discord
+datetime
+asyncio
+typing
+json
+random
+traceback
+sqlite3
+contextlib
+functools
+unicodedata
+string
+re
+os
+logging
