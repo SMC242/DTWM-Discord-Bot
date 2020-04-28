@@ -12,20 +12,30 @@ import datetime as D
 from traceback import print_exc
 
 class RepeatingTasks(commands.Cog):
-    """Any repeating tasks."""
+    """Any repeating tasks.
+    
+    ATTRIBUTES
+    Attendance-related:
+        scheduled: bool
+            Whether scheduling has been hit today already.
+        start_day: str
+            The day that the rescheduler last hit.
+            Format: %Y/%m/%d
+        att: Attendance.Attendance
+            The object used to call attendance functions."""
 
     # ATTRIBUTES
-    EVENT_START_TIME = D.time(19, 00)  # in UTC
+    EVENT_START_TIME = D.time(20, 00)  # in UTC
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         # for the rescheduler
         self.scheduled = False  
-        self.start_day = D.datetime(2020, 1, 1)
-        common.load_bot(bot)
+        # create a dummy start time so that the rescheduler doesn't reject today
+        self.start_day = D.datetime(1980, 1, 1).strftime("%Y/%m/%d")
 
         # start a dummy instance of Attendance
-        self.att = Attendance(commands.Bot("AZERTY*^%"))
+        self.att = Attendance(bot)
 
         # start the tasks
         tasks_ = [
@@ -51,7 +61,6 @@ class RepeatingTasks(commands.Cog):
         try:
             # check that it hasn't been scheduled already
             if self.scheduled:
-                print("tried to schedule but already scheduled")
                 return
             else:  # begin scheduling
                 self.scheduled = True
@@ -65,7 +74,6 @@ class RepeatingTasks(commands.Cog):
             run_in_seconds = (new_target - old_time).total_seconds()
 
             # wait until event time
-            print("Scheduled")
             await async_sleep(run_in_seconds)
 
             #ping people to get in ops
@@ -82,20 +90,19 @@ class RepeatingTasks(commands.Cog):
     async def att_rescheduler(self):
         """Try to schedule attendance every four hours
         if it's a new day."""
+        # ensure that the bot is loaded first
+        await self.bot.wait_until_ready()
+        common.load_bot(self.bot)
+
         try:
-            print(f"rescheduler executing at {D.datetime.today().strftime('%H:%M')}")
             # check for a new day and check it's not Saturday
             today = D.datetime.today().date()
-            if today.day is not self.start_day and today.weekday() is not 5:
+            if today.strftime("%Y/%m/%d") != self.start_day and today.weekday() != 6:
                 # update the scheduling attributes
                 self.start_day = D.datetime.today().date().day
                 self.scheduled = False
 
-                print("scheduling")
                 await self._schedule_att()
-
-            else:
-                print("tried to schedule but a day hasn't passed")
         except:
             print_exc()
 
@@ -103,7 +110,6 @@ class RepeatingTasks(commands.Cog):
     async def change_status(self):
         """Change the status every 30 minutes."""
         try:
-            print(f"change_status executing at {D.datetime.today().strftime('%H:%M')}")
             # get the responses
             with open("./Text Files/statuses.json", encoding = "utf-8-sig") as f:
                 statuses = load(f)
@@ -126,7 +132,6 @@ class RepeatingTasks(commands.Cog):
         NOTE: This method doesn't need to check if a day passed
         because the interface ignores the query if the day was already added."""
         try:
-            print(f"new_day executing at {D.datetime.today().strftime('%H:%M')}")
             # don't add Saturdays
             day = D.datetime.today().date().weekday()
             if day == 5:
@@ -156,7 +161,6 @@ class RepeatingTasks(commands.Cog):
         Any members in the DB but not in the outfit: unregister.
         Any members not in the DB but in the outfit: register."""
         try:
-            print(f"check_register executing at {D.datetime.today().strftime('%H:%M')}")
             # get the names of all registered members
             registered = [row[1] for row in self.att.db.get_all_members()]
             
