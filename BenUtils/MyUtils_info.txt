@@ -1,0 +1,2 @@
+I have taken some of the modules from my MyUtils package and put them into this project.
+The full repo can be found at https://github.com/SMC242/MyUtils

@@ -211,6 +211,10 @@ CREATE TABLE IF NOT EXISTS Days(
 
         self.doQuery("DELETE FROM Members WHERE name = ?;", vars = (name, ))
 
+<<<<<<< HEAD:DB.py
+=======
+
+>>>>>>> Restructure:Original Code/DB.py
     async def sendAttToDB(self, attendees: List[str]):
         """Send attendees to DB"""
 

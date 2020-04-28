@@ -97,8 +97,11 @@ def inBotChannel():
     Unless command is whitelisted'''
 
     async def inner(ctx):
+<<<<<<< HEAD:Discord_Bot.py
         # log the command
         print(f"command: {ctx.command.name} call recieved at {D.datetime.today().time().strftime('%H hours, %M minutes')}")
+=======
+>>>>>>> Restructure:Original Code/Discord_Bot.py
         botChannel=ctx.bot.get_channel(545818844036464670)
 
         if not botChannel==ctx.message.channel:
@@ -123,6 +126,11 @@ async def leader(ctx):
 async def help(ctx):
     '''Displays all of the commands'''
 
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: help call recieved")
+
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     #sort commands alphabetically
     filterOut=commands.Group
     notGroup={command.name : command for command in bot.walk_commands() if not isinstance(command, filterOut)}  #filter out Groups
@@ -176,6 +184,11 @@ async def help(ctx):
 async def toggleReactions(ctx):
     '''Allow/disallow reactions to messages with terms in the white list'''
 
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: toggleReactions call recieved")
+
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     botOverride=bot.get_cog('botOverrides')
     botOverride.reactionParent.reactionsAllowed = not botOverride.reactionParent.reactionsAllowed
 
@@ -244,6 +257,10 @@ async def fetchAttendance(ctx):
 @inBotChannel()
 async def getInOps(ctx):
     '''Pings every member that's playing PS2 but isn't in ops comms.'''
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: getInOps call recieved")
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     await getInOpsInner()
 
 
@@ -370,6 +387,10 @@ async def executeOnEvents(func: AsyncCommand, milestones: List[int]=None):
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def imNotAMember(ctx):
     '''Reacts to whether you're a member of DTWM'''
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print('Command: imNotAMember call recieved')
+>>>>>>> Restructure:Original Code/Discord_Bot.py
 
     if not await checkRoles((ctx.message.author,), ("Astartes", "Watch Leader")):
         await ctx.send('Join DTWM on Miller NC')
@@ -401,6 +422,10 @@ async def patLoli(ctx):
         "<:BTS_pat:661014543765602314>",
         ]
 
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: patLoli call recieved")
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     return await ctx.send(random.choice(emotes))
 
 
@@ -532,6 +557,10 @@ async def ayaya(ctx):
 @commands.cooldown(1, 5, type=commands.BucketType.user)
 async def commitNotAlive(ctx):
     '''Tell the bot to kill itself'''
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: commitNotAlive call recieved")
+>>>>>>> Restructure:Original Code/Discord_Bot.py
 
     responses=[
         "no u",
@@ -548,6 +577,11 @@ async def commitNotAlive(ctx):
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def doAttendance(ctx):
     '''Records current attendees in the db.'''
+<<<<<<< HEAD:Discord_Bot.py
+=======
+
+    print("Command: doAttendance call recieved")
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     
     #give user feedback
     await ctx.send("It will be done, my Lord")
@@ -577,6 +611,11 @@ async def giveAdvice(ctx, target: str=None):
     Arguments: ab!giveAdvice {target}
         **[optional]** the target role'''
 
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("command: giveAdvice call recieved")
+
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     mainRoleResponses={
         "watch commander" : ["Learn to split <:splitwatch_marines:618120678708609054>",
                              "Become a dictator",
@@ -736,7 +775,11 @@ async def giveAdvice(ctx, target: str=None):
 @commands.cooldown(1, 60, type=commands.BucketType.user)
 async def joinDTWM(ctx):
     '''Posts the invite link to the discord'''
+<<<<<<< HEAD:Discord_Bot.py
 
+=======
+    print("Command: joindtwm call recieved")
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     await ctx.send('Come quickly, brother! We can always use new Astartes. https://joindtwm.net/join')
 
 
@@ -755,6 +798,11 @@ async def fluff(ctx):
         ping,
         ]
 
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: fluff call recieved")
+
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     async with ctx.typing():
         choice=random.choice(fluff)
         await ctx.send(f"{choice}:")
@@ -790,6 +838,11 @@ async def countMessages(ctx, name: str):
         return count
 
 
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: countMessages call recieved")
+
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     async with ctx.typing():
         server=None
         try:
@@ -868,6 +921,11 @@ async def countReactions(ctx, name):
         return count
 
 
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: countReactions call recieved")
+
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     async with ctx.typing():
         server=None
         try:
@@ -920,7 +978,11 @@ async def ping(ctx):
             (0.1, 0.5) : "I polished your armour",
         }
 
+<<<<<<< HEAD:Discord_Bot.py
         print(f"   Process time: {difference} seconds\n   Latency: {bot.latency}")
+=======
+        print(f"Command: ping call recieved.\n   Process time: {difference} seconds\n   Latency: {bot.latency}")
+>>>>>>> Restructure:Original Code/Discord_Bot.py
         return await reactToOutput(ctx, responses, difference,\
            f"Latency: {bot.latency:.2f}\nI took {difference:.2f} seconds to get here. ",\
            "The Tyranids are coming! You must escape now and send word to Terra")
@@ -950,6 +1012,11 @@ async def changeStatus(ctx, status: str):
         return messages[0].jump_url
 
 
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: changeStatus call recieved")
+
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     types: Dict[str, Tuple[str, Optional[str], Optional[str], ActivityType]] = {
         "newvideo": ("New propaganda on our channel", "https://tinyurl.com/dtwmyt", None, ActivityType.playing),
 
@@ -987,6 +1054,11 @@ async def changeStatus(ctx, status: str):
 async def getTrainingWeek(ctx):
     '''Returns whether this week is armour or air trainings on Monday + Tuesday'''
 
+<<<<<<< HEAD:Discord_Bot.py
+=======
+    print("Command: getTrainingWeek call recieved")
+
+>>>>>>> Restructure:Original Code/Discord_Bot.py
     botOverride=bot.get_cog('botOverrides')
 
     try:
