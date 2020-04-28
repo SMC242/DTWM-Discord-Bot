@@ -9,8 +9,6 @@ from Utils import common, memtils
 from contextlib import suppress
 from prettytable import PrettyTable
 from asyncio import sleep as async_sleep
-from functools import wraps, partial
-from inspect import signature
 
 class AttendanceDBWriter(db.DBWriter):
     """Handles the attendance database and accessing it."""

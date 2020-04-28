@@ -4,9 +4,8 @@ DEV_VERSION can be set to True to use the bot testing server."""
 
 from discord import *
 from discord.ext import commands
-import unicodedata, discord
+import discord
 from typing import *
-from string import ascii_letters
 
 # common variables
 DEV_VERSION = False
