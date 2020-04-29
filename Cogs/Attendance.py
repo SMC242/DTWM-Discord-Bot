@@ -203,7 +203,7 @@ class AttendanceDBWriter(db.DBWriter):
             raise ValueError("No attendance data returned from Attendees.")
 
         # convert away and avg. attendance to more readable forms
-        averages = [row[0] * 100 for row in rows]
+        averages = list(map( lambda row: int( round( row[0] *100, 0 ) ), rows ))
         aways = ["Yes" if row[1] else "No" for row in rows]
 
         # create and configure the table
@@ -250,7 +250,8 @@ class AttendanceDBWriter(db.DBWriter):
         
         # convert no average for an event type to (0%, event type) instead of (None, None)
         # and convert average from decimal to percentage
-        rows = [(0, event_type) if row[0] is None else (row[0] * 100, row[1])
+        rows = [(0, event_type) if row[0] is None 
+                else ( int(round(row[0] * 100, 0)), row[1] )
                 for event_type, row in zip(event_types, rows)]
         # create and configure the table
         table = PrettyTable(["Event Type", "Average Attendance (%)"])
@@ -284,7 +285,7 @@ class AttendanceDBWriter(db.DBWriter):
         if not rows or not rows[0][0]:
             return None
         else:
-            return f"{rows[0][0]}%"
+            return f"{int(round(rows[0][0] * 100, 0))}%"
 
     def get_all_members(self) -> List[Tuple[int, str, bool, D.date]]:
         """Get the memberID, name, joinedAt of all registered members in the Members table."""
