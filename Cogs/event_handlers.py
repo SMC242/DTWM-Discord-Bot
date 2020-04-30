@@ -104,7 +104,12 @@ class ErrorHandler(commands.Cog):
                 f.write(tb)
 
             # log to Bot Testing.errors
-            await self.bot.get_channel(697746979782000680).send(f"```\n{tb}```")
+            try:
+                error_channel = self.bot.get_channel(697746979782000680)
+                await error_channel.send(f"```\n{tb}```")
+            # handle tb being too large for a Discord message
+            except errors.HTTPException:
+                await error_channel.send("The tracebaceback was too large. Check `Text Files/errorLog.txt`")
 
 
 # on_message handlers
@@ -178,7 +183,7 @@ class ReactionController(commands.Cog):
     @commands.has_any_role(*common.leader_roles)
     @commands.command(aliases = ["TR"])
     async def toggle_reactions(self, ctx):
-        """Enable or disable reactios to messages."""
+        """Enable or disable reactions to messages."""
         parent = ReactionParent
         parent.enabled = not parent.enabled
         await ctx.send(f"I will {'not' if not parent.enabled else ''} react to messages, my lord.")

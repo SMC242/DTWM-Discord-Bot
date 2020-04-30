@@ -1,35 +1,54 @@
 """Utils relating to sending or parsing messages."""
 
-from discord import *
 from typing import *
-from discord.ext import commands
-from math import ceil
-from re import finditer
+from matplotlib import pyplot, transforms
 
-async def send_message(channel: TextChannel, content: str):
-    """Send a message to the target channel. 
+async def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str,
+                       col_labels: List[str] = None, row_labels: List[str] = None) -> str:
+    """Create a table and save it as an image.
 
-    If the content exceeds 2k characters, it will be sent as multiple messages
-    without splitting up words.
-    
-    Mantains code snippets."""
-    # check the character count
-    length = len(content)
-    if len(content) < 2000:
-        return await channel.send(content)
-
-    # find how many messages are needed
-    # always round up or else the character limit will be hit
-    portions = ceil(length / 2000)
-
-    # check for code blocks being near the boundaries
-    for boundary in range(2000, (2000 * portions), 2000):
-        # find any code blocks within the boundary
-        [match.start() for match in re.finditer("```", content[boundary - 2000: boundary])]
+    ARGUMENTS
+    cell_contents:
+        The content to populate the rows with.
+        Each element in cell_contents represents a row.
+        Each element in cell_contents[n] represents a cell.
+    col_labels:
+        The labels for the columns.
+    row_labels:
+        "   "      "   "   rows.
+    file_name:
+        The name of the file. It will be saved as a png file.
+        The file will be saved in DTWM-Discord-Bot/Images.
         
+    RETURNS
+        The file path of the table image."""
+    # create table
+    table = pyplot.table(
+        cellText = cell_contents, rowLabels = row_labels,
+        colLabels = col_labels, loc ="center"
+        )
 
-    # for each boundary, backtrack until a space is found
-    # set that to the message and 
-    # overflow the backtracked chars into the next message
-    # a 20 character tolerance is added to each message for shifting
-    # to avoid splitting words
+    # remove all the background stuff
+    pyplot.axis("off")
+    pyplot.grid("off")
+    
+    # draw the canvas and get the current boundary box's coordinates
+    figure = pyplot.gcf()
+    figure.canvas.draw()
+    points = table.get_window_extent(figure._cachedRenderer).get_points()
+
+    # add some padding
+    points[0,:] -= 10
+    points[1,:] += 10
+
+    # create a boundary box that's cropped to fit the table
+    new_boundary_box =  transforms.Bbox.from_extents(points / figure.dpi)
+
+    # save the table
+    path = f"./Images/{file_name}.png"
+    pyplot.savefig(path, bbox_inches = new_boundary_box)
+    return path
+
+if __name__ == "__main__":
+    import asyncio
+    #asyncio.get_event_loop().run_until_complete()

@@ -1,11 +1,11 @@
 """The database interface."""
 
-from discord import member
+from discord import member, File
 from discord.ext import commands
 from typing import *
 from BenUtils import db
 import sqlite3 as sql, datetime as D
-from Utils import common, memtils
+from Utils import common, memtils, mestils
 from contextlib import suppress
 from prettytable import PrettyTable
 from asyncio import sleep as async_sleep
@@ -170,12 +170,11 @@ class AttendanceDBWriter(db.DBWriter):
         except IndexError:
             return None
 
-    def get_att_per_member(self) -> PrettyTable:
-        """Get this month's attendance.
-        
+    async def get_att_per_member(self) -> str:
+        """Get this month's attendance and save it as an image.
+
         RETURNS
-            A PrettyTable.
-            NOTE: A title must be added to the table.
+            The path the the table image.
             
         RAISES
             ValueError: No attendance data returned from Attendees."""
@@ -203,27 +202,25 @@ class AttendanceDBWriter(db.DBWriter):
             raise ValueError("No attendance data returned from Attendees.")
 
         # convert away and avg. attendance to more readable forms
-        averages = list(map( lambda row: int( round( row[0] *100, 0 ) ), rows ))
+        averages = map( lambda row: int( round( row[0] *100, 0 ) ), rows )
         aways = ["Yes" if row[1] else "No" for row in rows]
 
-        # create and configure the table
-        table = PrettyTable(["Name", "Attendance (%)", "Away (yes or no)"])
-        # sort by attendance ascending
-        table.sortby = "Attendance (%)"
-        table.reversesort = True
+        # convert the lists to a list of rows
+        table_rows = [(name, average, away)
+                      for name, average, away in zip(members, averages, aways)]
 
-        # convert to a table
-        for name, average, away in zip(members, averages, aways):
-            table.add_row( (name, average, away) )
+        # create a table
+        return await mestils.create_table( table_rows, 
+                                    f"table_at_{D.datetime.today().strftime('%H.%M.%S')}",
+                                    col_labels = ["Name", "Attendance (%)", "Away (yes or no)"]
+                                    )
 
-        return table
-
-    def get_att_per_event(self) -> PrettyTable:
-        """Get the average attendance for each event type.
+    async def get_att_per_event(self) -> str:
+        """Get this month's average attendance for each event type
+        and save it as an image.
 
         RETURNS
-            A PrettyTable.
-            NOTE: A title must be added to the table.
+            The path the the table image.
             
         RAISES
             ValueError: No attendance data returned from Attendees."""
@@ -248,22 +245,17 @@ class AttendanceDBWriter(db.DBWriter):
         if not list(filter(lambda row: row[0], rows)):
             raise ValueError("No attendance data returned from Attendees.")
         
-        # convert no average for an event type to (0%, event type) instead of (None, None)
+        # convert no average for an event type to (event type, 0%) instead of (None, None)
         # and convert average from decimal to percentage
-        rows = [(0, event_type) if row[0] is None 
-                else ( int(round(row[0] * 100, 0)), row[1] )
+        table_rows: List[str, int] = [(event_type, 0) if row[0] is None 
+                else ( row[1], int(round(row[0] * 100, 0)) )
                 for event_type, row in zip(event_types, rows)]
-        # create and configure the table
-        table = PrettyTable(["Event Type", "Average Attendance (%)"])
-        # sort by attendance ascending
-        table.sortby = "Average Attendance (%)"
-        #table.reversesort = True
 
-        # convert to a table
-        for average, event_type in rows:
-            table.add_row( (event_type, average) )
-
-        return table
+        # create table
+        return await mestils.create_table(table_rows, 
+                                          f"table_at_{D.datetime.today().strftime('%H.%M.%S')}",
+                                          ("Event Type", "Average Attendance (%)")
+                                        )
 
     def get_member_att(self, name: str) -> Optional[str]:
         """Get the attendance % of a member.
@@ -457,8 +449,10 @@ class Attendance(commands.Cog):
     async def get_attendance(self, ctx):
         """Get the average attendance per member for this month."""
         try:
-            await ctx.send(f"Here are the results for this month, my lord:```\n" +
-                           f"{self.db.get_att_per_member().get_string()}```")
+            table_path = await self.db.get_att_per_member()
+            await ctx.send("Here are the results for this month, my lord:", 
+                           file = File(table_path)
+                           )
         # handle no attendance data
         except ValueError:
             await ctx.send("Our archives fail us... I cannot find any roll calls")
@@ -469,8 +463,10 @@ class Attendance(commands.Cog):
     async def get_event_attendance(self, ctx):
         """Get the average attendance per event type for this month"""
         try:
-            await ctx.send(f"These are the results for this month's events, my lord:```\n" + 
-                           f"{self.db.get_att_per_event().get_string()}```")
+            table_path = await self.db.get_att_per_event()
+            await ctx.send("These are the results for this month's events, my lord:", 
+                           file = File(table_path)
+                           )
         # handle no attendance data
         except ValueError:
             await ctx.send("Our archives fail us... I cannot find any roll calls")
@@ -516,7 +512,7 @@ class Attendance(commands.Cog):
             self.db.new_day(event_type)
             await ctx.send("A new day has begun")
 
-    @commands.command(aliases = ["MATT"])
+    @commands.command(aliases = ["MATT", "MY_ATT"])
     @commands.has_any_role(*common.member_roles)
     @common.in_bot_channel()
     async def get_my_attendance(self, ctx):
