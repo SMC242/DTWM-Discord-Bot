@@ -8,7 +8,7 @@ from .Attendance import Attendance
 from Utils import common, memtils
 from json import load
 from random import choice
-import datetime as D
+import datetime as D, os
 from traceback import print_exc
 
 class RepeatingTasks(commands.Cog):
@@ -43,6 +43,7 @@ class RepeatingTasks(commands.Cog):
             self.change_status,
             self.new_day,
             self.check_registered_members,
+            self.images_cleanup,
             ]
 
         for task in tasks_:
@@ -160,6 +161,8 @@ class RepeatingTasks(commands.Cog):
         """Check all members against the registered members every 12 hours.
         Any members in the DB but not in the outfit: unregister.
         Any members not in the DB but in the outfit: register."""
+        await self.bot.wait_until_ready()
+
         try:
             # get the names of all registered members
             registered = [row[1] for row in self.att.db.get_all_members()]
@@ -186,6 +189,13 @@ class RepeatingTasks(commands.Cog):
                           "I have un-registered him.")
         except:
             print_exc()
+
+    @tasks.loop(hours = 4)
+    async def images_cleanup(self):
+        """Delete the built-up images from mestils.create_table."""
+        for file_name in os.listdir("./Images"):
+            os.remove(f"./Images/{file_name}")
+
 
 def setup(bot):
     bot.add_cog(RepeatingTasks(bot))
