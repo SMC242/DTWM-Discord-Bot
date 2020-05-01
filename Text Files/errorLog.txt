@@ -1,0 +1,34 @@
+Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 349, in kick
+    [row[1] for row in self.db.get_all_members]:
+
+TypeError: 'method' object is not iterable
+Occured at: 04:48:19.204860Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 149, in list_members
+    table = PrettyTable(["ID", "Name"])
+
+NameError: name 'PrettyTable' is not defined
+Occured at: 04:49:10.688596Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 353, in kick
+    await self.kick_member(person)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 334, in kick_member
+    await person.remove_roles(*member_roles, reason = "Kicked from the outfit")
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\member.py", line 660, in remove_roles
+    await req(guild_id, user_id, role.id, reason=reason)
+
+AttributeError: 'NoneType' object has no attribute 'id'
+Occured at: 04:52:24.937948

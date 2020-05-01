@@ -11,7 +11,7 @@ from traceback import print_exc
 # dev settings
 DEV_VERSION = True
 common.DEV_VERSION = DEV_VERSION
-LOG_LOAD_ERROR = True
+LOG_LOAD_ERROR = False
 
 # instantiate the bot
 description = """This bot was designed for the DTWM discord by [DTWM] benmitchellmtbV5.
