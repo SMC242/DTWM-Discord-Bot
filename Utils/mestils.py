@@ -3,6 +3,8 @@
 from typing import *
 from matplotlib import pyplot, transforms
 
+# TODO: create a Messagable.send wrapper that chops large messages down into smaller messages
+
 async def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str,
                        col_labels: List[str] = None, row_labels: List[str] = None) -> str:
     """Create a table and save it as an image.

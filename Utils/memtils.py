@@ -2,7 +2,8 @@
 
 from typing import *
 import unicodedata
-from discord import member
+from discord import Member
+from discord.ext.commands import Context
 from Utils import common
 
 class NameParser:
@@ -74,7 +75,7 @@ class NameParser:
         self.check_titles = check_titles
         self.case = case
 
-    def parse(self) -> str:
+    async def parse(self) -> str:
         """Return the parsed name. The name will be parsed according to the settings."""
         # don't modify the original
         name = self._original_name
@@ -156,12 +157,12 @@ class NameParser:
 
         return name
 
-def check_roles(person: member.Member, role_name: str) -> bool:
+def check_roles(person: Member, role_name: str) -> bool:
     """Check if the person has the role.
     Not case-sensitive"""
     return role_name.lower() in [role.name.lower() for role in person.roles]
 
-def get_in_outfit(return_members: bool = False) -> List[Union[member.Member, str]]:
+async def get_in_outfit(return_members: bool = False) -> List[Union[Member, str]]:
     """Get all of the people in the outfit. Requires common.load_bot
     
     ARGUMENTS
@@ -183,12 +184,12 @@ def get_in_outfit(return_members: bool = False) -> List[Union[member.Member, str
                     if return_members:
                         in_outfit.append(person)
                     else:
-                        in_outfit.append(NameParser(person.display_name).parse())
+                        in_outfit.append(await NameParser(person.display_name).parse())
                     break  # prevent double-adding a person if they have multiple member roles
 
     return in_outfit
 
-def get_title(person: member.Member) -> str:
+def get_title(person: Member) -> str:
     """Return 'my lord' if they're a leader, otherwise return 'brother'."""
     title = "brother"
     for role_ in common.leader_roles:
@@ -196,3 +197,29 @@ def get_title(person: member.Member) -> str:
             title = "my lord"
 
     return title
+
+async def search_member(ctx: Context, name: str) -> Optional[Member]:
+    """Search for the member in ctx's guild by their name."""
+    # get the Members and their names
+    # the names have to be lowered or the sort will be wrong
+    name = name.lower()
+    members = sorted( [( m, await NameParser(m.display_name, case = False).parse() )
+                        for m in ctx.guild.members],
+                            key = lambda m: m[1])
+    # binary search through the names
+    lower = 0
+    upper = len(members)
+    found_member = None
+
+    while lower < upper:
+        mid = (upper - lower) // 2
+        current = members[mid]
+        if current[1] < name:
+            lower = mid + 1
+        elif current[1] > name:
+            upper = mid - 1
+        else:  # found
+            found_member = current[0]
+            break
+
+    return found_member

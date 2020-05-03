@@ -172,7 +172,7 @@ class RepeatingTasks(commands.Cog):
                 await async_sleep(10)
 
             # get all the names of the people in the discord outfit
-            in_outfit = memtils.get_in_outfit()
+            in_outfit = await memtils.get_in_outfit()
 
             # add those who are not registered
             for name in in_outfit:

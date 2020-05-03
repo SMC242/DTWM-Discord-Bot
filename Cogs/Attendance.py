@@ -8,6 +8,7 @@ import datetime as D
 from Utils import common, memtils, AttendanceDB as db
 from asyncio import sleep as async_sleep
 from prettytable import PrettyTable
+from .Event_handlers import CommandNotImplementedError
 
 class Attendance(commands.Cog):
     """Commands relating to attendance.
@@ -40,7 +41,7 @@ class Attendance(commands.Cog):
         new_role_names = [role_.name for role_ in after.roles if role_ not in before.roles]
         if "Scout" in new_role_names:
             # get their name
-            name = memtils.NameParser(after.display_name).parse()
+            name = await memtils.NameParser(after.display_name).parse()
 
             # only register them if they're not already registered
             if not self.db.get_member_by_name(name):
@@ -53,7 +54,7 @@ class Attendance(commands.Cog):
     async def add_all_members(self, ctx):
         """Add all current members to the Members table."""
         with ctx.typing():
-            in_outfit = memtils.get_in_outfit()
+            in_outfit = await memtils.get_in_outfit()
 
             # register them if they're not already in the DB
             count = 0  # count every person added to the DB
@@ -71,7 +72,7 @@ class Attendance(commands.Cog):
     async def add_member(self, ctx, name: str):
         """Register a member with their name."""
         # parse the name
-        name = memtils.NameParser(name).parse()
+        name = await memtils.NameParser(name).parse()
         
         # check that the name isn't registered
         if name not in [row[1] for row in self.db.get_all_members()]:
@@ -86,7 +87,7 @@ class Attendance(commands.Cog):
     async def remove_member(self, ctx, name: str):
         """Unregister a member by their name."""
         # parse the name
-        name = memtils.NameParser(name).parse()
+        name = await memtils.NameParser(name).parse()
         self.db.delete_member(name)
         await ctx.send("Another brother lost to the warp...")
 
@@ -126,7 +127,7 @@ class Attendance(commands.Cog):
             # add each person in each event channel to attendees
             for channel in channels:
                 for name in [person.display_name for person in channel.members]:
-                    attendees.add(memtils.NameParser(name).parse())
+                    attendees.add(await memtils.NameParser(name).parse())
 
             # sleep for 30 minutes 
             # but don't wait a fourth time
@@ -187,7 +188,7 @@ class Attendance(commands.Cog):
     async def joined_at(self, ctx, name: str):
         """Get the join date of a member by their name."""
         # parse the name
-        name = memtils.NameParser(name).parse()
+        name = await memtils.NameParser(name).parse()
         joined_at = self.db.get_join_date_by_name(name)
         # handle no member found
         if not joined_at:
@@ -227,7 +228,7 @@ class Attendance(commands.Cog):
     @common.in_bot_channel()
     async def get_my_attendance(self, ctx):
         """Get your attendance %"""
-        name = memtils.NameParser(ctx.author.display_name).parse()
+        name = await memtils.NameParser(ctx.author.display_name).parse()
         ratio = self.db.get_member_att(name)
         if ratio is None:
             await ctx.send("You haven't attended any events, brother. Please join our future wars!")
@@ -247,7 +248,7 @@ class Attendance(commands.Cog):
         This exists so that it can be called outside of the bot command"""
         with common.bot_channel.typing():
             # get all the outfit members
-            in_outfit = memtils.get_in_outfit(True)
+            in_outfit = await memtils.get_in_outfit(True)
 
             # get people playing PS2
             in_game = [person for person in in_outfit
@@ -282,7 +283,7 @@ class Attendance(commands.Cog):
     async def mark_as_away(self, ctx, name: str):
         """Mark the target as away in the database."""
         # parse the name
-        name = memtils.NameParser(name).parse()
+        name = await memtils.NameParser(name).parse()
         member_found = self.db.mark_away(name)
 
         # report whether the query was successful
@@ -297,7 +298,7 @@ class Attendance(commands.Cog):
     async def is_away(self, ctx, name: str):
         """Get whether the person is away."""
         # parse the name
-        name = memtils.NameParser(name).parse()
+        name = await memtils.NameParser(name).parse()
         row = self.db.get_member_by_name(name)
         if row:
             await ctx.send(f'''{name} is marked as {"not" if not row[2] else ""} away in our archives, my lord.''')
@@ -311,7 +312,7 @@ class Attendance(commands.Cog):
            This is its own method so that get_attendance can be
            extended to auto-kick people."""
         # remove them from the DB
-        self.db.delete_member(memtils.NameParser(person.display_name).parse())
+        self.db.delete_member(await memtils.NameParser(person.display_name).parse())
 
         # get the member-only roles roles
         member_role_ids = [
@@ -347,11 +348,20 @@ class Attendance(commands.Cog):
         """Kick a person from the outfit. Mention them...
         They will be moved to Guardsman, unregistered, and DMed."""
         # validate the person
-        if memtils.NameParser(person.display_name).parse() not in \
+        if await memtils.NameParser(person.display_name).parse() not in \
             [row[1] for row in self.db.get_all_members()]:
             await ctx.send("That person is not in our chapter!")
         else:
             await self.kick_member(person)
+
+    #@commands.command(aliases = ["K"])
+    #@common.in_bot_channel()
+    #@commands.has_any_role(*common.leader_roles)
+    async def get_attendance_plus(self, ctx):
+        """get_attendance but it allows browsing each person and kicking them."""
+        # use mestils.search_member to get the person
+        # then use ReactMenu on_reject to call Attendance.kick on them
+        raise CommandNotImplementedError()
 
 def setup(bot):
     bot.add_cog(Attendance(bot))
