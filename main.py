@@ -77,6 +77,10 @@ async def on_ready():
     #acknowledge startup in #servitors
     await common.bot_channel.send(f'{"`[DEV VERSION]` " if DEV_VERSION else ""}I have awoken... I am at your service.')
 
+    # warn user if they're on the dev version
+    if DEV_VERSION:
+        print("WARNING: you are on the dev version. Change main.DEV_VERSION to False if you're a user")
+
 if __name__ == "__main__":
     # get the token and start the bot
     with open("Text Files/token.txt") as f:
