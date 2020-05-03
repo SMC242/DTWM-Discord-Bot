@@ -2,7 +2,6 @@ discord
 datetime
 asyncio
 typing
-functools
 numpy
 Pillow
 matplotlib
