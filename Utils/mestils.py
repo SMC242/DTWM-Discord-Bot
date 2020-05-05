@@ -2,6 +2,7 @@
 
 from typing import *
 from matplotlib import pyplot, transforms
+import os
 
 # TODO: create a Messagable.send wrapper that chops large messages down into smaller messages
 

@@ -22,7 +22,7 @@ class ErrorHandler(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, 
+    async def on_command_error(self, ctx,
                                error: Union[commands.CommandError,
                                            commands.CheckFailure]):
         """Handle an exception raised during command invokation."""

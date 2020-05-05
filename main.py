@@ -3,7 +3,7 @@
 from discord import *
 from discord.ext import commands
 from typing import *
-from os import listdir
+import os
 from Utils import common
 from datetime import datetime
 from traceback import print_exc
@@ -28,8 +28,12 @@ bot = commands.Bot(
     case_insensitive = True
     )
 
+# ensure that the Images directory exists
+if not os.path.exists("./Images"):
+    os.mkdir(("./Images"))
+
 # load all of the Cogs. Credit to https://youtu.be/vQw8cFfZPx0?t=424
-for file in listdir("./Cogs"):
+for file in os.listdir("./Cogs"):
     # ensure it's a Python file and ignore modules that aren't Cogs
     if file.endswith(".py"):
         cog_name = file[:-3]
