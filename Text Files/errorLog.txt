@@ -31,4 +31,40 @@ Occured at: 04:49:10.688596Traceback (most recent call last):
     await req(guild_id, user_id, role.id, reason=reason)
 
 AttributeError: 'NoneType' object has no attribute 'id'
-Occured at: 04:52:24.937948
+Occured at: 04:52:24.937948Traceback (most recent call last):
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\discord\ext\commands\core.py", line 79, in wrapped
+    ret = await coro(*args, **kwargs)
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Cogs\Attendance.py", line 163, in get_attendance
+    table_path = await self.db.get_att_per_member()
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Utils\AttendanceDB.py", line 211, in get_att_per_member
+    col_labels = ["Name", "Attendance (%)", "Away (yes or no)"]
+
+  File "C:\Users\Sam\Desktop\DTWM-Discord-Bot\DTWM-Discord-Bot\Utils\mestils.py", line 51, in create_table
+    pyplot.savefig(path, bbox_inches = new_boundary_box)
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\matplotlib\pyplot.py", line 723, in savefig
+    res = fig.savefig(*args, **kwargs)
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\matplotlib\figure.py", line 2203, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\matplotlib\backend_bases.py", line 2105, in print_figure
+    **kwargs)
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\matplotlib\backends\backend_agg.py", line 535, in print_png
+    with cbook.open_file_cm(filename_or_obj, "wb") as fh:
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\contextlib.py", line 82, in __enter__
+    return next(self.gen)
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\matplotlib\cbook\__init__.py", line 418, in open_file_cm
+    fh, opened = to_filehandle(path_or_file, mode, True, encoding)
+
+  File "C:\Users\Sam\AppData\Local\Programs\Python\Python36\lib\site-packages\matplotlib\cbook\__init__.py", line 403, in to_filehandle
+    fh = open(fname, flag, encoding=encoding)
+
+FileNotFoundError: [Errno 2] No such file or directory: './Images/table_at_16.40.43.png'
+Occured at: 16:40:44.539032
