@@ -197,16 +197,22 @@ class AttendanceDBWriter(db.DBWriter):
         if not list(filter(lambda row: row[0], rows)):
             raise ValueError("No attendance data returned from Attendees.")
 
+        # convert no attendance to 0%
+        new_rows = [(r[0] if r[0] else 0, r[1]) for r in rows]
+
         # convert away and avg. attendance to more readable forms
-        averages = map( lambda row: int( round( row[0] *100, 0 ) ), rows )
-        aways = ["Yes" if row[1] else "No" for row in rows]
+        averages = map( lambda row: int( round( row[0] * 100, 0 ) ), new_rows )
+        aways = ["Yes" if row[1] else "No" for row in new_rows]
 
         # convert the lists to a list of rows
         table_rows = [(name, average, away)
                       for name, average, away in zip(members, averages, aways)]
 
+        # sort it by attendance %
+        sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)
+
         # create a table
-        return await create_table( table_rows, 
+        return await create_table( sorted_rows, 
                                     f"table_at_{D.datetime.today().strftime('%H.%M.%S')}",
                                     col_labels = ["Name", "Attendance (%)", "Away (yes or no)"]
                                     )
@@ -240,6 +246,9 @@ class AttendanceDBWriter(db.DBWriter):
         # which looks like [(None, None)...]
         if not list(filter(lambda row: row[0], rows)):
             raise ValueError("No attendance data returned from Attendees.")
+
+        # convert no attendance to 0%
+        new_rows = [(r[0] if r[0] else 0, r[1]) for r in rows]
         
         # convert no average for an event type to (event type, 0%) instead of (None, None)
         # and convert average from decimal to percentage
@@ -247,8 +256,11 @@ class AttendanceDBWriter(db.DBWriter):
                 else ( row[1], int(round(row[0] * 100, 0)) )
                 for event_type, row in zip(event_types, rows)]
 
+        # sort it by attendance %
+        sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)
+
         # create table
-        return await create_table(table_rows, 
+        return await create_table(sorted_rows, 
                                           f"table_at_{D.datetime.today().strftime('%H.%M.%S')}",
                                           ("Event Type", "Average Attendance (%)")
                                         )

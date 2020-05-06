@@ -48,7 +48,7 @@ async def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str,
     new_boundary_box =  transforms.Bbox.from_extents(points / figure.dpi)
 
     # save the table
-    path = f"./Images/{file_name}.png"
+    path = f"./Images/{file_name}.png"  # the extra line is needed so that the path can be returned
     pyplot.savefig(path, bbox_inches = new_boundary_box)
     return path
 

@@ -159,28 +159,30 @@ class Attendance(commands.Cog):
     @common.in_bot_channel()
     async def get_attendance(self, ctx):
         """Get the average attendance per member for this month."""
-        try:
-            table_path = await self.db.get_att_per_member()
-            await ctx.send("Here are the results for this month, my lord:", 
-                           file = File(table_path)
-                           )
-        # handle no attendance data
-        except ValueError:
-            await ctx.send("Our archives fail us... I cannot find any roll calls")
+        with ctx.typing():
+            try:
+                table_path = await self.db.get_att_per_member()
+                await ctx.send("Here are the results for this month, my lord:", 
+                               file = File(table_path)
+                               )
+            # handle no attendance data
+            except ValueError:
+                await ctx.send("Our archives fail us... I cannot find any roll calls")
 
     @commands.command(aliases = ["Eatt"])
     @commands.has_any_role(*common.leader_roles)
     @common.in_bot_channel()
     async def get_event_attendance(self, ctx):
         """Get the average attendance per event type for this month"""
-        try:
-            table_path = await self.db.get_att_per_event()
-            await ctx.send("These are the results for this month's events, my lord:", 
-                           file = File(table_path)
-                           )
-        # handle no attendance data
-        except ValueError:
-            await ctx.send("Our archives fail us... I cannot find any roll calls")
+        with ctx.typing():
+            try:
+                table_path = await self.db.get_att_per_event()
+                await ctx.send("These are the results for this month's events, my lord:", 
+                               file = File(table_path)
+                               )
+            # handle no attendance data
+            except ValueError:
+                await ctx.send("Our archives fail us... I cannot find any roll calls")
 
     @commands.command(aliases = ["JA"])
     @commands.has_any_role(*common.leader_roles)
