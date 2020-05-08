@@ -305,3 +305,16 @@ class AttendanceDBWriter(db.DBWriter):
         changes_before = self.connection.total_changes
         self.doQuery("UPDATE Members SET away = 1 WHERE name = ?;", [name])
         return self.connection.total_changes > changes_before
+
+    def unmark_away(self, name: str) -> bool:
+        '''
+        Mark the person as away in the Members table.
+        
+        RETURNS
+        True: a member was found and modified.
+        False: " "     "  not "  "   "
+        '''
+        # count the number of changes and use it to see if a member was hit
+        changes_before = self.connection.total_changes
+        self.doQuery("UPDATE Members SET away = 0 WHERE name = ?;", [name])
+        return self.connection.total_changes > changes_before

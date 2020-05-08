@@ -5,6 +5,7 @@ import unicodedata
 from discord import Member
 from discord.ext.commands import Context
 from Utils import common
+from fuzzywuzzy import process  # this module has a great name :D
 
 class NameParser:
     """
@@ -157,10 +158,16 @@ class NameParser:
 
         return name
 
-def check_roles(person: Member, role_name: str) -> bool:
-    """Check if the person has the role.
+def check_roles(person: Member, role_name: Union[Iterable[str], str]) -> bool:
+    """Check if the person has the role(s).
     Not case-sensitive"""
-    return role_name.lower() in [role.name.lower() for role in person.roles]
+    role_names = [role.name.lower() for role in person.roles]
+    if isinstance(role_name, str):
+        return role_name.lower() in role_names
+    # check if any of the target roles are in their roles
+    else:
+        targets = [name.lower() for name in role_name]
+        return bool(set(role_names).intersection(set(targets)))
 
 async def get_in_outfit(return_members: bool = False) -> List[Union[Member, str]]:
     """Get all of the people in the outfit. Requires common.load_bot
@@ -174,18 +181,15 @@ async def get_in_outfit(return_members: bool = False) -> List[Union[Member, str]
     # get all the outfit members
     in_outfit = []
     for person in common.server.members:
-        # check if they have any of the member roles
-        for role in common.member_roles:
-            if check_roles(person, role):
-                # don't add battle brothers
-                if check_roles(person, "Battle Brother"):
-                    break
+        if check_roles(person, common.member_roles):
+            # don't add battle brothers
+            if check_roles(person, "Battle Brother"):
+                    continue
+            else:
+                if return_members:
+                    in_outfit.append(person)
                 else:
-                    if return_members:
-                        in_outfit.append(person)
-                    else:
-                        in_outfit.append(await NameParser(person.display_name).parse())
-                    break  # prevent double-adding a person if they have multiple member roles
+                    in_outfit.append(await NameParser(person.display_name).parse())
 
     return in_outfit
 
@@ -223,3 +227,25 @@ async def search_member(ctx: Context, name: str) -> Optional[Member]:
             break
 
     return found_member
+
+async def is_member(name: str, outfit_members: list[str] = None) -> bool:
+    """Check if the person is a member of the outfit.
+    Not case-sensitive and uses a fuzzy ratio.
+    
+    ARGUEMENTS
+    name:
+        The name of the person to check against the outfit.
+    outfit_members:
+        The names of the people in the outfit.
+        Defaults to people with the member roles in our discord.
+        This should be passed if you need to check against the DB members."""
+    # change this to increase/decrease sensitivity to changes
+    MIN_RATIO = 85
+    # parsed the name and lower it
+    parsed_name = await NameParser(name, case = False).parse()
+
+    # get all of the discord members in lowercase
+    member_names = [n.lower() for n in await get_in_outfit()]
+
+    # do a fuzzy comparison
+    return process.extractOne(parsed_name, member_names)[1] >= MIN_RATIO

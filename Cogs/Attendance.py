@@ -355,6 +355,20 @@ class Attendance(commands.Cog):
             await ctx.send("That person is not in our chapter!")
         else:
             await self.kick_member(person)
+            await ctx.send("He has been expelled, my lord")
+
+    @commands.command(aliases = ["RA"])
+    @common.in_bot_channel()
+    @commands.has_any_role(*common.leader_roles)
+    async def remove_away(self, ctx, name):
+        """Remove a person's away status."""
+        # validate the person
+        name = await memtils.NameParser(person.display_name).parse()
+        if name not in [row[1] for row in self.db.get_all_members()]:
+            await ctx.send("That person is not in our chapter!")
+        else:
+            await self.db.unmark_away(name)
+            await ctx.send("An old face has returned :D")
 
     #@commands.command(aliases = ["K"])
     #@common.in_bot_channel()
