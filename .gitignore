@@ -7,6 +7,5 @@ __pycache__/classes.cpython-37.pyc
 Text Files/token.txt
 *.sln
 *.config
-Text Files\errorLog.txt
 Images/
-Text Files/errorLog.txt
+Text\ Files/errorLog.txt
