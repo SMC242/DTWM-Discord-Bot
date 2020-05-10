@@ -44,7 +44,7 @@ class AttendanceDBWriter(db.DBWriter):
         """Add a member to the Members table."""
         self.doQuery("INSERT INTO Members(name) VALUES(?);", vars = [name])
 
-    def get_member_by_name(self, name: str) -> Optional[Tuple[int, str, bool, str]]:
+    def get_member_by_name(self, name: str) -> Optional[Tuple[int, str, bool, D.date]]:
         """
         Get the row of a member by their name.
 
@@ -174,31 +174,32 @@ class AttendanceDBWriter(db.DBWriter):
             
         RAISES
             ValueError: No attendance data returned from Attendees."""
-        # get all members because executemany doesn't support SELECT
-        members = [row[1] for row in self.get_all_members()]
-
         # get the target month for the LIKE clause
         target_month = D.datetime.today().strftime("%Y-%m-") + "%"
 
         # get the attendance per member and whether they were away
-        rows = []
-        for member_ in members:
-            rows.append(
-                self.doQuery("""SELECT AVG(attended), away FROM Attendees, Members
-                    WHERE Attendees.memberID = Members.memberID
-                    AND Members.name = ?
-                    AND date LIKE ?;""",
-                    vars = (member_, target_month)
-                    )[0]
+        rows = self.doQuery("""SELECT AVG(attended), away, name
+	                            FROM Attendees, Members
+                                WHERE Attendees.memberID = Members.memberID
+    	                            AND date LIKE ?
+                                GROUP BY name;""",
+                vars = [target_month]
                 )
 
         # handle no attendance data returned
-        # which looks like [(None, None)...]
-        if not list(filter(lambda row: row[0], rows)):
+        if not rows:
             raise ValueError("No attendance data returned from Attendees.")
 
+        # convert to a dict
+        rows: Dict[str, Tuple[float, int]] = {name : (avg, away)
+                                              for avg, away, name in rows}
+
         # convert no attendance to 0%
-        new_rows = [(r[0] if r[0] else 0, r[1]) for r in rows]
+        new_rows = [(0.0, 0, name) if name not in rows
+                    else (*rows[name], name)
+                    for name in 
+                    [r[1] for r in self.get_all_members()]
+                   ]
 
         # convert away and avg. attendance to more readable forms
         averages = map( lambda row: int( round( row[0] * 100, 0 ) ), new_rows )
@@ -206,7 +207,8 @@ class AttendanceDBWriter(db.DBWriter):
 
         # convert the lists to a list of rows
         table_rows = [(name, average, away)
-                      for name, average, away in zip(members, averages, aways)]
+                      for name, average, away in \
+                        zip([row[2] for row in new_rows], averages, aways)]
 
         # sort it by attendance %
         sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)
@@ -230,31 +232,38 @@ class AttendanceDBWriter(db.DBWriter):
         target_month = D.datetime.today().strftime("%Y-%m-") + "%"
 
         # get the attendance per member and whether they were away
-        rows = []
-        event_types = ("AIR", "ARMOUR", "INFANTRY", "CO-OPS1", "CO-OPS2", "INTERNAL_OPS")
-        for event in event_types:
-            rows.append(
-                self.doQuery("""SELECT AVG(attended), eventType FROM Attendees, Days
-                    WHERE Days.date = Attendees.date
-                    AND Days.eventType = ?
-                    AND Attendees.date LIKE ?;""",
-                    vars = (event, target_month)
-                    )[0]
-                )
+        rows = self.doQuery("""SELECT AVG(attended), eventType
+	                        FROM Attendees, Days
+                            WHERE Attendees.date = Days.date
+    	                        AND Attendees.date LIKE ?
+                            GROUP BY eventType;""",
+            vars = [target_month]
+            )
 
         # handle no attendance data returned
         # which looks like [(None, None)...]
-        if not list(filter(lambda row: row[0], rows)):
+        if not rows:
             raise ValueError("No attendance data returned from Attendees.")
 
         # convert no attendance to 0%
-        new_rows = [(r[0] if r[0] else 0, r[1]) for r in rows]
+        event_types = (
+            "AIR",
+            "ARMOUR",
+            "INFANTRY",
+            "CO-OPS1",
+            "Co-OPS2",
+            "INTERNAL_OPS",
+            )
+        rows = {event_type: avg for avg, event_type in rows}
+        new_rows = [(0.0, event_type) if event_type not in rows
+                    else (rows[event_type], event_type)
+                    for event_type in event_types
+            ]
         
         # convert no average for an event type to (event type, 0%) instead of (None, None)
         # and convert average from decimal to percentage
-        table_rows: List[str, int] = [(event_type, 0) if row[0] is None 
-                else ( row[1], int(round(row[0] * 100, 0)) )
-                for event_type, row in zip(event_types, rows)]
+        table_rows: List[str, int] = [( event_type, int(round(avg * 100, 0)) )
+                                        for avg, event_type in new_rows]
 
         # sort it by attendance %
         sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)

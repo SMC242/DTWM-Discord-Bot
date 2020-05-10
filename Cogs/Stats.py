@@ -61,7 +61,7 @@ class ServerStats(commands.Cog):
             Limited to 5k messages."""
             return len( await channel.history(limit = 5000, after = after).flatten() )
 
-        with ctx.typing():
+        async with ctx.typing():
             # verify the arguement
             if target_channel != "global" and not isinstance(target_channel, TextChannel):
                 return await ctx.send("You must mention a channel or pass 'global'.")
@@ -96,7 +96,7 @@ class ServerStats(commands.Cog):
 
             return count
 
-        with ctx.typing():
+        async with ctx.typing():
             # verify the arguement
             if target_channel != "global" and not isinstance(target_channel, TextChannel):
                 return await ctx.send("You must mention a channel or pass 'global'.")

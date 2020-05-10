@@ -50,8 +50,22 @@ async def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str,
     # save the table
     path = f"./Images/{file_name}.png"  # the extra line is needed so that the path can be returned
     pyplot.savefig(path, bbox_inches = new_boundary_box)
+
+    # clean up the figure so that the table is properly forgotten
+    pyplot.clf()
+    pyplot.cla()
+    pyplot.close()
     return path
 
-if __name__ == "__main__":
-    import asyncio
-    #asyncio.get_event_loop().run_until_complete()
+def list_join(to_join: List[str], connective: str = "and") -> str:
+    """
+    Join a list into a grammatically-correct string.
+    ARGUMENTS
+    to_join:
+        The items to join together.
+    connective:
+        The connective to join the last two elements.
+        Example where 'and' is connective:
+        'one, two, three, four and five'
+    """
+    return ', '.join(to_join[:-2] + [f' {connective} '.join(to_join[-2:])])

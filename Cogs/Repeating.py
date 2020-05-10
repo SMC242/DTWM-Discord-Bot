@@ -176,14 +176,14 @@ class RepeatingTasks(commands.Cog):
 
             # add those who are not registered
             for name in in_outfit:
-                if name not in registered:
+                if not await memtils.is_member(name, in_outfit):
                     self.att.db.add_member(name)
                     print(f'"{name}" was detected by the cleanup check. ' + 
                           "I have registered him.")
 
             # remove those who are registered but not in in_outfit
             for name in registered:
-                if name not in in_outfit:
+                if not await memtils.is_member(name, registered):
                     self.att.db.delete_member(name)
                     print(f'"{name}" was detected by the cleanup check. ' + 
                           "I have un-registered him.")

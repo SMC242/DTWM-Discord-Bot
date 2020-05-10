@@ -8,6 +8,7 @@ import datetime as D, traceback, re
 from asyncio import get_event_loop
 from json import load
 from random import choice
+from Utils.mestils import list_join
 
 # errors, message reactions
 # custom error types
@@ -61,7 +62,7 @@ class ErrorHandler(commands.Cog):
             missing_roles = list(error.missing_roles)  # ensure it's a list for join()
             await ctx.send("You need to be " +
                            f"{'an ' if missing_roles[0][0].lower() in 'aeiou' else 'a '}" +
-                           f"{', '.join(missing_roles[:-2] + [' or '.join(missing_roles[-2:])])}" +
+                           f"{list_join(error.missing_roles, 'or')}" +
                            "to use that command!")
 
         elif isinstance(error, commands.DisabledCommand):

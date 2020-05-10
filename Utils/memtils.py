@@ -2,7 +2,7 @@
 
 from typing import *
 import unicodedata
-from discord import Member
+from discord import Member, Guild
 from discord.ext.commands import Context
 from Utils import common
 from fuzzywuzzy import process  # this module has a great name :D
@@ -76,7 +76,8 @@ class NameParser:
         self.check_titles = check_titles
         self.case = case
 
-    async def parse(self) -> str:
+    @property
+    def parsed(self) -> str:
         """Return the parsed name. The name will be parsed according to the settings."""
         # don't modify the original
         name = self._original_name
@@ -97,35 +98,21 @@ class NameParser:
         name = name.strip()
 
         # convert the case
-        if self.case is True:
-            return name.upper()
-        if self.case is False:
-            return name.lower()
-        else:
+        if self.case is None:
             return name
+        if self.case:
+            return name.upper()
+        else:
+            return name.lower()
 
     def remove_tag(self, name: str) -> str:
         """Remove [TAG]s from the name."""
         # exit if there is no tag
+        # credit to Auroram for the high-level refactor
         if "]" in name:
-            #linear search for end of outfit tag and set name to name after tag
-            i=0
-            while True: 
-                # check if the end of the tag is at i
-                if name[i] == "]":
-                    # check for a space between the tag and the name
-                    try:
-                        if name[i+1]==" ":
-                            i+=1
-                        return name[i+1:]
-                    # the tag is at the end of name
-                    except IndexError:
-                        return name
-                # otherwise, continue
-                else:
-                    i+=1
-        else:
-            return name
+            tag_index = name.index("]")
+            name = name[tag_index + 1:]
+        return name.strip()  # remove extra spaces
 
     def convert_to_english(self, name: str) -> str:
         """Check for non-english characters. What happens to them
@@ -189,7 +176,7 @@ async def get_in_outfit(return_members: bool = False) -> List[Union[Member, str]
                 if return_members:
                     in_outfit.append(person)
                 else:
-                    in_outfit.append(await NameParser(person.display_name).parse())
+                    in_outfit.append(NameParser(person.display_name).parsed)
 
     return in_outfit
 
@@ -202,13 +189,30 @@ def get_title(person: Member) -> str:
 
     return title
 
-async def search_member(ctx: Context, name: str) -> Optional[Member]:
-    """Search for the member in ctx's guild by their name."""
+async def search_member(search_with: Union[Context, Guild],
+                        name: str) -> Optional[Member]:
+    """Search for the member using search_with's members by their name.
+    
+    ARGUMENTS
+    search_with:
+        The object to get the server members from.
+        Using a Context object is preferable as
+        it makes the bot more flexible.
+    name:
+        The un-parsed name of the person to find.
+        
+    RETURNS
+    None: no member was found.
+    Member: the instance of the person found."""
+    # get the guild if a Context object was passed
+    if isinstance(search_with, Context):
+        search_with = search_with.guild
+
     # get the Members and their names
     # the names have to be lowered or the sort will be wrong
     name = name.lower()
-    members = sorted( [( m, await NameParser(m.display_name, case = False).parse() )
-                        for m in ctx.guild.members],
+    members = sorted( [( m, NameParser(m.display_name, case = False).parsed )
+                        for m in search_with.members],
                             key = lambda m: m[1])
     # binary search through the names
     lower = 0
@@ -228,7 +232,8 @@ async def search_member(ctx: Context, name: str) -> Optional[Member]:
 
     return found_member
 
-async def is_member(name: str, outfit_members: list[str] = None) -> bool:
+async def is_member(name: str, outfit_members: List[str] = None,
+                    min_ratio: int = 85) -> bool:
     """Check if the person is a member of the outfit.
     Not case-sensitive and uses a fuzzy ratio.
     
@@ -238,14 +243,18 @@ async def is_member(name: str, outfit_members: list[str] = None) -> bool:
     outfit_members:
         The names of the people in the outfit.
         Defaults to people with the member roles in our discord.
-        This should be passed if you need to check against the DB members."""
-    # change this to increase/decrease sensitivity to changes
-    MIN_RATIO = 85
+        This should be passed if you need to check against the DB members.
+    min_ratio:
+        Change this to increase/decrease sensitivity to differences
+        between the name and the best match from the outfit.
+    """
     # parsed the name and lower it
-    parsed_name = await NameParser(name, case = False).parse()
+    parsed_name = NameParser(name, case = False).parsed
 
-    # get all of the discord members in lowercase
-    member_names = [n.lower() for n in await get_in_outfit()]
+    # get the names of the members from the discord if they weren't provided
+    if not outfit_members:
+        outfit_members = await get_in_outfit()
+    member_names = [n.lower() for n in outfit_members]
 
     # do a fuzzy comparison
-    return process.extractOne(parsed_name, member_names)[1] >= MIN_RATIO
+    return process.extractOne(parsed_name, member_names)[1] >= min_ratio
