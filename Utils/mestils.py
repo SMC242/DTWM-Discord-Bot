@@ -2,11 +2,11 @@
 
 from typing import *
 from matplotlib import pyplot, transforms
-import os
+import os, datetime as D
 
 # TODO: create a Messagable.send wrapper that chops large messages down into smaller messages
 
-async def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str,
+async def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str = None,
                        col_labels: List[str] = None, row_labels: List[str] = None) -> str:
     """Create a table and save it as an image.
 
@@ -22,7 +22,7 @@ async def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str,
     file_name:
         The name of the file. It will be saved as a png file.
         The file will be saved in DTWM-Discord-Bot/Images.
-        
+        Defaults to "table_at_{D.datetime.today().strftime('%H.%M.%S')}"
     RETURNS
         The file path of the table image."""
     # create table
@@ -37,6 +37,7 @@ async def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str,
     
     # draw the canvas and get the current boundary box's coordinates
     figure = pyplot.gcf()
+    figure.dpi = 200
     figure.canvas.draw()
     points = table.get_window_extent(figure._cachedRenderer).get_points()
 
@@ -45,9 +46,11 @@ async def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str,
     points[1,:] += 10
 
     # create a boundary box that's cropped to fit the table
-    new_boundary_box =  transforms.Bbox.from_extents(points / figure.dpi)
+    new_boundary_box =  transforms.Bbox.from_extents(points / figure.dpi)  # 200 DPI
 
     # save the table
+    if not file_name:
+        file_name = f"table_at_{D.datetime.today().strftime('%H.%M.%S')}"
     path = f"./Images/{file_name}.png"  # the extra line is needed so that the path can be returned
     pyplot.savefig(path, bbox_inches = new_boundary_box)
 

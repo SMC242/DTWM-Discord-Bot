@@ -9,3 +9,5 @@ Text Files/token.txt
 *.config
 Images/
 Text\ Files/errorLog.txt
+Text\ Files/client_id.json
+Text\ Files/token.pickle

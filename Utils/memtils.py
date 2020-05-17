@@ -5,7 +5,7 @@ import unicodedata
 from discord import Member, Guild
 from discord.ext.commands import Context
 from Utils import common
-from fuzzywuzzy import process  # this module has a great name :D
+from fuzzywuzzy import process, fuzz  # this module has a great name :D
 
 class NameParser:
     """
@@ -210,10 +210,11 @@ async def search_member(search_with: Union[Context, Guild],
 
     # get the Members and their names
     # the names have to be lowered or the sort will be wrong
-    name = name.lower()
+    name = NameParser(name, case = False).parsed
     members = sorted( [( m, NameParser(m.display_name, case = False).parsed )
                         for m in search_with.members],
                             key = lambda m: m[1])
+
     # binary search through the names
     lower = 0
     upper = len(members)
@@ -233,6 +234,7 @@ async def search_member(search_with: Union[Context, Guild],
     return found_member
 
 async def is_member(name: str, outfit_members: List[str] = None,
+                    db: 'AttendanceDB.AttendanceDBWriter' = None,
                     min_ratio: int = 85) -> bool:
     """Check if the person is a member of the outfit.
     Not case-sensitive and uses a fuzzy ratio.
@@ -244,6 +246,9 @@ async def is_member(name: str, outfit_members: List[str] = None,
         The names of the people in the outfit.
         Defaults to people with the member roles in our discord.
         This should be passed if you need to check against the DB members.
+    db:
+        The DB interface to use to populate outfit_members
+        if outfit_members wasn't passed.
     min_ratio:
         Change this to increase/decrease sensitivity to differences
         between the name and the best match from the outfit.
@@ -251,10 +256,35 @@ async def is_member(name: str, outfit_members: List[str] = None,
     # parsed the name and lower it
     parsed_name = NameParser(name, case = False).parsed
 
-    # get the names of the members from the discord if they weren't provided
+    # get the names of the members from the discord or db if they weren't provided
     if not outfit_members:
-        outfit_members = await get_in_outfit()
+        if db:
+            outfit_members = [row[1] for row in db.get_all_members()]
+        else:
+            outfit_members = await get_in_outfit()
     member_names = [n.lower() for n in outfit_members]
 
     # do a fuzzy comparison
     return process.extractOne(parsed_name, member_names)[1] >= min_ratio
+
+def compare_name(name1: str, name2: Union[str, List[str]], 
+                       min_ratio: int = 85) -> bool:
+    """Use fuzzywuzzy to compare the parsed names.
+    
+    ARGUMENTS
+        name1:
+            The name to compare to the other name(s)
+        name2:
+            The name(s) to comare name1 against.
+        min_ratio:
+            The percentage of characters that must be the same
+            between name1 and name2."""
+    # parse name1
+    name1 = NameParser(name1).parsed
+
+    # handle name2 = string
+    if isinstance(name2, str):
+        return fuzz.ratio(name1, name2) >= min_ratio
+    # handle name2 = list
+    else:
+        return process.extractOne(name1, name2)[1] >= min_ratio

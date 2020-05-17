@@ -2,6 +2,7 @@
 
 from functools import wraps
 from logging import getLogger
+from traceback import print_exc
 
 def retry(logMsg: str = None, retries: int = 5):
     """Try func for n retries."""
@@ -11,7 +12,7 @@ def retry(logMsg: str = None, retries: int = 5):
         def inner(*args, **kwargs):
             # convert to function to allow exc_info to be the default
             if not logMsg:
-                logMsgCallable = exc_info
+                logMsgCallable = print_exc
 
             else:
                 logMsgCallable = lambda : logMsg

@@ -7,7 +7,7 @@ from contextlib import suppress
 import datetime as D
 from Utils import common, memtils, AttendanceDB as db
 from asyncio import sleep as async_sleep
-from prettytable import PrettyTable
+from Utils.mestils import create_table
 from .Event_handlers import CommandNotImplementedError
 
 class Attendance(commands.Cog):
@@ -157,12 +157,18 @@ class Attendance(commands.Cog):
     @common.in_bot_channel()
     async def list_members(self, ctx):
         """List all of the registered members"""
-        # create a PrettyTable
-        table = PrettyTable(["ID", "Name"])
-        for row in self.db.get_all_members():
-            table.add_row( (row[0], row[1]) )
+        # create a table
+        async with ctx.typing():
+            file_name = f"table_at_{D.datetime.today().strftime('%H.%M.%S')}"
+            path = await create_table(
+                                      [(row[0], row[1])
+                                       for row in self.db.get_all_members()
+                                      ],
+                                      file_name, ["ID", "Name"]
+                                    )
         
-        await ctx.send(f"They are ready to serve, my lord:```\n{table.get_string()}```")
+            await ctx.send(f"They are ready to serve, my lord:",
+                            file = File(path))
 
     @commands.command(aliases = ["att"])
     @commands.has_any_role(*common.leader_roles)
@@ -354,9 +360,16 @@ class Attendance(commands.Cog):
     @commands.command(aliases = ["K"])
     @common.in_bot_channel()
     @commands.has_any_role(*common.leader_roles)
-    async def kick(self, ctx, person: Member):
+    async def kick(self, ctx, person: Union[Member, str]):
         """Kick a person from the outfit. Mention them...
         They will be moved to Guardsman, unregistered, and DMed."""
+        # handle no Member passed
+        if isinstance(person, str):
+            person = await memtils.search_member(ctx, person)
+            # handle no Member found
+            if not person:
+                return await ctx.send("I can't find that person, my lord")
+
         # validate the person
         if not await memtils.is_member(person.display_name, 
                                  [r[1] for r in self.db.get_all_members()]):
@@ -366,6 +379,7 @@ class Attendance(commands.Cog):
             if memtils.check_roles(person, common.leader_roles):
                 return await ctx.send("You know that regicide is illegal," +
                                       f" {memtils.get_title(person)}")
+
             await self.kick_member(person)
             await ctx.send("He has been expelled, my lord")
 
@@ -381,6 +395,19 @@ class Attendance(commands.Cog):
         else:
             self.db.unmark_away(name)
             await ctx.send("An old face has returned :D")
+
+
+    @commands.command(aliases = ["SK", "SKSKSKSKSKSKSKSKSK_GIVE_ME_THE_TEA_SIS"])
+    @common.in_bot_channel()
+    @commands.has_any_role(*common.leader_roles)
+    async def suggest_kicks(self, ctx):
+        """Suggest who should be kicked this month."""
+        async with ctx.typing():
+            path, percent_warned, percent_kicked = await self.db.suggest_kicks()
+            await ctx.send("This is my opnion, my lord. " +
+                           f"This would mean {percent_warned} of the outfit would be warned " + 
+                           f"and {percent_kicked} would be kicked",
+                           file = File(path))
 
     #@commands.command(aliases = ["K"])
     #@common.in_bot_channel()

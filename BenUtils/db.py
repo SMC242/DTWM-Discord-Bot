@@ -142,7 +142,7 @@ class DBWriter:
 
         # if no target was passed: toggle
         # if on: toggle off
-        elif self.cutsor.row_factory:
+        elif self.cursor.row_factory:
             self.cursor.row_factory = None
 
         else: # if not on: toggle on

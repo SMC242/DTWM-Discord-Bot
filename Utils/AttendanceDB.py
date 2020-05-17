@@ -327,3 +327,67 @@ class AttendanceDBWriter(db.DBWriter):
         changes_before = self.connection.total_changes
         self.doQuery("UPDATE Members SET away = 0 WHERE name = ?;", [name])
         return self.connection.total_changes > changes_before
+
+    async def suggest_kicks(self) -> Tuple[str, str, str]:
+        """
+        Get all members under 50% attendance and their priority for kicking.
+
+        RETURNS
+            The path to the image of the table
+            that was created from the DB query results;
+            the % of the outfit recommended to be warned;
+            and the % of the outfit recommended to be kicked.
+        """
+        # get the target month for the LIKE clause
+        target_month = D.datetime.today().strftime("%Y-%m-") + "%"
+
+        # most of the data manipulation is in the query
+        # because sql is faaaaaaaaaaaast
+        rows = self.doQuery("""SELECT round(AVG(attended) * 100, 0) as ratio, name, away, joinedAt
+	                                FROM attendees, members
+	                                WHERE attendees.memberid = members.memberid
+    	                                AND attendees.date like ?
+                                    GROUP BY name
+                                    HAVING ratio <= 50;""", [target_month])
+        
+        # this could be faster in a list comp but that would be less readable
+        table_rows = []
+        num_kicked = 0
+        num_warned = 0
+        for ratio, name, away, joined_at in rows:
+            # round ratio
+            ratio = int(ratio)
+            # convert away to bool
+            away = bool(away)
+            # convert joinedAt to D.date
+            joined_at = D.datetime.strptime(joined_at, "%Y-%m-%d")
+            # assign each member a priority level
+            priority_score = (50 - ratio) // 10  # +1 point per 10% under 50% attendance
+            # reduce the priority of those who were away or joined within a month
+            if away or (D.datetime.today() - joined_at).days < 30:
+                priority_score = 0
+                
+            # count how many people are being recommended to be kicked/warned
+            if priority_score <= 1:
+                priority_level = "Warn/monitor"
+                num_warned += 1
+            else:
+                prioity_level = "Kick"
+                num_kicked += 1
+
+            table_rows.append((name, ratio, priority_level,
+                              away, joined_at.strftime("%d.%m.%y"))
+                             )
+
+        # get kicked/warned %
+        num_members = len(self.get_all_members())
+        percent_warned = f"{int(round((num_warned / num_members) * 100, 0))}%"
+        percent_kicked = f"{int(round((num_kicked / num_members) * 100, 0))}%"
+
+        # create table
+        path = await create_table(
+            sorted(table_rows, key = lambda row: row[2]),
+            col_labels = ("Name", "Attendance Ratio (%)",
+                          "Recommended Action", "Away (True/False)",
+                          "Join Date"))
+        return (path, percent_warned, percent_kicked)
