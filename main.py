@@ -28,6 +28,13 @@ bot = commands.Bot(
     case_insensitive = True
     )
 
+# check that there is a token to run from
+if not os.path.exists("./Text Files/token.txt"):
+    # wait for the user to read the message, then exit
+    input("There is no token in Text Files/\nPress any key to exit.")
+    import sys
+    sys.exit(0)
+
 # ensure that the Images directory exists
 if not os.path.exists("./Images"):
     os.mkdir(("./Images"))

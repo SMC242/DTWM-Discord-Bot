@@ -8,14 +8,8 @@ from .Attendance import Attendance
 from Utils import common, memtils
 from json import load
 from random import choice
-import datetime as D, os, pickle
+import datetime as D, os
 from traceback import print_exc
-
-# google drive modules
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.http import MediaFileUpload
-from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
 
 class RepeatingTasks(commands.Cog):
     """Any repeating tasks.
@@ -205,30 +199,15 @@ class RepeatingTasks(commands.Cog):
 
     @tasks.loop(hours = 12)
     async def backup_DB(self):
-        """Sends the DB to the DTWM Google Drive"""
-        # load the credentials
-        # all of this junk is required to authorise the app once
-        # instead of asking every time
-        SCOPES = ['https://www.googleapis.com/auth/drive']
-        creds = None
-        # The file token.pickle stores the user's access and refresh tokens, and is
-        # created automatically when the authorization flow completes for the first
-        # time.
-        if os.path.exists('./Text Files/token.pickle'):
-            with open('./Text Files/token.pickle', 'rb') as token:
-                creds = pickle.load(token)
-        # If there are no (valid) credentials available, let the user log in.
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    './Text Files/client_id.json', SCOPES)
-                creds = flow.run_local_server(port=0)
-            # Save the credentials for the next run
-            with open('./Text Files/token.pickle', 'wb') as token:
-                pickle.dump(creds, token)
-        service = build('drive', 'v3', credentials=creds)
+        """Sends the DB to Bot Testing.backups every 12 hours.
+        
+        Messages have a 5MB file size limit.
+        I calculated that we should fall well-within that cap
+        over the course of a year so this should be safe.
+        This will need to be revised if our outfit suddenly becomes
+        very large but that's unlikely."""
+        # don't back up the dev version's DBs
+        if common.DEV_VERSION:  return
 
         # search for the first file with "attendance" in its name
         # which has a .db extension
@@ -239,20 +218,16 @@ class RepeatingTasks(commands.Cog):
                 db_file = folder + file_name
         if not db_file:  return  # check that the file was found
 
-        # creating the upload
-        folder_ids = [
-            "1pmyPy6lM8NkZTnRgGKYTjW06gbygSogi",  # attendance folder
-            ]
-        metadata = {
-            "name": f"DB_Backup_from_{D.datetime.now().strftime('%d/%m/%Y')}",
-            "parents": folder_ids,
-            }
-
-        file_ = MediaFileUpload(db_file)
-        response = service.files().create(body=metadata,
-                                    media_body=file_,
-                                    fields='id').execute()
-        print("DB backed up successfully!")
+        # send it to Bot Channel.backups
+        try:
+            await self.bot.wait_until_ready()
+            backups_channel = self.bot.get_channel(712352058035929158)
+            await backups_channel.send(f"DB backup from {D.datetime.today().strftime('%d.%m.%Y')}",
+                                       file = File(db_file))
+            print("Backed up the database successfully!")
+        except:
+            print("The database failed to back up.")
+            await backups_channel.send(f"Failed to back up on {D.datetime.today().strftime('%d.%m.%Y')}")
 
 
 def setup(bot):
