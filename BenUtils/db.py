@@ -2,7 +2,6 @@
 
 import sqlite3 as sql, os
 from typing import Any, List
-from .decorators import retry
 
 class DBWriter:
     """
@@ -83,7 +82,6 @@ class DBWriter:
         self.path = filePath
 
 
-    @retry(logMsg = "Failed to create connection.")
     def createConnection(self):
         """Create DB connection. Return connection object to self.connection"""
 

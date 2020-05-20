@@ -10,7 +10,7 @@ class AttendanceDBWriter(db.DBWriter):
     """Handles the attendance database and accessing it."""
 
     def __init__(self):
-        db.DBWriter.__init__(self, "Attendance")
+        super().__init__("Attendance")
 
         # create the table if it doesn't exist
         self.create_tables()
@@ -166,7 +166,7 @@ class AttendanceDBWriter(db.DBWriter):
         except IndexError:
             return None
 
-    async def get_att_per_member(self) -> str:
+    def get_att_per_member(self) -> str:
         """Get this month's attendance and save it as an image.
 
         RETURNS
@@ -214,12 +214,12 @@ class AttendanceDBWriter(db.DBWriter):
         sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)
 
         # create a table
-        return await create_table( sorted_rows, 
+        return create_table( sorted_rows, 
                                     f"table_at_{D.datetime.today().strftime('%H.%M.%S')}",
                                     col_labels = ["Name", "Attendance (%)", "Away (yes or no)"]
                                     )
 
-    async def get_att_per_event(self) -> str:
+    def get_att_per_event(self) -> str:
         """Get this month's average attendance for each event type
         and save it as an image.
 
@@ -269,7 +269,7 @@ class AttendanceDBWriter(db.DBWriter):
         sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)
 
         # create table
-        return await create_table(sorted_rows, 
+        return create_table(sorted_rows, 
                                           f"table_at_{D.datetime.today().strftime('%H.%M.%S')}",
                                           ("Event Type", "Average Attendance (%)")
                                         )
@@ -328,7 +328,7 @@ class AttendanceDBWriter(db.DBWriter):
         self.doQuery("UPDATE Members SET away = 0 WHERE name = ?;", [name])
         return self.connection.total_changes > changes_before
 
-    async def suggest_kicks(self) -> Tuple[str, str, str]:
+    def suggest_kicks(self) -> Tuple[str, str, str]:
         """
         Get all members under 50% attendance and their priority for kicking.
 
@@ -385,7 +385,7 @@ class AttendanceDBWriter(db.DBWriter):
         percent_kicked = f"{int(round((num_kicked / num_members) * 100, 0))}%"
 
         # create table
-        path = await create_table(
+        path = create_table(
             sorted(table_rows, key = lambda row: row[2]),
             col_labels = ("Name", "Attendance Ratio (%)",
                           "Recommended Action", "Away (True/False)",

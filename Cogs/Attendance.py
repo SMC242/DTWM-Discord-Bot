@@ -157,15 +157,18 @@ class Attendance(commands.Cog):
     @common.in_bot_channel()
     async def list_members(self, ctx):
         """List all of the registered members"""
+        async def wrap(self, file_name: str) -> str:
+            return create_table(
+                                [(row[0], row[1])
+                                for row in self.db.get_all_members()
+                                ],
+                                file_name, ["ID", "Name"]
+                                )
+
         # create a table
         async with ctx.typing():
             file_name = f"table_at_{D.datetime.today().strftime('%H.%M.%S')}"
-            path = await create_table(
-                                      [(row[0], row[1])
-                                       for row in self.db.get_all_members()
-                                      ],
-                                      file_name, ["ID", "Name"]
-                                    )
+            path = await wrap(self, file_name)
         
             await ctx.send(f"They are ready to serve, my lord:",
                             file = File(path))
@@ -175,9 +178,15 @@ class Attendance(commands.Cog):
     @common.in_bot_channel()
     async def get_attendance(self, ctx):
         """Get the average attendance per member for this month."""
+        # this is necessary to cede control to the event loop
+        # while not making the query itself async
+        # if the query was async, it could cause the DB to be locked
+        async def wrap(self) -> str:
+            return self.db.get_att_per_member()
+
         async with ctx.typing():
             try:
-                table_path = await self.db.get_att_per_member()
+                table_path = await wrap(self)
                 await ctx.send("Here are the results for this month, my lord:",
                                file = File(table_path)
                                )
@@ -190,9 +199,12 @@ class Attendance(commands.Cog):
     @common.in_bot_channel()
     async def get_event_attendance(self, ctx):
         """Get the average attendance per event type for this month"""
+        async def wrap(self) -> str:
+            return self.db.get_att_per_event()
+
         async with ctx.typing():
             try:
-                table_path = await self.db.get_att_per_event()
+                table_path = wrap(self)
                 await ctx.send("These are the results for this month's events, my lord:", 
                                file = File(table_path)
                                )
@@ -402,8 +414,11 @@ class Attendance(commands.Cog):
     @commands.has_any_role(*common.leader_roles)
     async def suggest_kicks(self, ctx):
         """Suggest who should be kicked this month."""
+        async def wrap(self) -> Tuple[str, str, str]:
+            return self.db.suggest_kicks()
+
         async with ctx.typing():
-            path, percent_warned, percent_kicked = await self.db.suggest_kicks()
+            path, percent_warned, percent_kicked = await wrap(self)
             await ctx.send("This is my opnion, my lord. " +
                            f"This would mean {percent_warned} of the outfit would be warned " + 
                            f"and {percent_kicked} would be kicked",
