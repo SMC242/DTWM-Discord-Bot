@@ -39,7 +39,7 @@ class TrainingWeeks(commands.Cog):
         return topic
 
     @commands.command(aliases = ["week"])
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def get_training_week(self, ctx):
         """Get the training types for this week"""
         await ctx.send(f"This week we will train {self.training_type}, {memtils.get_title(ctx.author)}")
@@ -51,7 +51,6 @@ class ServerStats(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @common.in_bot_channel()
     @commands.cooldown(1, 30, commands.BucketType.user)
     @commands.command(aliases = ["CM"])
     async def count_messages(self, ctx, target_channel: Union[TextChannel, str]):
@@ -81,7 +80,6 @@ class ServerStats(commands.Cog):
             await ctx.send(f"{count} messages were sent {'aboard the Erioch' if is_global else ''} " +
                            f"today, {memtils.get_title(ctx.author)}.")
 
-    @common.in_bot_channel()
     @commands.cooldown(1, 30, commands.BucketType.user)
     @commands.command(aliases = ["CR"])
     async def count_reactions(self, ctx, target_channel: Union[TextChannel, str]):

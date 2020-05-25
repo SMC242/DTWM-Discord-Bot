@@ -34,7 +34,6 @@ class Attendance(commands.Cog):
 
     @commands.Cog.listener()
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
     async def on_member_update(self, before: Member, after: Member):
         """Add new scouts to the Members table automatically"""
         # get the roles that were added
@@ -51,17 +50,17 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["AAM"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def add_all_members(self, ctx):
         """Add all current members to the Members table."""
         async with ctx.typing():
             in_outfit = await memtils.get_in_outfit()
+            registered = [r[1] for r in self.db.get_all_members()]
 
             # register them if they're not already in the DB
             count = 0  # count every person added to the DB
             for name in in_outfit:
-                if not await memtils.is_member(name, 
-                                               [r[1] for r in self.db.get_all_members()]):
+                if not await memtils.is_member(name, registered):
                     self.db.add_member(name)
                     count += 1
 
@@ -70,7 +69,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["AM"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def add_member(self, ctx, name: str):
         """Register a member with their name."""
         
@@ -84,7 +83,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["RM"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def remove_member(self, ctx, name: str):
         """Unregister a member by their name."""
         # parse the name
@@ -99,7 +98,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["RMI"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def remove_member_by_id(self, ctx, id: int):
         """Unregister a member by their id"""
         # validate the id
@@ -111,7 +110,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["DATT"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5400, commands.BucketType.user)
     async def do_attendance(self, ctx):
         """Get the names of all people in the event voice channels
         then send it to the DB in 90 minutes."""
@@ -154,28 +153,34 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["LM"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def list_members(self, ctx):
         """List all of the registered members"""
         async def wrap(self, file_name: str) -> str:
+            rows = [(row[0], row[1])
+                    for row in self.db.get_all_members()]
+            # handle no registered members
+            if not rows:
+                raise ValueError("No members are registered")
+
             return create_table(
-                                [(row[0], row[1])
-                                for row in self.db.get_all_members()
-                                ],
+                                rows,
                                 file_name, ["ID", "Name"]
                                 )
 
         # create a table
         async with ctx.typing():
             file_name = f"table_at_{D.datetime.today().strftime('%H.%M.%S')}"
-            path = await wrap(self, file_name)
-        
-            await ctx.send(f"They are ready to serve, my lord:",
-                            file = File(path))
+            try:
+                path = await wrap(self, file_name)
+                await ctx.send(f"They are ready to serve, my lord:",
+                                file = File(path))
+            except ValueError:
+                await ctx.send("None of our men have been registered, my lord")
 
     @commands.command(aliases = ["att"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def get_attendance(self, ctx):
         """Get the average attendance per member for this month."""
         # this is necessary to cede control to the event loop
@@ -196,7 +201,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["Eatt"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def get_event_attendance(self, ctx):
         """Get the average attendance per event type for this month"""
         async def wrap(self) -> str:
@@ -204,7 +209,7 @@ class Attendance(commands.Cog):
 
         async with ctx.typing():
             try:
-                table_path = wrap(self)
+                table_path = await wrap(self)
                 await ctx.send("These are the results for this month's events, my lord:", 
                                file = File(table_path)
                                )
@@ -214,7 +219,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["JA"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def joined_at(self, ctx, name: str):
         """Get the join date of a member by their name."""
         # parse the name
@@ -228,7 +233,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["JAI"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def joined_at_by_id(self, ctx, id: int):
         """Get the join date of a member by their ID."""
         joined_at = self.db.get_join_date_by_id(id)
@@ -240,7 +245,6 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["ND"])
     @commands.is_owner()
-    @common.in_bot_channel()
     async def new_day(self, ctx, event_type: str):
         """Create a new day in the database. The event type must be one of the following:
         air, armour, infantry, co-ops1, co-ops2, internal_ops"""
@@ -255,7 +259,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["MATT", "MY_ATT"])
     @commands.has_any_role(*common.member_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def get_my_attendance(self, ctx):
         """Get your attendance %"""
         name = memtils.NameParser(ctx.author.display_name).parsed
@@ -267,7 +271,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["V5", "hop_in"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5400, commands.BucketType.user)
     async def get_in_ops(self, ctx):
         """Pings everyone currently playing Planetside 2 to get in ops."""
         await ctx.send("I will summon our chapter, my lord")
@@ -309,7 +313,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["away", "A"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def mark_as_away(self, ctx, name: str):
         """Mark the target as away in the database."""
         # parse the name
@@ -324,7 +328,7 @@ class Attendance(commands.Cog):
 
     @commands.command(aliases = ["IA"])
     @commands.has_any_role(*common.leader_roles)
-    @common.in_bot_channel()
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def is_away(self, ctx, name: str):
         """Get whether the person is away."""
         # parse the name
@@ -364,40 +368,46 @@ class Attendance(commands.Cog):
         await person.add_roles(guild.get_role(545803265741291521), reason = "Kicked from the outfit")
 
         # DM them
-        with suppress(Forbidden):
+        try:
             await person.send("You've been kicked from the chapter because you haven't" + 
                               " attended enough events this month." +
                               " You can return in 2 weeks if you have more time :)")
+        # ping them in the bot channel if they can't be DMed
+        except Forbidden:
+            await common.bot_channel.send(f"{person.mention} You've been kicked from the chapter " + 
+                                          "because you haven't attended enough events this month." +
+                                          " You can return in 2 weeks if you have more time :)")
 
     @commands.command(aliases = ["K"])
-    @common.in_bot_channel()
     @commands.has_any_role(*common.leader_roles)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def kick(self, ctx, person: Union[Member, str]):
         """Kick a person from the outfit. Mention them...
         They will be moved to Guardsman, unregistered, and DMed."""
-        # handle no Member passed
-        if isinstance(person, str):
-            person = await memtils.search_member(ctx, person)
-            # handle no Member found
-            if not person:
-                return await ctx.send("I can't find that person, my lord")
+        async with ctx.typing():
+            # handle no Member passed
+            if isinstance(person, str):
+                person = memtils.search_member(ctx, person)
+                # handle no Member found
+                if not person:
+                    return await ctx.send("I can't find that person, my lord")
 
-        # validate the person
-        if not await memtils.is_member(person.display_name, 
-                                 [r[1] for r in self.db.get_all_members()]):
-            await ctx.send("That person is not in our chapter!")
-        else:
-            # easter-egg
-            if memtils.check_roles(person, common.leader_roles):
-                return await ctx.send("You know that regicide is illegal," +
-                                      f" {memtils.get_title(person)}")
+            # validate the person
+            if not await memtils.is_member(person.display_name, 
+                                     [r[1] for r in self.db.get_all_members()]):
+                await ctx.send("That person is not in our chapter!")
+            else:
+                # easter-egg
+                if memtils.check_roles(person, common.leader_roles):
+                    return await ctx.send("You know that regicide is illegal," +
+                                          f" {memtils.get_title(person)}")
 
-            await self.kick_member(person)
-            await ctx.send("He has been expelled, my lord")
+                await self.kick_member(person)
+                await ctx.send("He has been expelled, my lord")
 
     @commands.command(aliases = ["RA"])
-    @common.in_bot_channel()
     @commands.has_any_role(*common.leader_roles)
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def remove_away(self, ctx, name: str):
         """Remove a person's away status."""
         name = memtils.NameParser(name).parsed
@@ -410,22 +420,24 @@ class Attendance(commands.Cog):
 
 
     @commands.command(aliases = ["SK", "SKSKSKSKSKSKSKSKSK_GIVE_ME_THE_TEA_SIS"])
-    @common.in_bot_channel()
     @commands.has_any_role(*common.leader_roles)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def suggest_kicks(self, ctx):
         """Suggest who should be kicked this month."""
         async def wrap(self) -> Tuple[str, str, str]:
             return self.db.suggest_kicks()
 
         async with ctx.typing():
-            path, percent_warned, percent_kicked = await wrap(self)
-            await ctx.send("This is my opnion, my lord. " +
+            try:
+                path, percent_warned, percent_kicked = await wrap(self)
+                await ctx.send("This is my opnion, my lord. " +
                            f"This would mean {percent_warned} of the outfit would be warned " + 
                            f"and {percent_kicked} would be kicked",
                            file = File(path))
-
+            except ValueError:
+                await ctx.send("I have no archive entries to base my opinion on, my lord")
+            
     #@commands.command(aliases = ["K"])
-    #@common.in_bot_channel()
     #@commands.has_any_role(*common.leader_roles)
     async def get_attendance_plus(self, ctx):
         """get_attendance but it allows browsing each person and kicking them."""

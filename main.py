@@ -7,6 +7,7 @@ import os
 from Utils import common
 from datetime import datetime
 from traceback import print_exc
+from BenUtils.searching import binarySearch
 
 # dev settings
 DEV_VERSION = True
@@ -21,7 +22,8 @@ Special thanks to:
     Profile picture: [DTWM] BoeruChan"""
 bot = commands.Bot(
     f"{'dev' if DEV_VERSION else 'ab'}!",
-    description = description, owner_id = 395598378387636234,
+    description = description,
+    owner_ids = (395598378387636234, 515163362062237716),
     activity = Activity(name = "Waking up...", url = "https://joindtwm.net",
         type = ActivityType.playing, state = "Powering on...",
         details = "The adepts have summoned me from my slumber."),
@@ -75,6 +77,21 @@ async def close(ctx):
     await ctx.send("Power core depleted. Shutting down...")
     print(f"Ow! That hurt @{ctx.author}")
     await bot.logout()
+
+@bot.command(aliases = ["TC"])
+@commands.is_owner()
+async def toggle_command(ctx, name: str):
+    """Deactivate or activate a faulty command."""
+    commands = list(set([cmd for cmd in bot.walk_commands()]))  # filter out duplicates
+    command = binarySearch(name, sorted(commands, key = lambda cmd: cmd.name),
+                           return_type = "item",
+                           key = lambda cmd: cmd.name)
+    if command:
+        command.enabled = False
+        await ctx.send(f"I have {'en' if command.enabled else 'dis'}abled" +
+                       f" {command.name}")
+    else:
+        await ctx.send("I cannot find that command, my lord")
 
 @bot.listen()
 async def on_ready():

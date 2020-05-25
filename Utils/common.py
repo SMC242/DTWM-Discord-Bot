@@ -38,20 +38,3 @@ def load_bot(target_bot: commands.Bot):
     else:
         bot_channel = bot.get_channel(545818844036464670)  # DTWM.servitors
         server = bot.get_guild(545422040644190220)  # DTWM
-
-
-def in_bot_channel() -> commands.check:
-    """Check if the command was invoked in the bot channel."""
-    async def inner(ctx):
-        # require a bot instance
-        if not bot_loaded:
-            raise ValueError("This check requires a bot. Use load_bot to unlock it.")
-
-        # check if the bot is in #servitors
-        if not ctx.channel == bot_channel:
-            await ctx.send(f"These are matters for {bot_channel.mention}, brother. "+
-                           "Take it there and I will answer you")
-            return False
-        else:
-            return True
-    return commands.check(inner)

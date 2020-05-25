@@ -3,20 +3,17 @@
 Inspired by Groovy"""
 
 from discord import *
+from discord.ext import commands
 from typing import *
-from datetime import datetime
 from BenUtils import callbacks as ca
-from asyncio import get_event_loop
-from discord.ext.commands import Bot
+import asyncio
 from contextlib import suppress
+from Utils.memtils import get_title
 
 class ReactMenu:
     """Create an interactable menu within an embedded discord.Message.
     
     ATTRIBUTES
-    bound_messages: class attribute: List[Tuple[datetime, ReactMenu]]
-        The messages that are currently being tracked.
-        They're cleaned up every 10 minutes.
     emotes: Dict[int, str]
         The emotes' ids being used by this instance and their callback type's name.
         Callback types may be: next_content, last_content, on_select, on_reject.
@@ -29,37 +26,41 @@ class ReactMenu:
         The callback to call when the select emote is added.
     on_reject: Callback
         The callback to call when the reject emote is added.
-    content: List[Tuple[str, Optional[str]]]
+    content: List[str]
         The content to display per page.
-        Format: (field_value, field_name)
+    field_names:  List[str]
+        The names of each element of content.
     """
-    # classtributes
-    bound_messages: List[Tuple[datetime, 'ReactMenu']] = []
 
-    def __init__(self, content: List[Tuple[str, Optional[str]]],
-                 bot: Bot, channel: TextChannel,
+    def __init__(self, content: List[str],
+                 bot: commands.Bot, channel: TextChannel,
+                 field_names: List[str] = None,
                  on_select: ca.Callback = None, on_reject: ca.Callback = None,
-                 next_emote_id: int = 705987084535595028, 
-                 last_emote_id: int = 705986890787979284,
-                 select_emote_id: int = 705986225206591549,
-                 reject_emote_id: int = 705987303180599337,
+                 last_emote_name: int = 712642258016534558,
+                 next_emote_name: int = 712642257995431967,
+                 select_emote_name: int = 712642257697767436,
+                 reject_emote_name: int = 712642257697767458,
                   **embed_settings):
         """The Embed colour defaults to pink.
 
         ARGUMENTS
         content:
             The content to display per page.
-            Format: (field_value, field_name)
         bot:
             The bot to use to maintain this menu.
         channel:
             The text channel to send the menu to.
+        field_names:
+            The titles of each element in content.
+            Use None as a placeholder to keep the two lists parallel.
         on_select:
             The callback to execute when the select reaction is chosen.
             A select reaction will be added if this is set.
+            It must take an instance of ReactMenu as its first argument.
         on_reject:
             The callback to execute when the reject reaction is chosen.
             A reject reaction will be added if this is set.
+            It must take an instance of ReactMenu as its first argument.
         next_emote_id:
             The id for the emote to react to the message with
             to trigger next_content.
@@ -78,64 +79,100 @@ class ReactMenu:
             Any settings for the discord.Embed.
         """
         self.content = content
+        self.channel = channel
         self._bot = bot
         self.on_select = on_select
         self.on_reject = on_reject
+        self._content_index = 0
+        self._starting = True  # don't check its reactions until this is False
 
-        # verify content's format
-        for ele in content:
-            if not isinstance(ele, (tuple, list)) or len(ele) != 2:
-                raise ValueError("Incorrect content format")
+        # verify that field_names is parallel to content
+        content_length = len(content)
+        if field_names:
+            if (content_length - len(field_names)) > 0:
+                field_names + [None] * (content_length - len(field_names))
+        else:
+            field_names = [None] * content_length
+        self.field_names = field_names
 
         # default the colour to pink
-        if "colour" not in embed_settings.keys():
+        if "colour" not in embed_settings:
             embed_settings["colour"] = 13908894
+        self.embed_settings = embed_settings
 
         # create the Embed with the first element of content
-        embed = Embed(colour = colour,
-                      **embed_settings)
-        embed.add_field(name = content[0][1], value = content[0][0])
+        embed = Embed(**embed_settings)
+        embed.add_field(name = field_names[0], value = content[0])
 
+        asyncio.get_event_loop().create_task(self.__ainit__(channel, embed, next_emote_name,
+                                                    last_emote_name, select_emote_name,
+                                                    reject_emote_name, on_select, on_reject))
+
+    async def __ainit__(self, channel, embed, next_emote_name,
+                        last_emote_name, select_emote_name,
+                        reject_emote_name, on_select, on_reject):
+        """Send the initial message, bind to it, and set up the reactions"""
         # send the initial message
-        self._loop = get_event_loop()
-        self._loop.create_task(channel.send(embed = embed))
+        await self.channel.send(embed = embed)
 
-        # get the message that was just sent
-        # Assumes that the bot experiences low traffic
-        # since this will only be in 1 server
-        self.msg = bot.user.history(limit = 1).flatten()
+        # search for the bot's most recent message
+        # and assume it's the ReactMenu
+        bot_id = self._bot.user.id
+        self.msg = None
+        for historic_message in reversed(await self.channel.history(limit = 5).flatten()):
+            if bot_id == historic_message.author.id:
+                self.msg = historic_message
 
-        # get emotes
-        ids = (next_emote_id, last_emote_id,
-                select_emote_id, reject_emote_id)
-        emotes = [bot.get_emoji(id_) for id_ in ids]
+        # handle failure to find the message
+        if not self.msg:
+            return await channel.send(f"I misplaced my message. I am sorry...")
 
-        # set up instance's emotes
-        callback_types = ("next", "last", "select", "reject")
-        self.emotes = {id_ : ca_type for ca_type, id_ in 
-                       zip(callback_types, ids)}
+        # register the message
+        handler = self._bot.get_cog("ReactMenuHandler")
+        handler.bound_messages[self.msg.id] = self
 
         # add the default reactions
-        for emote in self.emotes[:2]:
-            loop.create_task(bot.add_reaction(emote))
+        emotes = [self._bot.get_emoji(id_) for id_ in (last_emote_name, next_emote_name,
+                  select_emote_name, reject_emote_name)]
+        for emote in emotes[:2]:
+            await self.msg.add_reaction(emote)
 
         # add the optional reactions
         if on_select:
-            loop.create_task(bot.add_reaction(self.emotes[2]))
+            await self.msg.add_reaction(emotes[2])
         if on_reject:
-            loop.create_task(bot.add_reaction(self.emotes[3]))
+            await self.msg.add_reaction(emotes[3])
 
-        # add the listener after the reactions are set up
-        self._bot.add_listener(self.on_reaction_add)
+        # populate emotes dict
+        await asyncio.sleep(1)
+        self.msg = await self.channel.fetch_message(self.msg.id)  # refresh the Message instance once the reactions have been added
+        self.emotes = {r.emoji.id: callback_type for r, callback_type in 
+                       zip(self.msg.reactions, ("on_last", "on_next", "on_select", "on_reject"))}
 
-    async def on_reaction_add(self, reaction: Reaction, person: Member):
-        """Check if the message reacted to is bound.
-        If so, execute the reaction's callback if applicable."""
-        # check if the message is bound
-        if reaction.message in ReactMenu.bound_messages:
-            # check if the reaction is valid
-            with suppress(AttributeError):
-                cb = getattr(self, self.emotes[reaction.id])
-                # execute the reaction's callback if it exists
-                if cb is not None:
-                    await cb()
+        # mark self as ready
+        self._starting = False
+
+    @staticmethod
+    async def on_next(self):
+        if self._content_index < len(self.content) - 1:
+            self._content_index += 1
+            await self.msg.edit(embed = self.create_embed())
+
+    @staticmethod
+    async def on_last(self):
+        if self._content_index > 0:
+            self._content_index -= 1
+            await self.msg.edit(embed = self.create_embed())
+
+    def create_embed(self) -> Optional[Embed]:
+        """Create an Embed from the content and field name
+        at _content_index using embed_settings.
+        
+        RETURNS
+        None: there is no more content
+        Embed: the Embed was successfully created."""
+        with suppress(IndexError):
+            embed = Embed(**self.embed_settings)
+            embed.add_field(name = self.field_names[self._content_index],
+                            value = self.content[self._content_index])
+            return embed

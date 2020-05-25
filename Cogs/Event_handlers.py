@@ -1,7 +1,7 @@
 """Handlers for events sent by Discord."""
 
 from discord import *
-from discord.ext import commands
+from discord.ext import commands, tasks
 from typing import *
 from Utils import common, memtils
 import datetime as D, traceback, re
@@ -62,7 +62,7 @@ class ErrorHandler(commands.Cog):
             missing_roles = list(error.missing_roles)  # ensure it's a list for join()
             await ctx.send("You need to be " +
                            f"{'an ' if missing_roles[0][0].lower() in 'aeiou' else 'a '}" +
-                           f"{list_join(error.missing_roles, 'or')}" +
+                           f"{list_join(missing_roles, 'or')}" +
                            "to use that command!")
 
         elif isinstance(error, commands.DisabledCommand):
@@ -180,9 +180,9 @@ class ReactionController(commands.Cog):
     This is necessary because adding these commands to ReactionParent
     would cause a double registration error when the children were added to the bot."""
 
-    @common.in_bot_channel()
     @commands.has_any_role(*common.leader_roles)
     @commands.command(aliases = ["TR"])
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def toggle_reactions(self, ctx):
         """Enable or disable reactions to messages."""
         parent = ReactionParent
@@ -276,12 +276,66 @@ class ReactReactions(ReactionParent):
         if to_send is not None:
             await msg.add_reaction(to_send)
 
+
+class ReactMenuHandler(commands.Cog):
+    """Manages all of the active ReactMenus.
+    
+    ATTRIBUTES
+    bound_messages: Dict[Tuple[int, ReactMenu]]
+        The messages that are currently being tracked.
+        They're cleaned up every 10 minutes.
+        Format: Message.id : ReactMenu"""
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.bound_messages: Dict[int, 'ReactMenu'] = {}
+        self.message_cleanup.start()
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction_: Reaction, person: Member):
+        """Check if the message reacted to is bound.
+        If so, execute the reaction's callback if applicable."""
+        # don't respond to self
+        if person == self.bot.user:  return
+
+        # check if the message is bound
+        msg = reaction_.message
+        if msg.id not in self.bound_messages:  return
+
+        # check if the reaction is valid
+        menu = self.bound_messages[msg.id]
+            
+        # check that it's ready
+        if menu._starting:  return
+
+        # execute the reaction's callback if it exists
+        cb = getattr(menu,
+                        menu.emotes[reaction_.emoji.id], None)
+        if cb is not None:
+            await cb(menu)
+
+        # clean up the user's reactions
+        for r in msg.reactions:
+            await r.remove(person)
+
+    @tasks.loop(minutes = 10)
+    async def message_cleanup(self):
+        """Stop tracking messages that are older than 10 minutes."""
+        for menu in self.bound_messages.values():
+            msg = menu.msg
+            # check if it was last interacted wtih >10 minutes ago
+            if (msg.edited_at and ((D.datetime.utcnow() - msg.edited_at).seconds / 60) > 10) \
+                or ((D.datetime.utcnow() - msg.created_at).seconds / 60) > 10:
+                del self.bound_messages[msg.id]
+
+
 def setup(bot):
     cogs = (
         ErrorHandler,
         ReactReactions,
         TextReactions,
         ReactionController,
+        ReactMenuHandler,
         )
     for cog in cogs:
         bot.add_cog( cog(bot) )

@@ -37,7 +37,7 @@ class AttendanceDBWriter(db.DBWriter):
 
     def create_tables(self):
         """Create the tables if they're not already created."""
-        self._executeFromFile("./Text Files/table_definitions.txt")
+        self._executeFromFile("./Text Files/AttDBTableDefinitions.txt")
 
     # any methods that the bot will access have been made coroutines
     def add_member(self, name: str):
@@ -349,6 +349,9 @@ class AttendanceDBWriter(db.DBWriter):
     	                                AND attendees.date like ?
                                     GROUP BY name
                                     HAVING ratio <= 50;""", [target_month])
+
+        if not rows:
+            raise ValueError("No attendance data returned from the DB.")
         
         # this could be faster in a list comp but that would be less readable
         table_rows = []

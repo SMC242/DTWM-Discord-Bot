@@ -6,6 +6,7 @@ from discord import Member, Guild
 from discord.ext.commands import Context
 from Utils import common
 from fuzzywuzzy import process, fuzz  # this module has a great name :D
+from BenUtils.searching import binarySearch
 
 class NameParser:
     """
@@ -189,7 +190,7 @@ def get_title(person: Member) -> str:
 
     return title
 
-async def search_member(search_with: Union[Context, Guild],
+def search_member(search_with: Union[Context, Guild],
                         name: str) -> Optional[Member]:
     """Search for the member using search_with's members by their name.
     
@@ -211,27 +212,14 @@ async def search_member(search_with: Union[Context, Guild],
     # get the Members and their names
     # the names have to be lowered or the sort will be wrong
     name = NameParser(name, case = False).parsed
-    members = sorted( [( m, NameParser(m.display_name, case = False).parsed )
-                        for m in search_with.members],
-                            key = lambda m: m[1])
+    members = sorted([( m, NameParser(m.display_name, case = False).parsed)
+                      for m in search_with.members],
+                     key = lambda m: m[1])
 
     # binary search through the names
-    lower = 0
-    upper = len(members)
-    found_member = None
-
-    while lower < upper:
-        mid = (upper - lower) // 2
-        current = members[mid]
-        if current[1] < name:
-            lower = mid + 1
-        elif current[1] > name:
-            upper = mid - 1
-        else:  # found
-            found_member = current[0]
-            break
-
-    return found_member
+    return binarySearch(name, members,
+                        return_type = "item",
+                        key = lambda m: m[1])
 
 async def is_member(name: str, outfit_members: List[str] = None,
                     db: 'AttendanceDB.AttendanceDBWriter' = None,
@@ -253,6 +241,9 @@ async def is_member(name: str, outfit_members: List[str] = None,
         Change this to increase/decrease sensitivity to differences
         between the name and the best match from the outfit.
     """
+    # handle an empty list
+    if len(outfit_members) == 0:  return False
+
     # parsed the name and lower it
     parsed_name = NameParser(name, case = False).parsed
 

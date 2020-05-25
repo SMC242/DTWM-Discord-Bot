@@ -177,14 +177,14 @@ class RepeatingTasks(commands.Cog):
 
             # add those who are not registered
             for name in in_outfit:
-                if not await memtils.is_member(name, in_outfit):
+                if not await memtils.is_member(name, registered):
                     self.att.db.add_member(name)
                     print(f'"{name}" was detected by the cleanup check. ' + 
                           "I have registered him.")
 
             # remove those who are registered but not in in_outfit
             for name in registered:
-                if not await memtils.is_member(name, registered):
+                if not await memtils.is_member(name, in_outfit):
                     self.att.db.delete_member(name)
                     print(f'"{name}" was detected by the cleanup check. ' + 
                           "I have un-registered him.")
@@ -226,8 +226,10 @@ class RepeatingTasks(commands.Cog):
                                        file = File(db_file))
             print("Backed up the database successfully!")
         except:
+            # log to Bot Testing.generl
+            errors_channel = self.bot.get_channel(697746979782000680)
             print("The database failed to back up.")
-            await backups_channel.send(f"Failed to back up on {D.datetime.today().strftime('%d.%m.%Y')}")
+            await errors_channel.send(f"Failed to back up the DB on {D.datetime.today().strftime('%d.%m.%Y')}")
 
 
 def setup(bot):
