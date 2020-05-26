@@ -70,7 +70,7 @@ class DBWriter:
             pass
 
         #create file
-        filePath = newPath + f"\{name}.db"
+        filePath = os.path.join(newPath, f"{name}.db")
         try:
             with open(filePath):
                 pass
