@@ -53,8 +53,11 @@ class ServerStats(commands.Cog):
 
     @commands.cooldown(1, 30, commands.BucketType.user)
     @commands.command(aliases = ["CM"])
-    async def count_messages(self, ctx, target_channel: Union[TextChannel, str]):
-        """Count the number of messages in the target channel in the last 24 hours. Pass 'global' to count the entire server."""
+    async def count_messages(self, ctx,
+                             target_channel: Union[TextChannel, str] = "global",
+                             hours: float = 24):
+        """Count the number of messages in the target channel in the last 24 hours by default.
+        Pass 'global' to count the entire server."""
         async def count_channel_messages(channel: TextChannel, after: D.datetime) -> int:
             """Return the number of messages in the target channel.
             Limited to 5k messages."""
@@ -66,7 +69,7 @@ class ServerStats(commands.Cog):
                 return await ctx.send("You must mention a channel or pass 'global'.")
 
             # get the datetime for 24 hours ago
-            after = D.datetime.today() - D.timedelta(days = 1)
+            after = D.datetime.today() - D.timedelta(hours = hours)
 
             # count all channels if global was passed
             is_global = target_channel == "global"
@@ -82,8 +85,11 @@ class ServerStats(commands.Cog):
 
     @commands.cooldown(1, 30, commands.BucketType.user)
     @commands.command(aliases = ["CR"])
-    async def count_reactions(self, ctx, target_channel: Union[TextChannel, str]):
-        """Count the number of reactions in the target channel in the last 24 hours. Pass 'global' to count the entire server."""
+    async def count_reactions(self, ctx,
+                              target_channel: Union[TextChannel, str] = "global",
+                              hours: float = 24):
+        """Count the number of reactions in the target channel in the last 24 hours by default.
+        Pass 'global' to count the entire server."""
         async def count_channel_reacts(channel: TextChannel, after: D.datetime) -> int:
             """Return the number of reactions in the target channel.
             Limited to 5k messages."""
