@@ -10,7 +10,7 @@ from traceback import print_exc
 from BenUtils.searching import binarySearch
 
 # dev settings
-DEV_VERSION = True
+DEV_VERSION = False
 common.DEV_VERSION = DEV_VERSION
 LOG_LOAD_ERROR = True
 

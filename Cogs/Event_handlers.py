@@ -9,6 +9,7 @@ from asyncio import get_event_loop
 from json import load
 from random import choice
 from Utils.mestils import list_join
+from inspect import iscoroutinefunction as iscorofunc
 
 # errors, message reactions
 # custom error types
@@ -312,7 +313,11 @@ class ReactMenuHandler(commands.Cog):
         cb = getattr(menu,
                         menu.emotes[reaction_.emoji.id], None)
         if cb is not None:
-            await cb(menu)
+            # allow coroutines
+            if iscorofunc(cb):
+                await cb(menu)
+            else:
+                cb(menu)
 
         # clean up the user's reactions
         for r in msg.reactions:

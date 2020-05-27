@@ -8,7 +8,6 @@ from typing import *
 from BenUtils import callbacks as ca
 import asyncio
 from contextlib import suppress
-from Utils.memtils import get_title
 
 class ReactMenu:
     """Create an interactable menu within an embedded discord.Message.
@@ -30,16 +29,31 @@ class ReactMenu:
         The content to display per page.
     field_names:  List[str]
         The names of each element of content.
+    last_emote_id: int
+        The id of the Emoji representing the back button.
+    next_emote_id: int
+        The id of the Emoji representing the forward button.
+    select_emote_id: int
+        The id of the Emoji representing the yes button.
+    reject_emote_id: int
+        The id of the Emoji representing the no button.
+    embed_settings: dict
+        The kwargs for the Embed instance.
+    _channel: discord.TextChannel
+        The channel that the ReactMenu is bound to.
+    _content_index: int
+        Which element in content is currently being displayed.
+
     """
 
     def __init__(self, content: List[str],
                  bot: commands.Bot, channel: TextChannel,
                  field_names: List[str] = None,
                  on_select: ca.Callback = None, on_reject: ca.Callback = None,
-                 last_emote_name: int = 712642258016534558,
-                 next_emote_name: int = 712642257995431967,
-                 select_emote_name: int = 712642257697767436,
-                 reject_emote_name: int = 712642257697767458,
+                 last_emote_id: int = 712642258016534558,
+                 next_emote_id: int = 712642257995431967,
+                 select_emote_id: int = 712642257697767436,
+                 reject_emote_id: int = 712642257697767458,
                   **embed_settings):
         """The Embed colour defaults to pink.
 
@@ -101,39 +115,26 @@ class ReactMenu:
         self.embed_settings = embed_settings
 
         # create the Embed with the first element of content
-        embed = Embed(**embed_settings)
-        embed.add_field(name = field_names[0], value = content[0])
+        embed = self.create_embed()
 
-        asyncio.get_event_loop().create_task(self.__ainit__(channel, embed, next_emote_name,
-                                                    last_emote_name, select_emote_name,
-                                                    reject_emote_name, on_select, on_reject))
+        asyncio.get_event_loop().create_task(self.__ainit__(channel, embed, next_emote_id,
+                                                    last_emote_id, select_emote_id,
+                                                    reject_emote_id, on_select, on_reject))
 
-    async def __ainit__(self, channel, embed, next_emote_name,
-                        last_emote_name, select_emote_name,
-                        reject_emote_name, on_select, on_reject):
+    async def __ainit__(self, channel, embed, next_emote_id,
+                        last_emote_id, select_emote_id,
+                        reject_emote_id, on_select, on_reject):
         """Send the initial message, bind to it, and set up the reactions"""
         # send the initial message
-        await self.channel.send(embed = embed)
-
-        # search for the bot's most recent message
-        # and assume it's the ReactMenu
-        bot_id = self._bot.user.id
-        self.msg = None
-        for historic_message in reversed(await self.channel.history(limit = 5).flatten()):
-            if bot_id == historic_message.author.id:
-                self.msg = historic_message
-
-        # handle failure to find the message
-        if not self.msg:
-            return await channel.send(f"I misplaced my message. I am sorry...")
+        self.msg = await self.channel.send(embed = embed)
 
         # register the message
         handler = self._bot.get_cog("ReactMenuHandler")
         handler.bound_messages[self.msg.id] = self
 
         # add the default reactions
-        emotes = [self._bot.get_emoji(id_) for id_ in (last_emote_name, next_emote_name,
-                  select_emote_name, reject_emote_name)]
+        emotes = [self._bot.get_emoji(id_) for id_ in (last_emote_id, next_emote_id,
+                  select_emote_id, reject_emote_id)]
         for emote in emotes[:2]:
             await self.msg.add_reaction(emote)
 
@@ -154,15 +155,21 @@ class ReactMenu:
 
     @staticmethod
     async def on_next(self):
+        """Show the next content when the next button is clicked."""
         if self._content_index < len(self.content) - 1:
             self._content_index += 1
             await self.msg.edit(embed = self.create_embed())
+        else:
+            await self.channel.send("I can't move forward!")
 
     @staticmethod
     async def on_last(self):
+        """Show the previous content when the back button is clicked."""
         if self._content_index > 0:
             self._content_index -= 1
             await self.msg.edit(embed = self.create_embed())
+        else:  # give the user feedback if they can't move
+            await self.channel.send("I can't move back!")
 
     def create_embed(self) -> Optional[Embed]:
         """Create an Embed from the content and field name
@@ -175,4 +182,27 @@ class ReactMenu:
             embed = Embed(**self.embed_settings)
             embed.add_field(name = self.field_names[self._content_index],
                             value = self.content[self._content_index])
+            return embed
+
+
+class ReactTable(ReactMenu):
+    """Interactable tables via reactions as buttons."""
+
+    def __init__(self, headers: Tuple[str], *args, **kwargs):
+        """ARGUMENTS
+        headers:
+            The titles of each element for each row of
+            content.
+        *args, **kwargs:
+            See the docstring of ReactMenu.__init__"""
+        self.headers = headers
+        super().__init__(*args, **kwargs)
+
+    def create_embed(self) -> Optional[Embed]:
+        """Creates a table-like Embed."""
+        with suppress(IndexError):
+            embed = Embed(**self.embed_settings)
+            for header, value in zip(self.headers,
+                                     self.content[self._content_index]):
+                embed.add_field(name = header, value = value, inline = False)
             return embed

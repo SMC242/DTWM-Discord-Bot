@@ -219,7 +219,7 @@ def search_member(search_with: Union[Context, Guild],
     # binary search through the names
     return binarySearch(name, members,
                         return_type = "item",
-                        key = lambda m: m[1])
+                        key = lambda m: m[1])[0]
 
 async def is_member(name: str, outfit_members: List[str] = None,
                     db: 'AttendanceDB.AttendanceDBWriter' = None,

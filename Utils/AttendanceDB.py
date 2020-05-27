@@ -328,12 +328,15 @@ class AttendanceDBWriter(db.DBWriter):
         self.doQuery("UPDATE Members SET away = 0 WHERE name = ?;", [name])
         return self.connection.total_changes > changes_before
 
-    def suggest_kicks(self) -> Tuple[str, str, str]:
+    def suggest_kicks(self) -> Tuple[
+                                     List[Tuple[str, int, str, str, str]],
+                                     str, str]:
         """
         Get all members under 50% attendance and their priority for kicking.
 
         RETURNS
-            The path to the image of the table
+            The rows to create a table with in the format:
+            (name, attendance ratio (%), suggested action, away status, join date)
             that was created from the DB query results;
             the % of the outfit recommended to be warned;
             and the % of the outfit recommended to be kicked.
@@ -386,11 +389,4 @@ class AttendanceDBWriter(db.DBWriter):
         num_members = len(self.get_all_members())
         percent_warned = f"{int(round((num_warned / num_members) * 100, 0))}%"
         percent_kicked = f"{int(round((num_kicked / num_members) * 100, 0))}%"
-
-        # create table
-        path = create_table(
-            sorted(table_rows, key = lambda row: row[2]),
-            col_labels = ("Name", "Attendance Ratio (%)",
-                          "Recommended Action", "Away (True/False)",
-                          "Join Date"))
-        return (path, percent_warned, percent_kicked)
+        return (table_rows, percent_warned, percent_kicked)

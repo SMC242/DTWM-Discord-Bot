@@ -1,14 +1,86 @@
 """The database interface."""
 
-from discord import Member, File, Forbidden
+from discord import Member, File, Forbidden, Embed
 from discord.ext import commands
 from typing import *
 from contextlib import suppress
 import datetime as D
-from Utils import common, memtils, AttendanceDB as db
-from asyncio import sleep as async_sleep
+from Utils import common, memtils, AttendanceDB as db, react_menu
+from asyncio import sleep as async_sleep, get_event_loop
 from Utils.mestils import create_table
 from .Event_handlers import CommandNotImplementedError
+
+class KickSuggestionMenu(react_menu.ReactTable):
+    """A specialised reaction table for kicking people."""
+
+    def __init__(self, table_rows: Tuple[
+                                      List[Tuple[str, int, str, str, str]],
+                                      str, str],
+                 ctx: commands.Context, percent_warned: str,
+                 percent_kicked: str):
+        self._att_cog = ctx.bot.get_cog("Attendance")
+        self._loop = get_event_loop()
+        headers = ("Name", "Attendance Ratio (%)", "Recommended Action",
+                   "Away (True/False)", "Join Date")
+        super().__init__(headers, table_rows, ctx.bot,
+                         ctx.channel, on_select = self.kick,
+                         on_reject = self.skip)
+        # give information about how to interact with the menu
+        # and the warn/kick stats
+        self.stats = (percent_warned, percent_kicked)
+        self._loop.create_task(self.give_info())
+
+    async def give_info(self):
+        """Edit the kick/warn stats into msg
+        and tell the user what the buttons mean."""
+        # wait for __ainit__ to finish
+        await async_sleep(1)
+        info = ("This is my opinion, my lord. " +
+                f"{self.stats[0]} of the outfit would be warned " +
+                f"and {self.stats[1]} would be kicked. " +
+                "Click the tick to kick the currently selected member " + 
+                "or click the X to skip them.")
+        await self.msg.edit(content = info)
+
+    @staticmethod
+    async def kick(self):
+        """Kick someone from the outfit
+        when the yes button is clicked."""
+        # get the Member instance
+        name = self.content[self._content_index][0]
+        person = memtils.search_member(self.channel.guild, name)
+
+        # kick them
+        if person:
+            await self._att_cog.kick_member(person)
+
+        # remove them from content and move to the next index
+        await self.skip(self)
+
+    @staticmethod
+    async def skip(self):
+        """Pass on kicking someone
+        when the no button is clicked."""
+        # remove them from content and move to the next index
+        if self._content_index < len(self.content) - 1:
+            # this order is necessary to avoid the length check of on_next
+            await self.on_next(self)
+            del self.content[self._content_index - 1]
+            self._content_index -= 1
+        # display nothing left when all members have been
+        # kicked or rejected
+        else:
+            embed = Embed(**self.embed_settings)
+            embed.add_field(name = "All done", value = "No suggested actions left")
+            await self.msg.edit(embed = embed)
+
+            # remove all the reactions
+            for reaction in self.msg.reactions:
+                await reaction.remove(self._bot.user)
+            
+            # remove self from the tracked instances
+            handler = self._bot.get_cog("ReactMenuHandler")
+            del handler.bound_messages[self.msg.id]
 
 class Attendance(commands.Cog):
     """Commands relating to attendance.
@@ -353,6 +425,7 @@ class Attendance(commands.Cog):
             588061401617268746,  # Custodes
             702914817157234708,  # Noise Marine
             564827583540363264,  # Remembrancer
+            696160922439385091,  # Arbites
             696160804940152982,  # Chrono-gladiator
             545804189180231691,  # Keeper
             545807109774770187,  # Astartes
@@ -424,16 +497,17 @@ class Attendance(commands.Cog):
     @commands.cooldown(1, 20, commands.BucketType.user)
     async def suggest_kicks(self, ctx):
         """Suggest who should be kicked this month."""
-        async def wrap(self) -> Tuple[str, str, str]:
+        async def wrap(self) -> Tuple[
+                                      List[Tuple[str, int, str, str, str]],
+                                      str, str]:
             return self.db.suggest_kicks()
 
         async with ctx.typing():
             try:
-                path, percent_warned, percent_kicked = await wrap(self)
-                await ctx.send("This is my opnion, my lord. " +
-                           f"This would mean {percent_warned} of the outfit would be warned " + 
-                           f"and {percent_kicked} would be kicked",
-                           file = File(path))
+                table_rows, *stats = await wrap(self)
+
+                # create the reaction table
+                KickSuggestionMenu(table_rows, ctx, *stats)
             except ValueError:
                 await ctx.send("I have no archive entries to base my opinion on, my lord")
             
