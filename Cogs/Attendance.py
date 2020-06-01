@@ -19,28 +19,22 @@ class KickSuggestionMenu(react_menu.ReactTable):
                  ctx: commands.Context, percent_warned: str,
                  percent_kicked: str):
         self._att_cog = ctx.bot.get_cog("Attendance")
-        self._loop = get_event_loop()
         headers = ("Name", "Attendance Ratio (%)", "Recommended Action",
                    "Away (True/False)", "Join Date")
-        super().__init__(headers, table_rows, ctx.bot,
-                         ctx.channel, on_select = self.kick,
-                         on_reject = self.skip)
+
         # give information about how to interact with the menu
         # and the warn/kick stats
         self.stats = (percent_warned, percent_kicked)
-        self._loop.create_task(self.give_info())
-
-    async def give_info(self):
-        """Edit the kick/warn stats into msg
-        and tell the user what the buttons mean."""
-        # wait for __ainit__ to finish
-        await async_sleep(1)
         info = ("This is my opinion, my lord. " +
                 f"{self.stats[0]} of the outfit would be warned " +
                 f"and {self.stats[1]} would be kicked. " +
                 "Click the tick to kick the currently selected member " + 
                 "or click the X to skip them.")
-        await self.msg.edit(content = info)
+
+        # initialise the ReactMenu
+        super().__init__(headers, table_rows, ctx.bot,
+                         ctx.channel, on_select = self.kick,
+                         on_reject = self.skip, message_text = info)
 
     @staticmethod
     async def kick(self):
@@ -79,8 +73,8 @@ class KickSuggestionMenu(react_menu.ReactTable):
                 await reaction.remove(self._bot.user)
             
             # remove self from the tracked instances
-            handler = self._bot.get_cog("ReactMenuHandler")
-            del handler.bound_messages[self.msg.id]
+            self.unregister()
+
 
 class Attendance(commands.Cog):
     """Commands relating to attendance.
@@ -102,7 +96,6 @@ class Attendance(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.db = db.AttendanceDBWriter()
-        common.load_bot(bot)
 
     @commands.Cog.listener()
     @commands.has_any_role(*common.leader_roles)
@@ -228,25 +221,25 @@ class Attendance(commands.Cog):
     @commands.cooldown(1, 20, commands.BucketType.user)
     async def list_members(self, ctx):
         """List all of the registered members"""
-        async def wrap(self, file_name: str) -> str:
+        async def wrap(self) -> Tuple[int, str]:
+            """Get the memberID and name of all members."""
             rows = [(row[0], row[1])
                     for row in self.db.get_all_members()]
             # handle no registered members
             if not rows:
                 raise ValueError("No members are registered")
-
-            return create_table(
-                                rows,
-                                file_name, ["ID", "Name"]
-                                )
+            return rows
 
         # create a table
         async with ctx.typing():
-            file_name = f"table_at_{D.datetime.today().strftime('%H.%M.%S')}"
             try:
-                path = await wrap(self, file_name)
-                await ctx.send(f"They are ready to serve, my lord:",
-                                file = File(path))
+                react_menu.ReactTable(("ID", "Name"), await wrap(self),
+                                  self.bot, ctx.channel,
+                                  message_text = "They are ready to serve, my lord:",
+                                  elements_per_page = 5,
+                                  inline = False,
+                                  random_colour = True,
+                                  )
             except ValueError:
                 await ctx.send("None of our men have been registered, my lord")
 

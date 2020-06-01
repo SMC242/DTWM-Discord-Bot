@@ -38,7 +38,7 @@ class DBWriter:
 
         self.createDB(name)
         self.createConnection()
-        self.cursor = self.connection.cursor()
+        #self.cursor = self.connection.cursor()
         # set up the foreign keys on each connection
         # due to a limitation of sqlite requiring this for each connection
         self.doQuery("PRAGMA foreign_keys = 1;")
@@ -98,14 +98,17 @@ class DBWriter:
         # it exists to cut down on cookie cutter lines for safe queries
 
         # sqlite3 handles escaping insertions
+        cursor = self.cursor
         if not many:
-            self.cursor.execute(query, vars)
+            cursor.execute(query, vars)
 
         else:
-            self.cursor.executemany(query, vars)
+            cursor.executemany(query, vars)
 
         self.connection.commit()
-        return self.cursor.fetchall()
+        results = cursor.fetchall()
+        cursor.close()
+        return results
 
 
     def _executeFromFile(self, path: str):
@@ -145,3 +148,8 @@ class DBWriter:
 
         else: # if not on: toggle on
             self.cursor.row_factory = sql.Row
+
+    @property
+    def cursor(self) -> sql.Cursor:
+        """Get a Cursor from the active connection."""
+        return self.connection.cursor()

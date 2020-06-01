@@ -92,10 +92,6 @@ class RepeatingTasks(commands.Cog):
     async def att_rescheduler(self):
         """Try to schedule attendance every four hours
         if it's a new day."""
-        # ensure that the bot is loaded first
-        await self.bot.wait_until_ready()
-        common.load_bot(self.bot)
-
         try:
             # check for a new day and check it's not Saturday
             today = D.datetime.today().date()
@@ -104,6 +100,7 @@ class RepeatingTasks(commands.Cog):
                 self.start_day = D.datetime.today().date().day
                 self.scheduled = False
 
+                await common.wait_until_loaded(self.bot)
                 await self._schedule_att()
         except:
             print_exc()
@@ -123,7 +120,7 @@ class RepeatingTasks(commands.Cog):
                 else ActivityType.watching
 
             # set status
-            await self.bot.wait_until_ready()
+            await common.wait_until_loaded(self.bot)
             await self.bot.change_presence(activity = Activity(name = chosen_status, type = act_type))
         except:
             print_exc()
@@ -161,18 +158,17 @@ class RepeatingTasks(commands.Cog):
     async def check_registered_members(self):
         """Check all members against the registered members every 12 hours.
         Any members in the DB but not in the outfit: unregister.
-        Any members not in the DB but in the outfit: register."""
-        await self.bot.wait_until_ready()
+        Any members not in the DB but in the outfit: register.
+        Won't trigger if DEV_VERSION is enabled."""
+        if common.DEV_VERSION:
+            return
 
         try:
             # get the names of all registered members
             registered = [row[1] for row in self.att.db.get_all_members()]
-            
-            # ensure that the bot has been loaded
-            if common.server is None:
-                await async_sleep(10)
 
             # get all the names of the people in the discord outfit
+            await common.wait_until_loaded(self.bot)
             in_outfit = await memtils.get_in_outfit()
 
             # add those who are not registered
@@ -220,7 +216,7 @@ class RepeatingTasks(commands.Cog):
 
         # send it to Bot Channel.backups
         try:
-            await self.bot.wait_until_ready()
+            await common.wait_until_loaded(self.bot)
             backups_channel = self.bot.get_channel(712352058035929158)
             await backups_channel.send(f"DB backup from {D.datetime.today().strftime('%d.%m.%Y')}",
                                        file = File(db_file))

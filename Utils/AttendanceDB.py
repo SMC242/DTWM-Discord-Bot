@@ -43,7 +43,7 @@ class AttendanceDBWriter(db.DBWriter):
     def add_member(self, name: str):
         """Add a member to the Members table."""
         self.doQuery("INSERT INTO Members(name) VALUES(?);", vars = [name])
-
+        
     def get_member_by_name(self, name: str) -> Optional[Tuple[int, str, bool, D.date]]:
         """
         Get the row of a member by their name.

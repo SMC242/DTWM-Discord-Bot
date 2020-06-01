@@ -49,15 +49,14 @@ for file in os.listdir("./Cogs"):
         # ignore __init__ because it's not a Cog but it must be in the directory
         if cog_name == "__init__":
             continue
-
         try:
             bot.load_extension(f"Cogs.{cog_name}")
             print(f"Cog ({cog_name}) loaded sucessfully")
-
         except:
             print(f"Cog ({cog_name}) failed to load")
             # log loading tracebacks if lod_load_error is True or if it's not set but dev_version is True
-            if (LOG_LOAD_ERROR is not None and LOG_LOAD_ERROR) or (LOG_LOAD_ERROR is None and DEV_VERSION):
+            if (LOG_LOAD_ERROR is not None and LOG_LOAD_ERROR) or \
+                (LOG_LOAD_ERROR is None and DEV_VERSION):
                 print_exc()
 
 @bot.before_invoke
@@ -100,7 +99,7 @@ async def on_ready():
     print("I am ready.\n---")
 
     # load common
-    common.load_bot(bot)
+    await common.wait_until_loaded(bot)
 
     #acknowledge startup in #servitors
     await common.bot_channel.send(f'{"`[DEV VERSION]` " if DEV_VERSION else ""}I have awoken... I am at your service.')

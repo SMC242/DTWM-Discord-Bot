@@ -6,7 +6,7 @@ from discord import *
 from discord.ext import commands
 from typing import *
 from BenUtils import callbacks as ca
-import asyncio
+import asyncio, random
 from contextlib import suppress
 
 class ReactMenu:
@@ -47,13 +47,16 @@ class ReactMenu:
     """
 
     def __init__(self, content: List[str],
-                 bot: commands.Bot, channel: TextChannel,
+                 bot: commands.Bot,
+                 channel: Union[TextChannel, commands.Context],
+                 message_text: str = None,
                  field_names: List[str] = None,
                  on_select: ca.Callback = None, on_reject: ca.Callback = None,
                  last_emote_id: int = 712642258016534558,
                  next_emote_id: int = 712642257995431967,
                  select_emote_id: int = 712642257697767436,
                  reject_emote_id: int = 712642257697767458,
+                 random_colour = False,
                   **embed_settings):
         """The Embed colour defaults to pink.
 
@@ -64,6 +67,10 @@ class ReactMenu:
             The bot to use to maintain this menu.
         channel:
             The text channel to send the menu to.
+            Contexts can be taken too as they act like
+            TextChannel.
+        message_text:
+            What to send as the message.content.
         field_names:
             The titles of each element in content.
             Use None as a placeholder to keep the two lists parallel.
@@ -89,6 +96,8 @@ class ReactMenu:
             The id for the emote to react to the message with
             to trigger reject_content.
             This will be ignored if on_reject is None.
+        random_colour:
+            Choose a random colour for the embed for each page.
         embed_settings:
             Any settings for the discord.Embed.
         """
@@ -97,6 +106,7 @@ class ReactMenu:
         self._bot = bot
         self.on_select = on_select
         self.on_reject = on_reject
+        self.random_colour = random_colour
         self._content_index = 0
         self._starting = True  # don't check its reactions until this is False
 
@@ -117,16 +127,19 @@ class ReactMenu:
         # create the Embed with the first element of content
         embed = self.create_embed()
 
-        asyncio.get_event_loop().create_task(self.__ainit__(channel, embed, next_emote_id,
-                                                    last_emote_id, select_emote_id,
-                                                    reject_emote_id, on_select, on_reject))
+        asyncio.get_event_loop().create_task(self.__ainit__(channel, embed, message_text,
+                                                            next_emote_id, last_emote_id,
+                                                            select_emote_id, reject_emote_id,
+                                                            on_select, on_reject))
 
-    async def __ainit__(self, channel, embed, next_emote_id,
-                        last_emote_id, select_emote_id,
-                        reject_emote_id, on_select, on_reject):
+    async def __ainit__(self, channel, embed, message_text,
+                        next_emote_id, last_emote_id,
+                        select_emote_id, reject_emote_id,
+                        on_select, on_reject):
         """Send the initial message, bind to it, and set up the reactions"""
         # send the initial message
-        self.msg = await self.channel.send(embed = embed)
+        self.msg = await self.channel.send(content = message_text,
+                                           embed = embed)
 
         # register the message
         handler = self._bot.get_cog("ReactMenuHandler")
@@ -179,30 +192,101 @@ class ReactMenu:
         None: there is no more content
         Embed: the Embed was successfully created."""
         with suppress(IndexError):
+            # generate a random colour
+            if self.random_colour:
+                self.embed_settings["colour"] = self.create_colour()
+
             embed = Embed(**self.embed_settings)
             embed.add_field(name = self.field_names[self._content_index],
                             value = self.content[self._content_index])
             return embed
 
+    def unregister(self):
+        """Untrack this message."""
+        # remove self from the tracked instances
+        # handling KeyError to avoid race conditions
+        with suppress(KeyError):
+            handler = self._bot.get_cog("ReactMenuHandler")
+            del handler.bound_messages[self.msg.id]
+
+    @staticmethod
+    def create_colour() -> int:
+        """Create a random colour and return its code"""
+        digits = random.randint(1, 8)  # get a random length
+        colour = "".join( (str(random.randint(0, 9)) for i in range(digits)) )
+
+        # ensure that there isn't a leading 0
+        for i in range(len(colour) - 1):
+            if colour[i] == "0":
+                colour = colour[i:]
+
+        # check that all zeroes weren't generated
+        if len(colour) == 0:
+            colour = ReactMenu.create_colour()
+        return int(colour)
+
 
 class ReactTable(ReactMenu):
     """Interactable tables via reactions as buttons."""
 
-    def __init__(self, headers: Tuple[str], *args, **kwargs):
+    def __init__(self, headers: Tuple[str], *args,
+                elements_per_page: int = 1, inline: bool = False,
+                **kwargs):
         """ARGUMENTS
         headers:
             The titles of each element for each row of
             content.
+        elements_per_page:
+            The number of elements from content to
+            display per Embed.
+        inline:
+            Whether to display rows on one line or multiple.
         *args, **kwargs:
             See the docstring of ReactMenu.__init__"""
         self.headers = headers
+        self.elements_per_page = elements_per_page
+        self.inline = inline
+
         super().__init__(*args, **kwargs)
 
     def create_embed(self) -> Optional[Embed]:
         """Creates a table-like Embed."""
         with suppress(IndexError):
+            # deciding how many rows to show per page
+            portion = slice(self._content_index,
+                            self._content_index + self.elements_per_page)
+
+            # generate a random colour
+            if self.random_colour:
+                self.embed_settings["colour"] = self.create_colour()
             embed = Embed(**self.embed_settings)
-            for header, value in zip(self.headers,
-                                     self.content[self._content_index]):
-                embed.add_field(name = header, value = value, inline = False)
+
+            # add the rows
+            inline = self.inline  # avoid the overhead of accessing attrs
+            for row in self.content[portion]:
+                for header, value in zip(self.headers, row):
+                    embed.add_field(name = header, value = value,
+                                    inline = inline)
+                # add a break between rows
+                embed.add_field(name = "||\_-\_-\_-\_-\_-\_||", value = "||**-\_-\_-\_-\_-\_-**||")
             return embed
+
+    @staticmethod
+    async def on_next(self):
+        """Show the next content when the next button is clicked.
+        Iterates in sets of self.elements_per_page"""
+        if self._content_index < len(self.content) - 1:
+            await self.msg.edit(embed = self.create_embed())
+            self._content_index += self.elements_per_page
+        else:
+            await self.channel.send("I can't move forward!")
+
+    @staticmethod
+    async def on_last(self):
+        """Show the previous content when the back button is clicked.
+        Iterates in sets of self.elements_per_page"""
+        if self._content_index > 0:
+            await self.msg.edit(embed = self.create_embed())
+            self._content_index -= self.elements_per_page
+        else:  # give the user feedback if they can't move
+            await self.channel.send("I can't move back!")

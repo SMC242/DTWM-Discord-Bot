@@ -138,8 +138,7 @@ class ReactionParent(commands.Cog):
 
     async def get_channels(self):
         """Load all of the channels."""
-        await self.bot.wait_until_ready()
-        common.load_bot(self.bot)
+        await common.wait_until_loaded(self.bot)
 
         # add all the text channels and
         # set them up with a placeholder datetime
@@ -328,10 +327,11 @@ class ReactMenuHandler(commands.Cog):
         """Stop tracking messages that are older than 10 minutes."""
         for menu in self.bound_messages.values():
             msg = menu.msg
+            now = D.datetime.utcnow()
             # check if it was last interacted wtih >10 minutes ago
-            if (msg.edited_at and ((D.datetime.utcnow() - msg.edited_at).seconds / 60) > 10) \
-                or ((D.datetime.utcnow() - msg.created_at).seconds / 60) > 10:
-                del self.bound_messages[msg.id]
+            if (msg.edited_at and ((now - msg.edited_at).seconds / 60) > 10) \
+                or ((now - msg.created_at).seconds / 60) > 10:
+                menu.unregister()
 
 
 def setup(bot):

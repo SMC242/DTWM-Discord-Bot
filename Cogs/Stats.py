@@ -80,7 +80,7 @@ class ServerStats(commands.Cog):
             else:
                 count = await count_channel_messages(target_channel, after)
 
-            await ctx.send(f"{count} messages were sent {'aboard the Erioch' if is_global else ''} " +
+            await ctx.send(f"{count} messages were sent {'aboard the Erioch ' if is_global else ''}" +
                            f"today, {memtils.get_title(ctx.author)}.")
 
     @commands.cooldown(1, 30, commands.BucketType.user)
@@ -117,7 +117,7 @@ class ServerStats(commands.Cog):
             else:
                 count = await count_channel_reacts(target_channel, after)
 
-            await ctx.send(f"{count} reactions were given {'aboard the Erioch' if is_global else ''} " +
+            await ctx.send(f"{count} reactions were given {'aboard the Erioch ' if is_global else ''}" +
                            f"today, {memtils.get_title(ctx.author)}.")
 
 def setup(bot: commands.Bot):
