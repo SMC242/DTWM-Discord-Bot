@@ -2,6 +2,7 @@
 
 import sqlite3 as sql, os
 from typing import Any, List
+from contextlib import contextmanager
 
 class DBWriter:
     """
@@ -38,7 +39,9 @@ class DBWriter:
 
         self.createDB(name)
         self.createConnection()
-        #self.cursor = self.connection.cursor()
+         # allow dict accessing of query results
+        self.useRow = useRow
+
         # set up the foreign keys on each connection
         # due to a limitation of sqlite requiring this for each connection
         self.doQuery("PRAGMA foreign_keys = 1;")
@@ -49,10 +52,6 @@ class DBWriter:
 
         else:
             self.doQuery("PRAGMA encoding = 'UTF-8';")
-
-        # allow dict accessing of query results
-        if useRow:
-            self.cursor.row_factory = sql.Row
 
 
     def createDB(self, name: str):
@@ -98,17 +97,15 @@ class DBWriter:
         # it exists to cut down on cookie cutter lines for safe queries
 
         # sqlite3 handles escaping insertions
-        cursor = self.cursor
-        if not many:
-            cursor.execute(query, vars)
+        with self.cursor() as cursor:
+            if not many:
+                cursor.execute(query, vars)
 
-        else:
-            cursor.executemany(query, vars)
+            else:
+                cursor.executemany(query, vars)
 
-        self.connection.commit()
-        results = cursor.fetchall()
-        cursor.close()
-        return results
+            self.connection.commit()
+            return cursor.fetchall()
 
 
     def _executeFromFile(self, path: str):
@@ -120,36 +117,20 @@ class DBWriter:
         with open(path) as f:
             scriptLines = f.read()
 
-        self.cursor.executescript(scriptLines)
-        self.connection.commit()
+        with self.cursor() as cursor:
+            cursor.executescript(scriptLines)
+            self.connection.commit()
 
-
-    def toggleRow(self, targetState: bool = None):
-        """
-        Either set toggle cursor.row_factory from
-        Row to None/None to Row, or set it to the target state.
-        
-        targetState:
-            True: row_factory = Row
-            False: row_factory = None
-        """
-        
-        # if a target was passed
-        if targetState:
-            self.cursor.row_factory = sql.Row
-
-        elif targetState is False:  # I can't use falsy values since None is falsy
-            self.cursor.row_factory = None
-
-        # if no target was passed: toggle
-        # if on: toggle off
-        elif self.cursor.row_factory:
-            self.cursor.row_factory = None
-
-        else: # if not on: toggle on
-            self.cursor.row_factory = sql.Row
-
-    @property
+    @contextmanager
     def cursor(self) -> sql.Cursor:
-        """Get a Cursor from the active connection."""
-        return self.connection.cursor()
+        """Get a Cursor from the active connection.
+        Context manager that closes the cursor automatically."""
+        try:
+            cursor = self.connection.cursor()
+
+            # enable Row if the users desires it
+            if self.useRow:
+                cursor.row_factory = sql.Row
+            yield cursor
+        finally:
+            cursor.close()

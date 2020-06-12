@@ -222,10 +222,10 @@ class RepeatingTasks(commands.Cog):
                                        file = File(db_file))
             print("Backed up the database successfully!")
         except:
-            # log to Bot Testing.generl
-            errors_channel = self.bot.get_channel(697746979782000680)
+            # log to Bot Testing.errors
             print("The database failed to back up.")
-            await errors_channel.send(f"Failed to back up the DB on {D.datetime.today().strftime('%d.%m.%Y')}")
+            await common.error_channel.send("Failed to back up the DB on " +
+                                             f"{D.datetime.today().strftime('%d.%m.%Y')}")
 
 
 def setup(bot):

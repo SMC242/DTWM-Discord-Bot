@@ -15,6 +15,7 @@ leader_roles = member_roles[1:]
 # channels
 bot_channel = None
 server = None
+error_channel = None
 
 async def wait_until_loaded(wait_for: Bot):
     """Wait until the bot is ready, then load it."""
@@ -33,7 +34,7 @@ def _load_bot(target_bot: Bot):
 
     This is due to needing access to the bot for some checks.
     """
-    global bot, bot_channel, server, bot_loaded
+    global bot, bot_channel, server, bot_loaded, error_channel
 
     # don't load the bot twice
     if bot_loaded:
@@ -51,3 +52,4 @@ def _load_bot(target_bot: Bot):
     else:
         bot_channel = bot.get_channel(545818844036464670)  # DTWM.servitors
         server = bot.get_guild(545422040644190220)  # DTWM
+    error_channel = bot.get_channel(697746979782000680)

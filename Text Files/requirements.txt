@@ -7,3 +7,5 @@ Pillow
 matplotlib
 fuzzywuzzy
 python-levenshtein
+requests
+beautifulsoup4

@@ -2,7 +2,7 @@
 
 from typing import *
 from matplotlib import pyplot, transforms
-import os, datetime as D
+import os, re, datetime as D
 
 # TODO: create a Messagable.send wrapper that chops large messages down into smaller messages
 
@@ -72,3 +72,18 @@ def list_join(to_join: List[str], connective: str = "and") -> str:
         'one, two, three, four and five'
     """
     return ', '.join(to_join[:-2] + [f' {connective} '.join(to_join[-2:])])
+
+def search_word(contents: str, target_word: str) -> bool:
+    """Return whether the target_word was found in contents.
+    Not case-sensitive."""
+    return (re.compile(r'\b({0})\b'.format( target_word.lower() ), flags=re.IGNORECASE).search(
+        contents.lower() )) is not None
+
+def get_instagram_links(msg: str) -> List[Optional[str]]:
+    """Uses regex to extract Instagram links.
+
+    RETURNS
+    List[]: no links
+    List[str]: some links found"""
+    return re.findall("https:\/\/www\.instagram\.com\/p\/\w*|[-]",
+                     msg)

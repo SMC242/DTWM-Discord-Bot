@@ -139,7 +139,7 @@ class Attendance(commands.Cog):
         """Register a member with their name."""
         
         # check that the name isn't registered
-        if not await memtils.is_member(name, 
+        if not await memtils.is_member(name,
                                        [r[1] for r in self.db.get_all_members()]):
             self.db.add_member(name)
             await ctx.send(f"Welcome to the chapter, brother {name}!")

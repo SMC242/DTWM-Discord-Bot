@@ -25,9 +25,9 @@ bot = commands.Bot(
     description = description,
     owner_ids = (395598378387636234, 515163362062237716),
     activity = Activity(name = "Waking up...", url = "https://joindtwm.net",
-        type = ActivityType.playing, state = "Powering on...",
-        details = "The adepts have summoned me from my slumber."),
-    case_insensitive = True
+                        type = ActivityType.playing, state = "Powering on...",
+                        details = "The adepts have summoned me from my slumber."),
+    case_insensitive = True,
     )
 
 # check that there is a token to run from

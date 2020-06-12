@@ -3,12 +3,12 @@
 from discord import *
 from discord.ext import commands, tasks
 from typing import *
-from Utils import common, memtils
-import datetime as D, traceback, re
+from Utils import common, memtils, InstagramScraping
+import datetime as D, traceback
 from asyncio import get_event_loop
 from json import load
 from random import choice
-from Utils.mestils import list_join
+from Utils.mestils import list_join, search_word, get_instagram_links
 from inspect import iscoroutinefunction as iscorofunc
 
 # errors, message reactions
@@ -52,7 +52,7 @@ class ErrorHandler(commands.Cog):
             if '@' in ctx.invoked_with :
                 await ctx.send("How dare you try to use me to annoy others!")
             else:
-                await ctx.send(f'Sorry {title}, the archives do not know of this' +
+                await ctx.send(f'Sorry {title}, the archives do not know of this ' +
                                     f'"{ctx.invoked_with}" you speak of')
 
         elif isinstance(error, commands.MissingRequiredArgument):
@@ -85,6 +85,11 @@ class ErrorHandler(commands.Cog):
         elif isinstance(error, Forbidden):
             await ctx.send("I can't access one or more of those channels TwT")
 
+        # if a command is malfunctioning
+        elif isinstance(error.original, AssertionError):
+            await ctx.send(f"My diagnostics report a failure in {ctx.command.name}" + 
+                           "Please inform the Adepts soon.")
+
         # custom checks will handle their own failures
         elif isinstance(error, commands.CheckFailure):
             pass
@@ -107,11 +112,11 @@ class ErrorHandler(commands.Cog):
 
             # log to Bot Testing.errors
             try:
-                error_channel = self.bot.get_channel(697746979782000680)
-                await error_channel.send(f"```\n{tb}```")
+                await common.error_channel.send(f"```\n{tb}```")
             # handle tb being too large for a Discord message
             except errors.HTTPException:
-                await error_channel.send("The tracebaceback was too large. Check `Text Files/errorLog.txt`")
+                await common.error_channel.send("The tracebaceback was too large. " +
+                                                "Check `Text Files/errorLog.txt`")
 
 
 # on_message handlers
@@ -156,22 +161,16 @@ class ReactionParent(commands.Cog):
             id_ = msg.channel.id
             if (D.datetime.today() - self.channels[id_]).total_seconds() \
                 >= self.cooldown:
-                # start cooldown
-                self.channels[id_] = D.datetime.today()
-
                 return True
             else:  return False
-
         # handle the channel not being loaded
         except KeyError:
             return await self.get_channels()
 
-    @staticmethod
-    def search_word(contents: str, target_word: str) -> bool:
-        """Return whether the target_word was found in contents.
-        Not case-sensitive."""
-        return (re.compile(r'\b({0})\b'.format( target_word.lower() ), flags=re.IGNORECASE).search(
-            contents.lower() )) is not None
+    def set_cooldown(self, channel: TextChannel):
+        """Put the target channel on cooldown."""
+        # start cooldown
+        self.channels[channel.id] = D.datetime.today()
 
 
 class ReactionController(commands.Cog):
@@ -223,6 +222,7 @@ class TextReactions(ReactionParent):
 
         # only try to send if a match was found
         if to_send is not None:
+            self.set_cooldown(msg.channel)
             await msg.channel.send(to_send)
 
 
@@ -250,31 +250,24 @@ class ReactReactions(ReactionParent):
         if not await self.off_cooldown(msg):
             return
 
-        # load responses if there might be a match
-        # in checks for a sequence of chars rather than an exact match
-        # so this doesn't guarentee a match
-        targets = (
-            "ayaya",
-            "php",
-            )
-        content = msg.content
-        for target in targets:
-            if target in content:
-                with open("./Text Files/responses.json") as f:
-                    responses = load(f)
+        content = msg.content.lower()
+        # check if there is a match with regex.
+        match_name: str = None
+        if search_word(content, "ayaya") or \
+            search_word(content, "<:w_ayaya:622141714655870982>"):
+            match_name = "ayaya"
 
-        # ensure there is a match with reg. ex.
-        to_send: str = None
-        if self.search_word(content, "ayaya") or \
-            self.search_word(content, "<:w_ayaya:622141714655870982>"):
-            to_send = responses["ayaya"]
-
-        elif self.search_word(content, "php"):
-            to_send = responses["php"]
+        elif search_word(content, "php"):
+            match_name = "php"
 
         # only try to react if a match was found
-        if to_send is not None:
-            await msg.add_reaction(to_send)
+        if match_name is not None:
+            # get the responses
+            with open("./Text Files/responses.json") as f:
+                responses = load(f)
+
+            self.set_cooldown(msg.channel)
+            await msg.add_reaction(responses[match_name])
 
 
 class ReactMenuHandler(commands.Cog):
@@ -334,6 +327,55 @@ class ReactMenuHandler(commands.Cog):
                 menu.unregister()
 
 
+class InstagramLinks(commands.Cog):
+    """Gets the image(s) from an Instagram link in
+    DTWM.forbidden-knowledge"""
+
+    target_ids: List[int] = [  # the channels to target
+                          545809293841006603
+                        ]
+
+    def __init__(self, bot: commands.bot):
+        self.bot = bot
+        self.targets = []
+        get_event_loop().create_task(self.get_targets())
+
+    async def get_targets(self):
+        """Populate self.targets with TextChannels."""
+        await self.bot.wait_until_ready()
+        self.targets = [self.bot.get_channel(id_) for id_ in self.target_ids]
+
+    @commands.Cog.listener()
+    async def on_message(self, msg: Message):
+        """Check if the message was sent in the target channels.
+        If so, try to extract an Instagram link from it."""
+        # don't respond to self
+        if msg.author == self.bot.user:
+            return
+
+        # check if it's in one of the targeted channels
+        msg_channel = msg.channel
+        if not any([chan == msg_channel for chan in self.targets]):
+            return
+
+        # search for instagram links
+        links = get_instagram_links(msg.content)
+        if not links:
+            return
+
+        images = [InstagramScraping.InstagramImages(link).image
+                    for link in links]
+        # log any links that couldn't be fetched
+        if not all(images):
+            for i, image in enumerate(images):
+                if not image:
+                    await common.error_channel.send(f"Failed to get image from {links[i]}")
+        
+        # remove any failed images before sending them
+        images = list(filter(None, images))
+        await msg.channel.send("\n".join(images))
+        await msg.delete()  # remove the message afterwards
+
 def setup(bot):
     cogs = (
         ErrorHandler,
@@ -341,6 +383,7 @@ def setup(bot):
         TextReactions,
         ReactionController,
         ReactMenuHandler,
+        InstagramLinks,
         )
     for cog in cogs:
         bot.add_cog( cog(bot) )

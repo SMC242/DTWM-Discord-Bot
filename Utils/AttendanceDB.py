@@ -28,12 +28,13 @@ class AttendanceDBWriter(db.DBWriter):
 
         # if the day was already registered
         with suppress(sql.IntegrityError):
-            self.cursor.execute("""INSERT INTO Days(date, eventType) VALUES (
-                    ( SELECT DATE('now') ),
-                    ?
-                );""", [event_type]
-                )
-            self.connection.commit()
+            with self.cursor() as cursor:
+                cursor.execute("""INSERT INTO Days(date, eventType) VALUES (
+                        ( SELECT DATE('now') ),
+                        ?
+                    );""", [event_type]
+                    )
+                self.connection.commit()
 
     def create_tables(self):
         """Create the tables if they're not already created."""
