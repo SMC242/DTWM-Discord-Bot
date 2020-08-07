@@ -18,8 +18,8 @@ LOG_LOAD_ERROR = True
 description = """This bot was designed for the DTWM discord by [DTWM] benmitchellmtbV5.
 Special thanks to:
     My mentors: Auroram, Stalkopat
-    The host, admin, and debugging helper: [DTWM] ScreaminSteve
-    Profile picture: [DTWM] BoeruChan"""
+    The host, admin, and debugging helper: ScreaminSteve
+    Profile picture: BoeruChan"""
 bot = commands.Bot(
     f"{'dev' if DEV_VERSION else 'ab'}!",
     description = description,

@@ -3,12 +3,12 @@
 from discord import *
 from discord.ext import commands, tasks
 from typing import *
-from Utils import common, memtils, InstagramScraping
+from Utils import common, memtils
 import datetime as D, traceback
 from asyncio import get_event_loop
 from json import load
 from random import choice
-from Utils.mestils import list_join, search_word, get_instagram_links
+from Utils.mestils import list_join, search_word
 from inspect import iscoroutinefunction as iscorofunc
 
 # errors, message reactions
@@ -327,55 +327,6 @@ class ReactMenuHandler(commands.Cog):
                 menu.unregister()
 
 
-class InstagramLinks(commands.Cog):
-    """Gets the image(s) from an Instagram link in
-    DTWM.forbidden-knowledge"""
-
-    target_ids: List[int] = [  # the channels to target
-                          545809293841006603
-                        ]
-
-    def __init__(self, bot: commands.bot):
-        self.bot = bot
-        self.targets = []
-        get_event_loop().create_task(self.get_targets())
-
-    async def get_targets(self):
-        """Populate self.targets with TextChannels."""
-        await self.bot.wait_until_ready()
-        self.targets = [self.bot.get_channel(id_) for id_ in self.target_ids]
-
-    @commands.Cog.listener()
-    async def on_message(self, msg: Message):
-        """Check if the message was sent in the target channels.
-        If so, try to extract an Instagram link from it."""
-        # don't respond to self
-        if msg.author == self.bot.user:
-            return
-
-        # check if it's in one of the targeted channels
-        msg_channel = msg.channel
-        if not any([chan == msg_channel for chan in self.targets]):
-            return
-
-        # search for instagram links
-        links = get_instagram_links(msg.content)
-        if not links:
-            return
-
-        images = [InstagramScraping.InstagramImages(link).image
-                    for link in links]
-        # log any links that couldn't be fetched
-        if not all(images):
-            for i, image in enumerate(images):
-                if not image:
-                    await common.error_channel.send(f"Failed to get image from {links[i]}")
-        
-        # remove any failed images before sending them
-        images = list(filter(None, images))
-        await msg.channel.send("\n".join(images))
-        await msg.delete()  # remove the message afterwards
-
 def setup(bot):
     cogs = (
         ErrorHandler,
@@ -383,7 +334,6 @@ def setup(bot):
         TextReactions,
         ReactionController,
         ReactMenuHandler,
-        InstagramLinks,
         )
     for cog in cogs:
         bot.add_cog( cog(bot) )

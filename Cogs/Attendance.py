@@ -416,6 +416,8 @@ class Attendance(commands.Cog):
         # get the member-only roles roles
         member_role_ids = [
             588061401617268746,  # Custodes
+            564827583540363264,  # Ogryn
+            729040717636304948,  # Null Maiden
             702914817157234708,  # Noise Marine
             564827583540363264,  # Remembrancer
             696160922439385091,  # Arbites
