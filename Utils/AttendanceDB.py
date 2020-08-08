@@ -379,7 +379,7 @@ class AttendanceDBWriter(db.DBWriter):
                 priority_level = "Warn/monitor"
                 num_warned += 1
             else:
-                prioity_level = "Kick"
+                priority_level = "Kick"
                 num_kicked += 1
 
             table_rows.append((name, ratio, priority_level,

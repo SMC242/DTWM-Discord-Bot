@@ -39,12 +39,12 @@ class RepeatingTasks(commands.Cog):
 
         # start the tasks
         tasks_ = [
-            self.att_rescheduler,
-            self.change_status,
-            self.new_day,
-            self.check_registered_members,
-            self.images_cleanup,
-            self.backup_DB,
+            #self.att_rescheduler,
+            #self.change_status,
+            #self.new_day,
+            #self.check_registered_members,
+            #self.images_cleanup,
+            #self.backup_DB,
             ]
 
         for task in tasks_:

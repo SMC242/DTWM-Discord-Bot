@@ -112,4 +112,8 @@ if __name__ == "__main__":
     # get the token and start the bot
     with open("Text Files/token.txt") as f:
         token = f.readline().strip("\n")
-    bot.run(token)
+    try:
+        bot.run(token)
+    except:
+        import traceback
+        traceback.print_exc()
