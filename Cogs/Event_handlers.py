@@ -360,8 +360,6 @@ class InstagramHandler(commands.Cog):
         await ctx.send(self.last_msg.content, 
                         # I can't pass the whole list :/
                        embed = self.last_msg.embeds[0] if self.last_msg.embeds else None,
-                       file = self.last_msg.file,
-                       files = self.last_msg.files
                        )
 
 def setup(bot):
@@ -371,7 +369,7 @@ def setup(bot):
         TextReactions,
         ReactionController,
         ReactMenuHandler,
-        #InstagramHandler,
+        InstagramHandler,
         )
     for cog in cogs:
         bot.add_cog( cog(bot) )
