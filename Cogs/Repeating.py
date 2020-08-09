@@ -39,12 +39,12 @@ class RepeatingTasks(commands.Cog):
 
         # start the tasks
         tasks_ = [
-            #self.att_rescheduler,
-            #self.change_status,
-            #self.new_day,
-            #self.check_registered_members,
-            #self.images_cleanup,
-            #self.backup_DB,
+            self.att_rescheduler,
+            self.change_status,
+            self.new_day,
+            self.check_registered_members,
+            self.images_cleanup,
+            self.backup_DB,
             ]
 
         for task in tasks_:
@@ -124,6 +124,13 @@ class RepeatingTasks(commands.Cog):
             await self.bot.change_presence(activity = Activity(name = chosen_status, type = act_type))
         except:
             print_exc()
+
+    @change_status.before_loop
+    async def wait_for_ready(self):
+        """Wait until after on_ready to start changing the status
+        to prevent Discord from cutting the connection."""
+        await self.bot.wait_until_ready()
+        await async_sleep(600)  # wait 10 minutes before starting
 
     @tasks.loop(hours = 4)
     async def new_day(self):

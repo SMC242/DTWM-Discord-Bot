@@ -42,7 +42,7 @@ class KickSuggestionMenu(react_menu.ReactTable):
         when the yes button is clicked."""
         # get the Member instance
         name = self.content[self._content_index][0]
-        person = memtils.search_member(self.channel.guild, name)
+        person = await memtils.search_member(self.channel.guild, name)
 
         # kick them
         if person:
@@ -455,7 +455,7 @@ class Attendance(commands.Cog):
         async with ctx.typing():
             # handle no Member passed
             if isinstance(person, str):
-                person = memtils.search_member(ctx, person)
+                person = await memtils.search_member(ctx, person)
                 # handle no Member found
                 if not person:
                     return await ctx.send("I can't find that person, my lord")

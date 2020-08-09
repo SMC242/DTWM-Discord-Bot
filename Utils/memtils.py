@@ -190,7 +190,7 @@ def get_title(person: Member) -> str:
 
     return title
 
-def search_member(search_with: Union[Context, Guild],
+async def search_member(search_with: Union[Context, Guild],
                         name: str) -> Optional[Member]:
     """Search for the member using search_with's members by their name.
     
@@ -209,17 +209,7 @@ def search_member(search_with: Union[Context, Guild],
     if isinstance(search_with, Context):
         search_with = search_with.guild
 
-    # get the Members and their names
-    # the names have to be lowered or the sort will be wrong
-    name = NameParser(name, case = False).parsed
-    members = sorted([( m, NameParser(m.display_name, case = False).parsed)
-                      for m in search_with.members],
-                     key = lambda m: m[1])
-
-    # binary search through the names
-    return binarySearch(name, members,
-                        return_type = "item",
-                        key = lambda m: m[1])[0]
+    return NameParser((await search_with.query_members(name))[0].display_name).parsed
 
 async def is_member(name: str, outfit_members: List[str] = None,
                     db: 'AttendanceDB.AttendanceDBWriter' = None,

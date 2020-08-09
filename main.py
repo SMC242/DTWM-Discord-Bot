@@ -108,12 +108,12 @@ async def on_ready():
     if DEV_VERSION:
         print("WARNING: you are on the dev version. Change main.DEV_VERSION to False if you're a user")
 
+@bot.command()
+async def test(ctx):
+    print(await ctx.guild.query_members("benmitchellmtbV5"))
+
 if __name__ == "__main__":
     # get the token and start the bot
     with open("Text Files/token.txt") as f:
         token = f.readline().strip("\n")
-    try:
-        bot.run(token)
-    except:
-        import traceback
-        traceback.print_exc()
+    bot.run(token)

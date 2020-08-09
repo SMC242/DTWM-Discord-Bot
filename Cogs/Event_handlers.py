@@ -3,7 +3,7 @@
 from discord import *
 from discord.ext import commands, tasks
 from typing import *
-from Utils import common, memtils
+from Utils import common, memtils, mestils
 import datetime as D, traceback
 from asyncio import get_event_loop
 from json import load
@@ -327,6 +327,43 @@ class ReactMenuHandler(commands.Cog):
                 menu.unregister()
 
 
+class InstagramHandler(commands.Cog):
+    """Responds to Instagam links"""
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.last_msg = None
+
+    @commands.Cog.listener()
+    async def on_message(self, msg: Message):
+        """Warns the user if they post a private Instagram link."""
+        # don't respond to the bot
+        if self.bot.user == msg.author:
+            return
+
+        # check if there was an Instagram link
+        links = mestils.get_instagram_links(msg.content)
+        
+        # parse links
+        # private links have a longer id whereas public
+        # ones have a fixed size of 11
+        for link in links:
+            if len(link[28:]) > 11:  # https://www.instagram.com/p/ is 28 characters
+                await msg.channel.send("That link was private, brother. I will remove it " + "<:s_40k_adeptus_mechanicus_shocked:585598378721673226>")
+                self.last_msg = msg  # cache the message in case of a false-positive
+                await msg.delete(delay = 2)
+
+    @commands.command(aliases = ["RS", "resummon", "come_back", "false_positive"
+                                 "false_hit", "resummon_msg"])
+    async def resummon_message(self, ctx):
+        """Repost the last deleted message."""
+        await ctx.send(self.last_msg.content, 
+                        # I can't pass the whole list :/
+                       embed = self.last_msg.embeds[0] if self.last_msg.embeds else None,
+                       file = self.last_msg.file,
+                       files = self.last_msg.files
+                       )
+
 def setup(bot):
     cogs = (
         ErrorHandler,
@@ -334,6 +371,7 @@ def setup(bot):
         TextReactions,
         ReactionController,
         ReactMenuHandler,
+        #InstagramHandler,
         )
     for cog in cogs:
         bot.add_cog( cog(bot) )
