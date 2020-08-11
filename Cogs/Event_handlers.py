@@ -357,6 +357,8 @@ class InstagramHandler(commands.Cog):
                                  "false_hit", "resummon_msg"])
     async def resummon_message(self, ctx):
         """Repost the last deleted message."""
+        if self.last_msg is None:
+            return await ctx.send("I have not deleted anything today, my lord.")
         await ctx.send(self.last_msg.content, 
                         # I can't pass the whole list :/
                        embed = self.last_msg.embeds[0] if self.last_msg.embeds else None,
