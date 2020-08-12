@@ -4,6 +4,7 @@ from discord import *
 from discord.ext import commands, tasks
 from typing import *
 from Utils import common, memtils, mestils
+from contextlib import suppress
 import datetime as D, traceback
 from asyncio import get_event_loop
 from json import load
@@ -327,12 +328,52 @@ class ReactMenuHandler(commands.Cog):
                 menu.unregister()
 
 
-class InstagramHandler(commands.Cog):
-    """Responds to Instagam links"""
+class MessageAuthoritarian(commands.Cog):
+    """Base class for deleting messages if they meet a condition."""
+    last_msg: str = None  # the last deleted message
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.last_msg = None
+
+    async def on_message(self, msg: Message):
+        """Do your check here. This must be deccorated with commands.Cog.listener()
+        See the source for an example."""
+        # don't respond to the bot
+        if self.bot.user == msg.author:
+            return
+
+        raise NotImplementedError()
+
+        # example
+        if "ayaya" in msg.contents:
+            await msg.channel.send(">={")
+            MessageAuthoritarian.last_msg = msg
+            await msg.delete(delay = 2)
+
+
+class AuthoritarianBabySitter(commands.Cog):
+    """Holds the resummon_message command to avoid double-registering it."""
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
+    @commands.command(aliases = ["RS", "resummon", "come_back", "false_positive"
+                                 "false_hit", "resummon_msg"])
+    async def resummon_message(self, ctx):
+        """Repost the last deleted message."""
+        msg = MessageAuthoritarian.last_msg
+        if msg is None:
+            return await ctx.send("I have not deleted anything today, my lord.")
+        await ctx.send(msg.content, 
+                        # I can't pass the whole list :/
+                       embed = msg.embeds[0] if msg.embeds else None,
+                       )
+
+class InstagramHandler(MessageAuthoritarian):
+    """Responds to Instagam links"""
+
+    def __init__(self, bot: commands.Bot):
+        super().__init__(bot)
 
     @commands.Cog.listener()
     async def on_message(self, msg: Message):
@@ -350,19 +391,56 @@ class InstagramHandler(commands.Cog):
         for link in links:
             if len(link[28:]) > 11:  # https://www.instagram.com/p/ is 28 characters
                 await msg.channel.send("That link was private, brother. I will remove it " + "<:s_40k_adeptus_mechanicus_shocked:585598378721673226>")
-                self.last_msg = msg  # cache the message in case of a false-positive
+                MessageAuthoritarian.last_msg = msg  # cache the message in case of a false-positive
                 await msg.delete(delay = 2)
 
-    @commands.command(aliases = ["RS", "resummon", "come_back", "false_positive"
-                                 "false_hit", "resummon_msg"])
-    async def resummon_message(self, ctx):
-        """Repost the last deleted message."""
-        if self.last_msg is None:
-            return await ctx.send("I have not deleted anything today, my lord.")
-        await ctx.send(self.last_msg.content, 
-                        # I can't pass the whole list :/
-                       embed = self.last_msg.embeds[0] if self.last_msg.embeds else None,
-                       )
+
+class RepostHandler(MessageAuthoritarian):
+    """Deletes reposted links."""
+
+    def __init__(self, bot: commands.Bot):
+        super().__init__(bot)
+        self.links: Dict[str, D.datetime] = {}  # all of the links from the past 24 hours
+
+    @tasks.loop(hours = 12)
+    async def clean_up_links(self):
+        """Removes all links that are more than 2 days old"""
+        links_by_age = sorted(self.links.items(), key = lambda link, date: value)
+        now = D.datetime.now()
+        for link, date in links_by_age:
+            if (now - date).days >= 2:
+                del self.links[link]
+
+    @commands.Cog.listener()
+    async def on_message(self, msg: Message):
+        """Deletes reposted links"""
+        # don't reply to self
+        if msg.author == self.bot.user:
+            return
+
+        # check for embeds
+        if msg.embeds is None:
+            return
+
+        # parse the links of the 
+        split_link = lambda link: link.split("/")[4:]
+        # remove link args
+        remove_args = lambda split_link: (*split_link[:2], split_link[2].split("?", maxsplit = 1)[0])
+        # save each link if it
+        with suppress(AttributeError):
+            for embed in msg.embeds:
+                try:
+                    # get the id and file name
+                    id = "".join(remove_args(split_link(embed.url)))
+                    self.links[id]
+
+                    # the link has been saved, so delete the message
+                    await msg.channel.send(">={ No repostium in this discordium")
+                    MessageAuthoritarian.last_msg = msg
+                    await msg.delete(delay = 2)
+                except KeyError:  # save the link since it hasn't been saved
+                    self.links[id] = D.datetime.now()
+
 
 def setup(bot):
     cogs = (
@@ -372,6 +450,8 @@ def setup(bot):
         ReactionController,
         ReactMenuHandler,
         InstagramHandler,
+        AuthoritarianBabySitter,
+        RepostHandler,
         )
     for cog in cogs:
         bot.add_cog( cog(bot) )
