@@ -414,6 +414,16 @@ class RepostHandler(MessageAuthoritarian):
     @commands.Cog.listener()
     async def on_message(self, msg: Message):
         """Deletes reposted links"""
+
+        def parse_link(link: str) -> str:
+            """
+            Converts a link into its channel ID, message ID,
+            and file name delimited with '_'
+            """
+            channel_id, msg_id, file_name = link.split("/")[4:]  # remove the domain
+            file_name = file_name.split("?", maxsplit = 1)[0]    # remove the arguments
+            return "_".join((channel_id, msg_id, file_name))     # convert to one string
+
         # don't reply to self
         if msg.author == self.bot.user:
             return
@@ -422,23 +432,17 @@ class RepostHandler(MessageAuthoritarian):
         if msg.embeds is None:
             return
 
-        # parse the links of the 
-        split_link = lambda link: link.split("/")[4:]
-        # remove link args
-        remove_args = lambda split_link: (*split_link[:2], split_link[2].split("?", maxsplit = 1)[0])
         # save each link if it
         with suppress(AttributeError):
             for embed in msg.embeds:
-                try:
-                    # get the id and file name
-                    id = "".join(remove_args(split_link(embed.url)))
-                    self.links[id]
-
+                # get the id and file name
+                id = parse_link(embed.url)
+                if id in self.links:
                     # the link has been saved, so delete the message
-                    await msg.channel.send(">={ No repostium in this discordium")
+                    await msg.channel.send("}=< No repostium in this discordium >={")
                     MessageAuthoritarian.last_msg = msg
                     await msg.delete(delay = 2)
-                except KeyError:  # save the link since it hasn't been saved
+                else:  # save the link
                     self.links[id] = D.datetime.now()
 
 
