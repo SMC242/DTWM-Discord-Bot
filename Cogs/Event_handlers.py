@@ -433,7 +433,7 @@ class RepostHandler(MessageAuthoritarian):
             return
 
         # save each link if it
-        with suppress(AttributeError):
+        with suppress(AttributeError):  # ignore embeds with no URL
             for embed in msg.embeds:
                 # get the id and file name
                 id = parse_link(embed.url)
