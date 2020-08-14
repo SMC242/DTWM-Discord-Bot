@@ -346,7 +346,7 @@ class MessageAuthoritarian(commands.Cog):
 
         # example
         if "ayaya" in msg.contents:
-            await msg.channel.send(">={")
+            await msg.channel.send(">={", delete_after = 20)
             MessageAuthoritarian.last_msg = msg
             await msg.delete(delay = 2)
 
@@ -390,7 +390,7 @@ class InstagramHandler(MessageAuthoritarian):
         # ones have a fixed size of 11
         for link in links:
             if len(link[28:]) > 11:  # https://www.instagram.com/p/ is 28 characters
-                await msg.channel.send("That link was private, brother. I will remove it " + "<:s_40k_adeptus_mechanicus_shocked:585598378721673226>")
+                await msg.channel.send("That link was private, brother. I will remove it " + "<:s_40k_adeptus_mechanicus_shocked:585598378721673226>", delete_after = 20)
                 MessageAuthoritarian.last_msg = msg  # cache the message in case of a false-positive
                 await msg.delete(delay = 2)
 
@@ -439,7 +439,8 @@ class RepostHandler(MessageAuthoritarian):
                 id = parse_link(embed.url)
                 if id in self.links:
                     # the link has been saved, so delete the message
-                    await msg.channel.send("}=< No repostium in this discordium >={")
+                    await msg.channel.send("}=< No repostium in this discordium >={",
+                                           delete_after = 20)
                     MessageAuthoritarian.last_msg = msg
                     await msg.delete(delay = 2)
                 else:  # save the link
