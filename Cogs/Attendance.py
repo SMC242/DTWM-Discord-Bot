@@ -28,13 +28,14 @@ class KickSuggestionMenu(react_menu.ReactTable):
         info = ("This is my opinion, my lord. " +
                 f"{self.stats[0]} of the outfit would be warned " +
                 f"and {self.stats[1]} would be kicked. " +
-                "Click the tick to kick the currently selected member " + 
+                "Click the ban hammer to kick the currently selected member " + 
                 "or click the X to skip them.")
 
         # initialise the ReactMenu
         super().__init__(headers, table_rows, ctx.bot,
                          ctx.channel, on_select = self.kick,
-                         on_reject = self.skip, message_text = info)
+                         on_reject = self.skip, message_text = info,
+                         select_emote_id = 594462835082526721)
 
     @staticmethod
     async def kick(self):

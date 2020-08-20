@@ -102,13 +102,18 @@ class ReactMenu:
             Any settings for the discord.Embed.
         """
         self.content = content
-        self.channel = channel
+        self._channel = channel
         self._bot = bot
         self.on_select = on_select
         self.on_reject = on_reject
         self.random_colour = random_colour
         self._content_index = 0
         self._starting = True  # don't check its reactions until this is False
+        self.next_emote_id = next_emote_id
+        self.last_emote_id = last_emote_id
+        self.select_emote_id = select_emote_id
+        self.reject_emote_id = reject_emote_id
+        self.msg = None
 
         # verify that field_names is parallel to content
         content_length = len(content)
@@ -127,18 +132,18 @@ class ReactMenu:
         # create the Embed with the first element of content
         embed = self.create_embed()
 
-        asyncio.get_event_loop().create_task(self.__ainit__(channel, embed, message_text,
+        asyncio.get_event_loop().create_task(self.__ainit__(embed, message_text,
                                                             next_emote_id, last_emote_id,
                                                             select_emote_id, reject_emote_id,
                                                             on_select, on_reject))
 
-    async def __ainit__(self, channel, embed, message_text,
+    async def __ainit__(self, embed, message_text,
                         next_emote_id, last_emote_id,
                         select_emote_id, reject_emote_id,
                         on_select, on_reject):
         """Send the initial message, bind to it, and set up the reactions"""
         # send the initial message
-        self.msg = await self.channel.send(content = message_text,
+        self.msg = await self._channel.send(content = message_text,
                                            embed = embed)
 
         # register the message
@@ -159,7 +164,7 @@ class ReactMenu:
 
         # populate emotes dict
         await asyncio.sleep(1)
-        self.msg = await self.channel.fetch_message(self.msg.id)  # refresh the Message instance once the reactions have been added
+        self.msg = await self._channel.fetch_message(self.msg.id)  # refresh the Message instance once the reactions have been added
         self.emotes = {r.emoji.id: callback_type for r, callback_type in 
                        zip(self.msg.reactions, ("on_last", "on_next", "on_select", "on_reject"))}
 
@@ -222,6 +227,22 @@ class ReactMenu:
         if int_colour > 16777215:
             int_colour = ReactMenu.create_colour()
         return int_colour
+
+    def __str__(self) -> str:
+        """Converts self to a string."""
+        return f"""({self.__class__} with attributes:
+        _bot: {self._bot}
+        msg: {self.msg}
+        content: {self.content}
+        field_names: {self.field_names}
+        embed_settings: {self.embed_settings}
+        _channel: {self._channel}
+        _content_index: {self._content_index}
+        next_emote_id: {self.next_emote_id}
+        last_emote_id: {self.last_emote_id}
+        select_emote_id: {self.select_emote_id:}
+        reject_emote_id: {self.reject_emote_id}
+        )"""
 
 
 class ReactTable(ReactMenu):
@@ -288,3 +309,11 @@ class ReactTable(ReactMenu):
 
         await self.msg.edit(embed = self.create_embed())
         self._content_index -= self.elements_per_page
+
+    def __str__(self) -> str:
+        """Converts self to string."""
+        return super().__str__()[:-1:] + f"""
+        headers: {self.headers}
+        elements_per_page: {self.elements_per_page}
+        inline: {self.inline}
+        )"""

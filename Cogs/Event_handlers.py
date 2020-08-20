@@ -11,6 +11,7 @@ from json import load
 from random import choice
 from Utils.mestils import list_join, search_word
 from inspect import iscoroutinefunction as iscorofunc
+from json import dumps
 
 # errors, message reactions
 # custom error types
@@ -326,11 +327,13 @@ class ReactMenuHandler(commands.Cog):
                                 or ((now - msg.created_at).seconds / 60) < 10}
         self.bound_messages = new_bound_messages
 
-    @commands.command()
+    @commands.command(aliases = ["SRM"])
     @commands.is_owner()
     async def show_react_menus(self, ctx):
         """Show all of the bound react menus. Debugging tool."""
-        await ctx.send(self.bound_messages)
+        await ctx.send("```\n" + 
+                       dumps(self.bound_messages, indent = 4, sort_keys = True, default = str) +
+                       "```")
 
 
 class MessageAuthoritarian(commands.Cog):
@@ -463,11 +466,13 @@ class RepostHandler(MessageAuthoritarian):
                 else:  # save the link
                     self.links[id] = D.datetime.now()
 
-    @commands.command()
+    @commands.command(aliases = ["SCa"])
     @commands.is_owner()
     async def show_cache(self, ctx):
         """Output all links that have been cached. Debugging tool."""
-        await ctx.send(self.links)
+        await ctx.send("```\n" + 
+                       dumps(self.links, indent = 4, sort_keys = True, default = str) +
+                       "```")
 
 
 def setup(bot):
