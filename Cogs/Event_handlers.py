@@ -323,8 +323,8 @@ class ReactMenuHandler(commands.Cog):
         # check if it was last interacted wtih >10 minutes ago
         now = D.datetime.utcnow()
         new_bound_messages = {menu.msg.id: menu for menu in self.bound_messages.values()
-                                if (msg.edited_at and ((now - msg.edited_at).seconds / 60) < 10) \
-                                or ((now - msg.created_at).seconds / 60) < 10}
+                                if (menu.msg.edited_at and ((now - menu.msg.edited_at).seconds / 60) < 10) \
+                                or ((now - menu.msg.created_at).seconds / 60) < 10}
         self.bound_messages = new_bound_messages
 
     @commands.command(aliases = ["SRM"])
