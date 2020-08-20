@@ -299,6 +299,9 @@ class ReactTable(ReactMenu):
 
         await self.msg.edit(embed = self.create_embed())
         self._content_index += self.elements_per_page
+        # prevent overflow
+        if self._content_index >=len(self.content) - 1:
+            self._content_index = 0
 
     @staticmethod
     async def on_last(self):
@@ -309,6 +312,9 @@ class ReactTable(ReactMenu):
 
         await self.msg.edit(embed = self.create_embed())
         self._content_index -= self.elements_per_page
+        # prevent underflow
+        if self._content_index < 0:
+            self._content_index = len(self.content) - 1
 
     def __str__(self) -> str:
         """Converts self to string."""

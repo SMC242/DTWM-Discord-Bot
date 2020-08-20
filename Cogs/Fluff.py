@@ -62,7 +62,7 @@ class DTWMChanWorship(commands.Cog):
 
     @commands.command(aliases = ["leaderboard", "TCu"])
     async def top_cultists(self, ctx):
-        """List the 5 most devout worshippers of DTWM-chan."""
+        """List the most devout worshippers of DTWM-chan."""
         # check if there has been no chants
         if not self.chants:
             return await ctx.send("The servitor bay is silent. We need more brothers to pray")
@@ -89,7 +89,7 @@ class DTWMChanWorship(commands.Cog):
                    ctx,
                    f"Our brothers have chanted {len(self.chants)} times in total. " + 
                    "Here are DTWM-chan's most loyal worshippers:",
-                   elements_per_page = 5,
+                   elements_per_page = 3,
                     )
         await typing_indicator.__aexit__(*[None] * 3)  # pretend that no errors happened
 
