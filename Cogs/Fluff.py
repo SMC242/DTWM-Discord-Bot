@@ -47,7 +47,7 @@ class DTWMChanWorship(commands.Cog):
         CHARACTER_CAP = 2000
         msg = " ".join(["DTWM"] * (len(self.chants) + 1))
         if len(msg) > CHARACTER_CAP:
-            msgs = [msg[chunk_num: chunk + CHARACTER_CAP]
+            msgs = [msg[chunk_num: chunk_num + CHARACTER_CAP]
                     for chunk_num in range(0, len(msg), CHARACTER_CAP)]
         else:
             msgs = [msg]
@@ -115,6 +115,14 @@ class DTWMChanWorship(commands.Cog):
                 (now - chant.timestamp).days <= period):  # check that it falls within the period
                 count += 1
         await ctx.send(f"{target_member.display_name} has chanted {count} times")
+
+    @commands.command(aliases = ["SCC"])
+    @commands.is_owner()
+    async def set_chant_count(self, ctx, count: int):
+        """Add a number of dummy chants to self.chants. Debugging tool."""
+        self.chants.extend([self.Chant(person = ctx.author,
+                                       timestamp = datetime.now())] * count)
+        await ctx.send(f"I have added {count} chants, Adept {ctx.author.display_name}.")
 
     
 def setup(bot: commands.Bot):
