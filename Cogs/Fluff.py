@@ -27,7 +27,7 @@ class DTWMChanWorship(commands.Cog):
         await ctx.send("I shall keep the rabble quiet for five minutes, my lord")
 
     @commands.command(aliases = ["pray", "hail", "heil", "praise"])
-    @commands.cooldown(1, 1, commands.BucketType.user)
+    @commands.cooldown(1, 30, commands.BucketType.user)
     async def chant(self, ctx):
         """Join the chorus of chanting in the name of DTWM-chan."""
         from Utils.common import bot_channel  # this was sometimes None so it had to be imported here
@@ -39,6 +39,9 @@ class DTWMChanWorship(commands.Cog):
         if self.silenced_at and (datetime.now() - self.silenced_at).total_seconds() // 60 < 5:
             return await ctx.send("The Watch Leaders wish you to be quiet to respect a fallen soul. " +
                                   "Please revere DTWM-chan silently")
+
+        # record the chant
+        self.chants.append(self.Chant(person = ctx.author, timestamp = datetime.now()))
 
         # create the DTWM chant and split it into chunks that can be sent
         CHARACTER_CAP = 2000
@@ -57,12 +60,15 @@ class DTWMChanWorship(commands.Cog):
                         "Thank you for your reverance " + get_title(ctx.author),
                         delete_after = 10)
 
-        # record the chant
-        self.chants.append(self.Chant(person = ctx.author, timestamp = datetime.now()))
-
-    @commands.command()
+    @commands.command(aliases = ["leaderboard", "TCu"])
     async def top_cultists(self, ctx):
         """List the 5 most devout worshippers of DTWM-chan."""
+        # check if there has been no chants
+        if not self.chants:
+            return await ctx.send("The servitor bay is silent. We need more brothers to pray")
+
+        # create typing prompt without indenting as the search is already pretty deep
+        typing_indicator = await ctx.typing().__aenter__()
         # get each unqiue person and prepare to count their chants
         leaderboard = [[person, 0] for person in
                                                 set((chant.person for chant in self.chants))]
@@ -72,26 +78,34 @@ class DTWMChanWorship(commands.Cog):
                 if row[0] == chant.person:
                     leaderboard[index][1] += 1
                     break
+
+        # convert people to string and sort by points
+        string_leaderboard = sorted([(person.display_name, points) for person, points in leaderboard],
+                                    key = lambda record: record[1], reverse = True)
     
         ReactTable(("Name", "Number of Chants"), 
-                   [(person.display_name, points) for person, points in leaderboard],  # convert people to string
+                   string_leaderboard,
                    self.bot,
                    ctx,
-                   "Here are DTWM-chan's most loyal:",
+                   f"Our brothers have chanted {len(self.chants)} times in total. " + 
+                   "Here are DTWM-chan's most loyal worshippers:",
                    elements_per_page = 5,
                     )
+        await typing_indicator.__aexit__(*[None] * 3)  # pretend that no errors happened
 
-    @commands.command()
+    @commands.command(aliases = ["my_chants", "GC", "chants"])
     async def get_chants(self, ctx, target: Union[Member, str] = None, days: int = None):
         """Get the number of chants a person has done. Invoke without a name to get your own count.
         Defaults to their lifetime count, but you can pass a number of days (E.G today = 0)."""
+        # check that there have been some chants
+        if not self.chants:
+            return await ctx.send("The servitor bay is silent. We need more brothers to pray")
+
         # get the Member object of the person
         if isinstance(target, str):
             target_member = ctx.guild.query_members(target)
-        elif not target:
-            target_member = ctx.author
         else:
-            target_member = target
+            target_member = target if target else ctx.author
 
         lifetime_check = days is None  # used for overriding the time check if it's a lifetime count
         now = datetime.now()
