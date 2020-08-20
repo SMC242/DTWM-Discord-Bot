@@ -236,8 +236,7 @@ class Attendance(commands.Cog):
                 react_menu.ReactTable(("ID", "Name"), await wrap(self),
                                   self.bot, ctx.channel,
                                   message_text = "They are ready to serve, my lord:",
-                                  elements_per_page = 5,
-                                  inline = False,
+                                  elements_per_page = 3,
                                   random_colour = True,
                                   )
             except ValueError:
@@ -257,9 +256,13 @@ class Attendance(commands.Cog):
         async with ctx.typing():
             try:
                 table_path = await wrap(self)
-                await ctx.send("Here are the results for this month, my lord:",
-                               file = File(table_path)
-                               )
+                react_menu.ReactTable(("Name", "Attendance (%)", "Away (yes or no)"),
+                                      await wrap(self),
+                                      self.bot,
+                                      ctx,
+                                      elements_per_page = 3,
+                                      random_colour = True,
+                                      )
             # handle no attendance data
             except ValueError:
                 await ctx.send("Our archives fail us... I cannot find any roll calls")
@@ -274,10 +277,12 @@ class Attendance(commands.Cog):
 
         async with ctx.typing():
             try:
-                table_path = await wrap(self)
-                await ctx.send("These are the results for this month's events, my lord:", 
-                               file = File(table_path)
-                               )
+                react_menu.ReactTable(("Event type", "Attendance %"), 
+                                      await wrap(self),
+                                      self.bot,
+                                      ctx,
+                                      elements_per_page = 2,
+                                      )
             # handle no attendance data
             except ValueError:
                 await ctx.send("Our archives fail us... I cannot find any roll calls")

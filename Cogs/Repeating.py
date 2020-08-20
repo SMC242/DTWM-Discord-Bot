@@ -25,7 +25,7 @@ class RepeatingTasks(commands.Cog):
             The object used to call attendance functions."""
 
     # ATTRIBUTES
-    EVENT_START_TIME = D.time(20, 00)  # in UTC
+    EVENT_START_TIME = D.time(19, 00)  # in UTC
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -74,6 +74,10 @@ class RepeatingTasks(commands.Cog):
             new_target = D.datetime.combine(D.date.min, self.EVENT_START_TIME)
             old_time = D.datetime.combine(D.date.min, now)
             run_in_seconds = (new_target - old_time).total_seconds()
+
+            # check that it's not after the event time
+            if run_in_seconds < 0:
+                return
 
             # wait until event time
             await async_sleep(run_in_seconds)

@@ -28,6 +28,7 @@ bot = commands.Bot(
                         type = ActivityType.playing, state = "Powering on...",
                         details = "The adepts have summoned me from my slumber."),
     case_insensitive = True,
+    allowed_mentions = AllowedMentions(everyone = False, roles = False),
     )
 
 # check that there is a token to run from
@@ -107,10 +108,6 @@ async def on_ready():
     # warn user if they're on the dev version
     if DEV_VERSION:
         print("WARNING: you are on the dev version. Change main.DEV_VERSION to False if you're a user")
-
-@bot.command()
-async def test(ctx):
-    print(await ctx.guild.query_members("benmitchellmtbV5"))
 
 if __name__ == "__main__":
     # get the token and start the bot

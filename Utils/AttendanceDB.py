@@ -215,10 +215,7 @@ class AttendanceDBWriter(db.DBWriter):
         sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)
 
         # create a table
-        return create_table( sorted_rows, 
-                                    f"table_at_{D.datetime.today().strftime('%H.%M.%S')}",
-                                    col_labels = ["Name", "Attendance (%)", "Away (yes or no)"]
-                                    )
+        return sorted_rows
 
     def get_att_per_event(self) -> str:
         """Get this month's average attendance for each event type
@@ -270,10 +267,7 @@ class AttendanceDBWriter(db.DBWriter):
         sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)
 
         # create table
-        return create_table(sorted_rows, 
-                                          f"table_at_{D.datetime.today().strftime('%H.%M.%S')}",
-                                          ("Event Type", "Average Attendance (%)")
-                                        )
+        return sorted_rows
 
     def get_member_att(self, name: str) -> Optional[str]:
         """Get the attendance % of a member.
@@ -352,7 +346,7 @@ class AttendanceDBWriter(db.DBWriter):
 	                                WHERE attendees.memberid = members.memberid
     	                                AND attendees.date like ?
                                     GROUP BY name
-                                    HAVING ratio <= 50;""", [target_month])
+                                    HAVING ratio <= 20;""", [target_month])
 
         if not rows:
             raise ValueError("No attendance data returned from the DB.")

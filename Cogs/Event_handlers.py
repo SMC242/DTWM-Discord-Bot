@@ -61,11 +61,11 @@ class ErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.MissingAnyRole):
             # create a grammatically correct list of the required roles
-            missing_roles = list(error.missing_roles)  # ensure it's a list for join()
+            missing_roles = list(*error.missing_roles)  # ensure it's a list for join()
             await ctx.send("You need to be " +
                            f"{'an ' if missing_roles[0][0].lower() in 'aeiou' else 'a '}" +
                            f"{list_join(missing_roles, 'or')}" +
-                           "to use that command!")
+                           " to use that command!")
 
         elif isinstance(error, commands.DisabledCommand):
             await ctx.send(f"I cannot do that, {title}. The Adepts are doing maintenance on this coroutine.")
@@ -319,13 +319,18 @@ class ReactMenuHandler(commands.Cog):
     @tasks.loop(minutes = 10)
     async def message_cleanup(self):
         """Stop tracking messages that are older than 10 minutes."""
-        for menu in self.bound_messages.values():
-            msg = menu.msg
-            now = D.datetime.utcnow()
-            # check if it was last interacted wtih >10 minutes ago
-            if (msg.edited_at and ((now - msg.edited_at).seconds / 60) > 10) \
-                or ((now - msg.created_at).seconds / 60) > 10:
-                menu.unregister()
+        # check if it was last interacted wtih >10 minutes ago
+        now = D.datetime.utcnow()
+        new_bound_messages = {menu.msg.id: menu for menu in self.bound_messages.values()
+                                if (msg.edited_at and ((now - msg.edited_at).seconds / 60) < 10) \
+                                or ((now - msg.created_at).seconds / 60) < 10}
+        self.bound_messages = new_bound_messages
+
+    @commands.command()
+    @commands.is_owner()
+    async def show_react_menus(self, ctx):
+        """Show all of the bound react menus. Debugging tool."""
+        await ctx.send(self.bound_messages)
 
 
 class MessageAuthoritarian(commands.Cog):
@@ -407,9 +412,8 @@ class RepostHandler(MessageAuthoritarian):
         """Removes all links that are more than 2 days old"""
         links_by_age = sorted(self.links.items(), key = lambda link, date: value)
         now = D.datetime.now()
-        for link, date in links_by_age:
-            if (now - date).days >= 2:
-                del self.links[link]
+        # this will replace self.links to avoid deleting during iteration
+        self.links = dict(filter(lambda date: (now - date).days < 2))
 
     @commands.Cog.listener()
     async def on_message(self, msg: Message):
@@ -420,9 +424,13 @@ class RepostHandler(MessageAuthoritarian):
             Converts a link into its channel ID, message ID,
             and file name delimited with '_'
             """
-            channel_id, msg_id, file_name = link.split("/")[4:]  # remove the domain
-            file_name = file_name.split("?", maxsplit = 1)[0]    # remove the arguments
-            return "_".join((channel_id, msg_id, file_name))     # convert to one string
+            try:
+                channel_id, msg_id, file_name = link.split("/")[4:]  # remove the domain
+                file_name = file_name.split("?", maxsplit = 1)[0]    # remove the arguments
+                return "_".join((channel_id, msg_id, file_name))     # convert to one string
+            except ValueError:
+                print(f"Parsing failed. Link: {link}")
+                return None
 
         # don't reply to self
         if msg.author == self.bot.user:
@@ -435,8 +443,17 @@ class RepostHandler(MessageAuthoritarian):
         # save each link if it
         with suppress(AttributeError):  # ignore embeds with no URL
             for embed in msg.embeds:
+                # check if it's an external link
+                link = embed.url
+                if "discord" not in link:
+                    self.links[link] = D.datetime.now()
+
                 # get the id and file name
-                id = parse_link(embed.url)
+                id = parse_link(link)
+                # check that an error didn't occur
+                if not id:
+                    return
+
                 if id in self.links:
                     # the link has been saved, so delete the message
                     await msg.channel.send("}=< No repostium in this discordium >={",
@@ -445,6 +462,12 @@ class RepostHandler(MessageAuthoritarian):
                     await msg.delete(delay = 2)
                 else:  # save the link
                     self.links[id] = D.datetime.now()
+
+    @commands.command()
+    @commands.is_owner()
+    async def show_cache(self, ctx):
+        """Output all links that have been cached. Debugging tool."""
+        await ctx.send(self.links)
 
 
 def setup(bot):

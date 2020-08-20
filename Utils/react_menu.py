@@ -169,20 +169,20 @@ class ReactMenu:
     @staticmethod
     async def on_next(self):
         """Show the next content when the next button is clicked."""
-        if self._content_index < len(self.content) - 1:
-            self._content_index += 1
-            await self.msg.edit(embed = self.create_embed())
-        else:
-            await self.channel.send("I can't move forward!")
+        if self._content_index == len(self.content) - 1:
+            self._content_index = 0  # go to the start of the list
+
+        self._content_index += 1
+        await self.msg.edit(embed = self.create_embed())
 
     @staticmethod
     async def on_last(self):
         """Show the previous content when the back button is clicked."""
-        if self._content_index > 0:
-            self._content_index -= 1
-            await self.msg.edit(embed = self.create_embed())
-        else:  # give the user feedback if they can't move
-            await self.channel.send("I can't move back!")
+        if self._content_index == 0:
+            self._content_index = len(self.content) - 1  # go to the end of the list
+
+        self._content_index -= 1
+        await self.msg.edit(embed = self.create_embed())
 
     def create_embed(self) -> Optional[Embed]:
         """Create an Embed from the content and field name
@@ -201,14 +201,6 @@ class ReactMenu:
                             value = self.content[self._content_index])
             return embed
 
-    def unregister(self):
-        """Untrack this message."""
-        # remove self from the tracked instances
-        # handling KeyError to avoid race conditions
-        with suppress(KeyError):
-            handler = self._bot.get_cog("ReactMenuHandler")
-            del handler.bound_messages[self.msg.id]
-
     @staticmethod
     def create_colour() -> int:
         """Create a random colour and return its code"""
@@ -223,7 +215,13 @@ class ReactMenu:
         # check that all zeroes weren't generated
         if len(colour) == 0:
             colour = ReactMenu.create_colour()
-        return int(colour)
+
+        # check that the number is in range
+        # it's necessary to separate this because int doesn't have __len__
+        int_colour = int(colour)
+        if int_colour > 16777215:
+            int_colour = ReactMenu.create_colour()
+        return int_colour
 
 
 class ReactTable(ReactMenu):
@@ -275,18 +273,18 @@ class ReactTable(ReactMenu):
     async def on_next(self):
         """Show the next content when the next button is clicked.
         Iterates in sets of self.elements_per_page"""
-        if self._content_index < len(self.content) - 1:
-            await self.msg.edit(embed = self.create_embed())
-            self._content_index += self.elements_per_page
-        else:
-            await self.channel.send("I can't move forward!")
+        if self._content_index == len(self.content) - 1:
+            self._content_index = 0  # go to the start of the list
+
+        await self.msg.edit(embed = self.create_embed())
+        self._content_index += self.elements_per_page
 
     @staticmethod
     async def on_last(self):
         """Show the previous content when the back button is clicked.
         Iterates in sets of self.elements_per_page"""
-        if self._content_index > 0:
-            await self.msg.edit(embed = self.create_embed())
-            self._content_index -= self.elements_per_page
-        else:  # give the user feedback if they can't move
-            await self.channel.send("I can't move back!")
+        if self._content_index == 0:
+            self._content_index = len(self.content) - 1  # go to the end of the list
+
+        await self.msg.edit(embed = self.create_embed())
+        self._content_index -= self.elements_per_page
