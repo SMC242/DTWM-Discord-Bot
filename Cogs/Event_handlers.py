@@ -435,6 +435,18 @@ class RepostHandler(MessageAuthoritarian):
                 print(f"Parsing failed. Link: {link}")
                 return None
 
+        async def check_duplicate(id: str):
+            """Check if the id is already in self.links. If so, delete the message.
+            Otherwise: cache the id."""
+            if id in self.links:
+                # the link has been saved, so delete the message
+                await msg.channel.send("}=< No repostium in this discordium >={",
+                                        delete_after = 20)
+                MessageAuthoritarian.last_msg = msg
+                await msg.delete(delay = 2)
+            else:  # save the link
+                self.links[id] = D.datetime.now()
+
         # don't reply to self
         if msg.author == self.bot.user:
             return
@@ -447,24 +459,16 @@ class RepostHandler(MessageAuthoritarian):
         with suppress(AttributeError):  # ignore embeds with no URL
             for embed in msg.embeds:
                 # check if it's an external link
-                link = embed.url
-                if "discord" not in link:
-                    self.links[link] = D.datetime.now()
+                if "discord" not in embed.url:
+                    id = embed.url
+                else:  # if it's a discord link
+                    # get the id and file name
 
-                # get the id and file name
-                id = parse_link(link)
-                # check that an error didn't occur
-                if not id:
-                    return
-
-                if id in self.links:
-                    # the link has been saved, so delete the message
-                    await msg.channel.send("}=< No repostium in this discordium >={",
-                                           delete_after = 20)
-                    MessageAuthoritarian.last_msg = msg
-                    await msg.delete(delay = 2)
-                else:  # save the link
-                    self.links[id] = D.datetime.now()
+                    id = parse_link(embed.url)
+                    # check that an error didn't occur
+                    if not id:
+                        return
+                await check_duplicate(id)
 
     @commands.command(aliases = ["SCa"])
     @commands.is_owner()
