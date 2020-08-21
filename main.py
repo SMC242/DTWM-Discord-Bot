@@ -3,7 +3,8 @@
 from discord import *
 from discord.ext import commands
 from typing import *
-import os
+from concurrent.futures._base import CancelledError
+import os, git
 from Utils import common
 from datetime import datetime
 from traceback import print_exc
@@ -93,6 +94,28 @@ async def toggle_command(ctx, name: str):
     else:
         await ctx.send("I cannot find that command, my lord")
 
+@bot.command()
+@commands.is_owner()
+async def patch(ctx):
+    """Attempt to pull the latest git commit
+    and replaced Cogs/, Text Files/, and Utils/
+    with the new files."""
+    # unload everything but the base commands
+    extensions = list(bot.extensions.keys()).copy()  # avoid deletion during iteration
+    for extension in extensions:
+        bot.unload_extension(extension)
+
+    # get the origin of the repo
+    repo = git.Repo(".")
+    origin = repo.remote()
+    # pull the new files
+    origin.fetch()
+    origin.pull()
+
+    # reload the extensions
+    for extension in extensions:
+        bot.load_extension(extension)
+
 @bot.listen()
 async def on_ready():
     """Control the behaviour when the bot starts."""
@@ -110,7 +133,8 @@ async def on_ready():
         print("WARNING: you are on the dev version. Change main.DEV_VERSION to False if you're a user")
 
 if __name__ == "__main__":
+    global TOKEN
     # get the token and start the bot
     with open("Text Files/token.txt") as f:
-        token = f.readline().strip("\n")
-    bot.run(token)
+        TOKEN = f.readline().strip("\n")
+    bot.run(TOKEN)
