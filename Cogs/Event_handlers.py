@@ -451,13 +451,17 @@ class RepostHandler(MessageAuthoritarian):
         if msg.author == self.bot.user:
             return
 
-        # check for embeds
+        # check for embeds and avoid embeds with no URL
         if msg.embeds is None:
             return
 
         # save each link if it
         with suppress(AttributeError):  # ignore embeds with no URL
             for embed in msg.embeds:
+                # avoid empty embed
+                if embed.url == embed._EmptyEmbed:
+                    print(f"Empty embed ignored. Object: {embed}")
+                    return
                 # check if it's an external link
                 if "discord" not in embed.url:
                     id = embed.url

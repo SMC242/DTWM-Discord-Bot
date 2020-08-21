@@ -130,7 +130,7 @@ class ReactMenu:
         self.embed_settings = embed_settings
 
         # create the Embed with the first element of content
-        embed = self.create_embed()
+        embed = self.create_embed(*self.create_slice())
 
         asyncio.get_event_loop().create_task(self.__ainit__(embed, message_text,
                                                             next_emote_id, last_emote_id,
@@ -174,37 +174,52 @@ class ReactMenu:
     @staticmethod
     async def on_next(self):
         """Show the next content when the next button is clicked."""
-        if self._content_index == len(self.content) - 1:
-            self._content_index = 0  # go to the start of the list
-
         self._content_index += 1
-        await self.msg.edit(embed = self.create_embed())
+        slices = self.create_slice()
+        # prevent overflow
+        if not slices[0]:
+            self._content_index = 0
+            slices = self.create_slice()
+        await self.msg.edit(embed = self.create_embed(*slices))
 
     @staticmethod
     async def on_last(self):
         """Show the previous content when the back button is clicked."""
-        if self._content_index == 0:
-            self._content_index = len(self.content) - 1  # go to the end of the list
-
         self._content_index -= 1
-        await self.msg.edit(embed = self.create_embed())
+        slices = self.create_slice()
+        # prevent underflow
+        if not slices[0]:
+            self._content_index = len(self.content) - 1
+            slices = self.create_slice()
+        await self.msg.edit(embed = self.create_embed(*slices))
 
-    def create_embed(self) -> Optional[Embed]:
+    def create_slice(self) -> Tuple[Optional[Any], Optional[Any]]:
+        """Return a slice of self.content and self.field_names
+        between self._content_index and self._content_index + 1.
+
+        RETURNS
+        The sliced list. It will be empty if the upper bound is fully out of range."""
+        return (self.content[self._content_index:
+                            self._content_index + 1],
+                self.field_names[self._content_index:
+                            self._content_index + 1])
+
+    def create_embed(self, content_slice: List[Any],
+                     field_names_slice: List[Any]) -> Optional[Embed]:
         """Create an Embed from the content and field name
         at _content_index using embed_settings.
         
         RETURNS
         None: there is no more content
         Embed: the Embed was successfully created."""
-        with suppress(IndexError):
-            # generate a random colour
-            if self.random_colour:
-                self.embed_settings["colour"] = self.create_colour()
+        # generate a random colour
+        if self.random_colour:
+            self.embed_settings["colour"] = self.create_colour()
 
-            embed = Embed(**self.embed_settings)
-            embed.add_field(name = self.field_names[self._content_index],
-                            value = self.content[self._content_index])
-            return embed
+        embed = Embed(**self.embed_settings)
+        embed.add_field(name = content_slice,
+                        value = field_names_slice)
+        return embed
 
     @staticmethod
     def create_colour() -> int:
@@ -268,53 +283,60 @@ class ReactTable(ReactMenu):
 
         super().__init__(*args, **kwargs)
 
-    def create_embed(self) -> Optional[Embed]:
-        """Creates a table-like Embed."""
-        with suppress(IndexError):
-            # deciding how many rows to show per page
-            portion = slice(self._content_index,
-                            self._content_index + self.elements_per_page)
+    def create_slice(self) -> List[List[Optional[Any]]]:
+        """Return a slice of self.content between self._content_index
+        and self._content_index + self.elements_per_page.
+        It has to return an extra layer of list due to the design of ReactMenu.__init__
 
-            # generate a random colour
-            if self.random_colour:
-                self.embed_settings["colour"] = self.create_colour()
-            embed = Embed(**self.embed_settings)
+        RETURNS
+        The sliced list. It will be empty if the upper bound is fully out of range."""
+        return [self.content[self._content_index:
+                            self._content_index + self.elements_per_page]]
 
-            # add the rows
-            inline = self.inline  # avoid the overhead of accessing attrs
-            for row in self.content[portion]:
-                for header, value in zip(self.headers, row):
-                    embed.add_field(name = header, value = value,
-                                    inline = inline)
-                # add a break between rows
-                embed.add_field(name = "||\_-\_-\_-\_-\_-\_||", value = "||**-\_-\_-\_-\_-\_-**||")
-            return embed
+    def create_embed(self, slice_: List[Any]) -> Optional[Embed]:
+        """Creates a table-like Embed.
+        
+        ARGUMENTS
+        slice_: the slice from self.create_slice"""
+        # generate a random colour
+        if self.random_colour:
+            self.embed_settings["colour"] = self.create_colour()
+        embed = Embed(**self.embed_settings)
+
+        # add the rows
+        inline = self.inline  # avoid the overhead of accessing attrs
+        for row in slice_:
+            for header, value in zip(self.headers, row):
+                embed.add_field(name = header, value = value,
+                                inline = inline)
+            # add a break between rows
+            embed.add_field(name = "||\_-\_-\_-\_-\_-\_||", value = "||**-\_-\_-\_-\_-\_-**||")
+        return embed
 
     @staticmethod
     async def on_next(self):
         """Show the next content when the next button is clicked.
-        Iterates in sets of self.elements_per_page"""
-        if self._content_index == len(self.content) - 1:
-            self._content_index = 0  # go to the start of the list
-
-        await self.msg.edit(embed = self.create_embed())
+        Iterates in sets of self.elements_per_page"""     
         self._content_index += self.elements_per_page
-        # prevent overflow
-        if self._content_index >=len(self.content) - 1:
+        slice_ = self.create_slice()
+        # start from 0 if at end of list
+        if not slice_[0]:
             self._content_index = 0
+            slice_ = self.create_slice()
+        await self.msg.edit(embed = self.create_embed(*slice_))
 
     @staticmethod
     async def on_last(self):
         """Show the previous content when the back button is clicked.
         Iterates in sets of self.elements_per_page"""
-        if self._content_index == 0:
-            self._content_index = len(self.content) - 1  # go to the end of the list
-
-        await self.msg.edit(embed = self.create_embed())
+        # go to the end of the list if at the start
         self._content_index -= self.elements_per_page
-        # prevent underflow
-        if self._content_index < 0:
+        slice_ = self.create_slice()
+        # start from end if at start of list
+        if not slice_[0]:
             self._content_index = len(self.content) - 1
+            slice_ = self.create_slice()
+        await self.msg.edit(embed = self.create_embed(*slice_))
 
     def __str__(self) -> str:
         """Converts self to string."""
