@@ -93,13 +93,13 @@ async def toggle_command(ctx, name: str):
     else:
         await ctx.send("I cannot find that command, my lord")
 
-@bot.command()
+@bot.command(aliases = ["update"])
 @commands.is_owner()
 async def patch(ctx):
     """Attempt to pull the latest git commit
     and replaced Cogs/, Text Files/, and Utils/
     with the new files."""
-    import git
+    import git, importlib
     from Utils.mestils import send_as_chunks
     async with ctx.typing():
         try:
@@ -111,18 +111,24 @@ async def patch(ctx):
             # get the origin of the repo
             repo = git.Repo(".")
             origin = repo.remote()
-            # pull the new files
-            origin.fetch()
-            origin.pull()
+            # pull the new files and get summaries
+            info = origin.pull()
+            info_string = '\n'.join((ele.commit.summary for ele in info))
 
             # reload the extensions
             for extension in extensions:
                 bot.load_extension(extension)
-            await ctx.send("Patched successfully!")
-        except Exception as err:
-            await ctx.send("Patching failed. Error: ```\n")
+
+            # reload utils
+            for util in (common,):
+                importlib.reload(util)
+            await ctx.send("Patched successfully! Summary titles (pulls):\n" + 
+                           info_string)
+        except Exception as err:  # dump error to chat
+            await ctx.send("Patching failed. Error:")
             tb_lines = format_exception(type(err), err,
-                                        err.__traceback__)
+                                                err.__traceback__)
+            tb_lines[0] = "```" + tb_lines[0]
             tb = "\n".join(tb_lines) + f"Occured at: {datetime.now().time()}```"
             await send_as_chunks(tb, ctx)
 
