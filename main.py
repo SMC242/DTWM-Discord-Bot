@@ -3,11 +3,10 @@
 from discord import *
 from discord.ext import commands
 from typing import *
-from concurrent.futures._base import CancelledError
-import os, git
+import os
 from Utils import common
 from datetime import datetime
-from traceback import print_exc
+from traceback import format_exception, print_exc
 from BenUtils.searching import binarySearch
 
 # dev settings
@@ -100,21 +99,31 @@ async def patch(ctx):
     """Attempt to pull the latest git commit
     and replaced Cogs/, Text Files/, and Utils/
     with the new files."""
-    # unload everything but the base commands
-    extensions = list(bot.extensions.keys()).copy()  # avoid deletion during iteration
-    for extension in extensions:
-        bot.unload_extension(extension)
+    import git
+    from Utils.mestils import send_as_chunks
+    try:
+        # unload everything but the base commands
+        extensions = list(bot.extensions.keys()).copy()  # avoid deletion during iteration
+        for extension in extensions:
+            bot.unload_extension(extension)
 
-    # get the origin of the repo
-    repo = git.Repo(".")
-    origin = repo.remote()
-    # pull the new files
-    origin.fetch()
-    origin.pull()
+        # get the origin of the repo
+        repo = git.Repo(".")
+        origin = repo.remote()
+        # pull the new files
+        origin.fetch()
+        origin.pull()
 
-    # reload the extensions
-    for extension in extensions:
-        bot.load_extension(extension)
+        # reload the extensions
+        for extension in extensions:
+            bot.load_extension(extension)
+        await ctx.send("Patched successfully!")
+    except Exception as err:
+        await ctx.send("Patching failed. Error: ```\n")
+        tb_lines = format_exception(type(err), err,
+                                              err.__traceback__)
+        tb = "\n".join(tb_lines) + f"Occured at: {datetime.now().time()}```"
+        await send_as_chunks(tb, ctx)
 
 @bot.listen()
 async def on_ready():

@@ -7,6 +7,7 @@ from Utils.common import leader_roles
 from datetime import datetime
 from asyncio import sleep as async_sleep
 from Utils.memtils import get_title, NameParser
+from Utils.mestils import send_as_chunks
 from Utils.react_menu import ReactTable
 from json import dumps
 
@@ -45,19 +46,11 @@ class DTWMChanWorship(commands.Cog):
         # record the chant
         self.chants.append(self.Chant(name = ctx.author.display_name, timestamp = datetime.now()))
 
-        # create the DTWM chant and split it into chunks that can be sent
-        CHARACTER_CAP = 2000
+        # create the DTWM chant
         msg = " ".join(["DTWM"] * (len(self.chants)))
-        if len(msg) > CHARACTER_CAP:
-            msgs = [msg[chunk_num: chunk_num + CHARACTER_CAP]
-                    for chunk_num in range(0, len(msg), CHARACTER_CAP)]
-        else:
-            msgs = [msg]
 
         # send the messages
-        for msg in msgs:
-            await ctx.send(msg)
-            await async_sleep(1.5)
+        await send_as_chunks(msg, ctx)
         await ctx.send("DTWM-chan's light has reached us all. " + 
                         "Thank you for your reverance " + get_title(ctx.author),
                         delete_after = 10)

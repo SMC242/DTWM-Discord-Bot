@@ -9,7 +9,7 @@ import datetime as D, traceback
 from asyncio import get_event_loop
 from json import load
 from random import choice
-from Utils.mestils import list_join, search_word
+from Utils.mestils import list_join, search_word, send_as_chunks
 from inspect import iscoroutinefunction as iscorofunc
 from json import dumps
 
@@ -331,9 +331,9 @@ class ReactMenuHandler(commands.Cog):
     @commands.is_owner()
     async def show_react_menus(self, ctx):
         """Show all of the bound react menus. Debugging tool."""
-        await ctx.send("```\n" + 
+        await send_as_chunks("```\n" + 
                        dumps(self.bound_messages, indent = 4, sort_keys = True, default = str) +
-                       "```")
+                       "```", ctx)
 
 
 class MessageAuthoritarian(commands.Cog):
@@ -478,9 +478,9 @@ class RepostHandler(MessageAuthoritarian):
     @commands.is_owner()
     async def show_cache(self, ctx):
         """Output all links that have been cached. Debugging tool."""
-        await ctx.send("```\n" + 
+        await send_as_chunks("```\n" + 
                        dumps(self.links, indent = 4, sort_keys = True, default = str) +
-                       "```")
+                       "```", ctx)
 
 
 def setup(bot):

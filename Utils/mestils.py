@@ -1,7 +1,9 @@
 """Utils relating to sending or parsing messages."""
 
 from typing import *
+from discord.abc import Messageable
 from matplotlib import pyplot, transforms
+from asyncio import sleep as async_sleep
 import os, re, datetime as D
 
 # TODO: create a Messagable.send wrapper that chops large messages down into smaller messages
@@ -87,3 +89,29 @@ def get_instagram_links(msg: str) -> List[Optional[str]]:
     List[str]: some links found"""
     return re.findall("https:\/\/www\.instagram\.com\/p\/\w*|[-]",
                      msg)
+
+def chunk_message(msg: str) -> Tuple[str]:
+    """Split the input string into chunks of 2k characters or less."""
+    # create the DTWM chant and split it into chunks that can be sent
+    CHARACTER_CAP = 2000
+    if len(msg) > CHARACTER_CAP:
+        return [msg[chunk_num: chunk_num + CHARACTER_CAP]
+                for chunk_num in range(0, len(msg), CHARACTER_CAP)]
+    else:
+        return [msg]
+
+async def send_as_chunks(msg: str, target: Messageable,
+                         delay: float = 1, **send_kwargs):
+    """Wrapper for chunk_messages that also sends the messages
+    at a rate of 1/sec
+    
+    ARGUMENTS
+    msg: the message to chunk and send.
+    target: any channel, User, or Context to send the messages to.
+    delay: the delay between messages.
+    **send_kwargs: any kwargs for Messageable.send()
+    """
+    msgs = chunk_message(msg)
+    for msg in msgs:
+        await target.send(msg)
+        async_sleep(delay, **send_kwargs)
