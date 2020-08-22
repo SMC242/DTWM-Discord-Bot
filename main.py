@@ -101,29 +101,30 @@ async def patch(ctx):
     with the new files."""
     import git
     from Utils.mestils import send_as_chunks
-    try:
-        # unload everything but the base commands
-        extensions = list(bot.extensions.keys()).copy()  # avoid deletion during iteration
-        for extension in extensions:
-            bot.unload_extension(extension)
+    async with ctx.typing():
+        try:
+            # unload everything but the base commands
+            extensions = list(bot.extensions.keys()).copy()  # avoid deletion during iteration
+            for extension in extensions:
+                bot.unload_extension(extension)
 
-        # get the origin of the repo
-        repo = git.Repo(".")
-        origin = repo.remote()
-        # pull the new files
-        origin.fetch()
-        origin.pull()
+            # get the origin of the repo
+            repo = git.Repo(".")
+            origin = repo.remote()
+            # pull the new files
+            origin.fetch()
+            origin.pull()
 
-        # reload the extensions
-        for extension in extensions:
-            bot.load_extension(extension)
-        await ctx.send("Patched successfully!")
-    except Exception as err:
-        await ctx.send("Patching failed. Error: ```\n")
-        tb_lines = format_exception(type(err), err,
-                                              err.__traceback__)
-        tb = "\n".join(tb_lines) + f"Occured at: {datetime.now().time()}```"
-        await send_as_chunks(tb, ctx)
+            # reload the extensions
+            for extension in extensions:
+                bot.load_extension(extension)
+            await ctx.send("Patched successfully!")
+        except Exception as err:
+            await ctx.send("Patching failed. Error: ```\n")
+            tb_lines = format_exception(type(err), err,
+                                        err.__traceback__)
+            tb = "\n".join(tb_lines) + f"Occured at: {datetime.now().time()}```"
+            await send_as_chunks(tb, ctx)
 
 @bot.listen()
 async def on_ready():
