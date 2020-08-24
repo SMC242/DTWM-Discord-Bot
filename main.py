@@ -114,14 +114,6 @@ async def patch(ctx):
             # pull the new files and get summaries
             info = origin.pull()
             info_string = '\n'.join((ele.commit.summary for ele in info))
-
-            # reload the extensions
-            for extension in extensions:
-                bot.load_extension(extension)
-
-            # reload utils
-            for util in (common,):
-                importlib.reload(util)
             await ctx.send("Patched successfully! Summary titles (pulls):\n" + 
                            info_string)
         except Exception as err:  # dump error to chat
@@ -131,6 +123,27 @@ async def patch(ctx):
             tb_lines[0] = "```" + tb_lines[0]
             tb = "\n".join(tb_lines) + f"Occured at: {datetime.now().time()}```"
             await send_as_chunks(tb, ctx)
+        finally:
+            # reload the extensions
+            for extension in extensions:
+                bot.load_extension(extension)
+
+            # reload utils
+            for util in (common,):
+                importlib.reload(util)
+
+@bot.command(aliases = ["reload"])
+@commands.is_owner()
+async def reload_cogs(ctx):
+    """Restart all cogs and utils."""
+    extensions = list(bot.extensions.keys()).copy()  # avoid deletion during iteration
+    # reload the extensions
+    for extension in extensions:
+        bot.reload_extension(extension)
+
+    # reload utils
+    for util in (common,):
+        importlib.reload(util)
 
 @bot.listen()
 async def on_ready():
