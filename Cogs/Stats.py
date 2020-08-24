@@ -29,7 +29,7 @@ class TrainingWeeks(commands.Cog):
         #find this week's monday
         today = D.date.today()
         
-        topics = ['aerial superiority', 'armour support']
+        topics = ['combined arms control', 'armour support']
 
         _, week_num, _ = today.isocalendar()
         # NOTE: 1st week: air, 2nd week: armour, 3rd week: air, etc.
