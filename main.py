@@ -7,6 +7,7 @@ import os
 from Utils import common
 from datetime import datetime
 from traceback import format_exception, print_exc
+from Utils.mestils import send_as_chunks
 from BenUtils.searching import binarySearch
 
 # dev settings
@@ -24,7 +25,8 @@ bot = commands.Bot(
     f"{'dev' if DEV_VERSION else 'ab'}!",
     description = description,
     owner_ids = (395598378387636234, 515163362062237716),
-    activity = Activity(name = "Waking up...", url = "https://joindtwm.net",
+    activity = Activity(name = f"Waking up...{' [Testing]' if DEV_VERSION else ''}",
+                        url = "https://joindtwm.net",
                         type = ActivityType.playing, state = "Powering on...",
                         details = "The adepts have summoned me from my slumber."),
     case_insensitive = True,
@@ -100,7 +102,6 @@ async def patch(ctx):
     and replaced Cogs/, Text Files/, and Utils/
     with the new files."""
     import git, importlib
-    from Utils.mestils import send_as_chunks
     async with ctx.typing():
         try:
             # unload everything but the base commands
