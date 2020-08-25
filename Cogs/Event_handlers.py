@@ -459,7 +459,7 @@ class RepostHandler(MessageAuthoritarian):
         with suppress(AttributeError):  # ignore embeds with no URL
             for embed in msg.embeds:
                 # avoid empty embed
-                if embed.url == embed._EmptyEmbed:
+                if embed.url == Embed.Empty:
                     print(f"Empty embed ignored. Object: {embed}")
                     return
                 # check if it's an external link
