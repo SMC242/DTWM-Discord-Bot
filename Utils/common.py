@@ -26,47 +26,6 @@ extra_roles = (
 bot_channel = None
 server = None
 error_channel = None
-# roles are defined below Rank
-
-class Rank:
-    """
-    Dataclass for outfit ranks
-    
-    ATTRIBUTES
-    attendance_floor: float
-        The minimum attendance needed to stay in the outfit for this rank.
-    name: str
-        The name of the rank.
-    is_leader: bool
-        Whether they're considered leaders.
-    """
-
-    def __init__(self, name: str, attendance_floor: float = 50, is_leader: bool = False):
-        """
-        ARGUMENTS
-        name: str
-            The name of the rank.
-        attendance_floor:
-            The minimum attendance needed to stay in the outfit for this rank.
-        is_leader: bool
-            Whether they're considered leaders.
-        """
-        self.name = name
-        self.attedance_floor = attendance_floor
-        self.is_leader = is_leader
-
-    def meets_attendance(self, attendance_ratio: float) -> bool:
-        """Checks whether the input attendance % is above this rank's requirement"""
-        return self.attendance_floor <= attendance_ratio
-
-
-# Ranks
-Ogryn = Rank("Ogryn Auxiliary", 8)
-Scout = Rank("Scout", 50)
-Keeper = Rank("Keeper", 40)
-Champion = Rank("Champion", 30, True)
-Chaplain = Rank("Chaplain", 30, True)
-WatchLeader = Rank("Watch Leader", 20, True)
 
 async def wait_until_loaded(wait_for: Bot):
     """Wait until the bot is ready, then load it."""
