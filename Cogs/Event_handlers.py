@@ -331,9 +331,9 @@ class ReactMenuHandler(commands.Cog):
     @commands.is_owner()
     async def show_react_menus(self, ctx):
         """Show all of the bound react menus. Debugging tool."""
-        await send_as_chunks("```\n" + 
-                       dumps(self.bound_messages, indent = 4, sort_keys = True, default = str) +
-                       "```", ctx)
+        await send_as_chunks(
+                       dumps(self.bound_messages, indent = 4, sort_keys = True, default = str),
+                       ctx, code_block = True)
 
 
 class MessageAuthoritarian(commands.Cog):
@@ -478,9 +478,9 @@ class RepostHandler(MessageAuthoritarian):
     @commands.is_owner()
     async def show_cache(self, ctx):
         """Output all links that have been cached. Debugging tool."""
-        await send_as_chunks("```\n" + 
-                       dumps(self.links, indent = 4, sort_keys = True, default = str) +
-                       "```", ctx)
+        await send_as_chunks(
+                       dumps(self.links, indent = 4, sort_keys = True, default = str),
+                       ctx, code_block = True)
 
 
 def setup(bot):

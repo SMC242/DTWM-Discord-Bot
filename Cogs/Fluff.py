@@ -143,10 +143,9 @@ class DTWMChanWorship(commands.Cog):
     @commands.is_owner()
     async def print_chants(self, ctx):
         """Output self.chants. Debugging tool."""
-        await send_as_chunks("```\n" + 
-                             dumps(self.chants, indent = 4, sort_keys = True, default = str) +
-                             "```",
-                       ctx)
+        await send_as_chunks(
+                             dumps(self.chants, indent = 4, sort_keys = True, default = str),
+                             ctx, code_block = True)
 
     
 def setup(bot: commands.Bot):

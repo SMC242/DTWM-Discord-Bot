@@ -124,9 +124,8 @@ async def patch(ctx):
             await ctx.send("Patching failed. Error:")
             tb_lines = format_exception(type(err), err,
                                                 err.__traceback__)
-            tb_lines[0] = "```" + tb_lines[0]
-            tb = "\n".join(tb_lines) + f"Occured at: {datetime.now().time()}```"
-            await send_as_chunks(tb, ctx)
+            tb = "\n".join(tb_lines) + f"Occured at: {datetime.now().time()}"
+            await send_as_chunks(tb, ctx, code_block = True)
         finally:
             # reload the extensions
             for extension in extensions:

@@ -88,18 +88,22 @@ def get_instagram_links(msg: str) -> List[Optional[str]]:
     return re.findall("https:\/\/www\.instagram\.com\/p\/\w*|[-]",
                      msg)
 
-def chunk_message(msg: str) -> Tuple[str]:
+def chunk_message(msg: str, code_block: bool = False) -> Tuple[str]:
     """Split the input string into chunks of 2k characters or less."""
-    # create the DTWM chant and split it into chunks that can be sent
     CHARACTER_CAP = 2000
+    if code_block:  # code blocks require 7 characters
+        CHARACTER_CAP -= 7
+    # split the message into chunks that can be sent
     if len(msg) > CHARACTER_CAP:
-        return [msg[chunk_num: chunk_num + CHARACTER_CAP]
+        return [f"```\n{msg[chunk_num: chunk_num + CHARACTER_CAP]}```"  # create code block for each message
+                if code_block else  msg[chunk_num: chunk_num + CHARACTER_CAP]
                 for chunk_num in range(0, len(msg), CHARACTER_CAP)]
     else:
         return [msg]
 
 async def send_as_chunks(msg: str, target: Messageable,
-                         delay: float = 1, **send_kwargs):
+                         delay: float = 1, code_block: bool = False,
+                        **send_kwargs):
     """Wrapper for chunk_messages that also sends the messages
     at a rate of 1/sec
     
@@ -107,9 +111,10 @@ async def send_as_chunks(msg: str, target: Messageable,
     msg: the message to chunk and send.
     target: any channel, User, or Context to send the messages to.
     delay: the delay between messages.
+    code_block: whether to format the messages as code blocks.
     **send_kwargs: any kwargs for Messageable.send()
     """
-    msgs = chunk_message(msg)
+    msgs = chunk_message(msg, code_block)
     for msg in msgs:
-        await target.send(msg)
-        async_sleep(delay, **send_kwargs)
+        await target.send(msg, **send_kwargs)
+        async_sleep(delay)
