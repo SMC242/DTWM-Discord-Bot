@@ -10,6 +10,8 @@ from json import load
 from random import choice
 import datetime as D, os
 from traceback import print_exc
+from sqlite3 import OperationalError
+from contextlib import suppress
 
 class RepeatingTasks(commands.Cog):
     """Any repeating tasks.
@@ -141,7 +143,7 @@ class RepeatingTasks(commands.Cog):
         """Add a new day to the DB unless it's Saturday.
         NOTE: This method doesn't need to check if a day passed
         because the interface ignores the query if the day was already added."""
-        try:
+        with suppress(OperationalError):  # suppress locked error
             # don't add Saturdays
             day = D.datetime.today().date().weekday()
             if day == 5:
@@ -162,8 +164,6 @@ class RepeatingTasks(commands.Cog):
                 }
 
             self.att.db.new_day(event_types[day])
-        except:
-            print_exc()
 
     @tasks.loop(hours = 12)
     async def check_registered_members(self):
