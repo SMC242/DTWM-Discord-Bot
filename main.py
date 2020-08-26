@@ -79,6 +79,9 @@ async def close(ctx):
     await ctx.send("Power core depleted. Shutting down...")
     print(f"Ow! That hurt @{ctx.author}")
     await bot.logout()
+    # close the script
+    from sys import exit
+    exit(0)
 
 @bot.command(aliases = ["TC"])
 @commands.is_owner()

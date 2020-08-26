@@ -10,14 +10,25 @@ from Utils.memtils import get_title, NameParser
 from Utils.mestils import send_as_chunks
 from Utils.react_menu import ReactTable
 from json import dumps
+from functools import wraps
 
+def has_chanted():
+    """Check if the person has chanted before.
+    If they haven't, initialise their list"""
+    async def inner(ctx):
+        cog = ctx.bot.get_cog("DTWMChanWorship")
+        name = ctx.author.display_name
+        if name not in cog.chants:
+            cog.chants[name] = []
+        return True
+    return commands.check(inner)
+    
 class DTWMChanWorship(commands.Cog):
     """This Cog handles chanting 'DTWM'"""
-    Chant: Tuple[str, datetime] = namedtuple("chant", ("name", "timestamp"))
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.chants: List[self.Chant] = []
+        self.chants: Dict[str, List[datetime]] = {} # format: {name: List of chant timestamps[]}
         self.silenced_at: datetime = None  # when the bot was last silenced
 
     @commands.command(aliases = ["silence", "shut_up", "clear_comms"])
@@ -29,8 +40,17 @@ class DTWMChanWorship(commands.Cog):
         self.silenced_at = datetime.now()
         await ctx.send("I shall keep the rabble quiet for five minutes, my lord")
 
-    @commands.command(aliases = ["pray", "hail", "heil", "praise"])
+    @property
+    def chants_number(self) -> int:
+        """Get the total number of chants"""
+        total = 0
+        for person_chants in self.chants.values():
+            total += len(person_chants)
+        return total
+    
+    @commands.command(aliases = ["pray", "hail", "praise"])
     @commands.cooldown(1, 30, commands.BucketType.user)
+    @has_chanted()
     async def chant(self, ctx):
         """Join the chorus of chanting in the name of DTWM-chan."""
         from Utils.common import bot_channel  # this was sometimes None so it had to be imported here
@@ -44,10 +64,10 @@ class DTWMChanWorship(commands.Cog):
                                   "Please revere DTWM-chan silently")
 
         # record the chant
-        self.chants.append(self.Chant(name = ctx.author.display_name, timestamp = datetime.now()))
+        self.chants[ctx.author.display_name].append(datetime.now())
 
         # create the DTWM chant
-        msg = " ".join(["DTWM"] * (len(self.chants)))
+        msg = " ".join(["DTWM"] * self.chants_number)
 
         # send the messages
         await send_as_chunks(msg, ctx)
@@ -64,15 +84,9 @@ class DTWMChanWorship(commands.Cog):
             return await ctx.send("The servitor bay is silent. We need more brothers to pray")
 
         async with ctx.typing():
-            # get each unqiue person and prepare to count their chants
-            leaderboard = [[name, 0] for name in
-                                                    set((chant.name for chant in self.chants))]
-            # for each message, find its author and increment their points
-            for chant in self.chants:
-                for index, row in enumerate(leaderboard):
-                    if row[0] == chant.name:
-                        leaderboard[index][1] += 1
-                        break
+            # get each person's chants
+            leaderboard = [(name, len(person_chants)) for name, person_chants
+                           in self.chants.items()]
     
             ReactTable(("Name", "Number of Chants"), 
                        sorted(leaderboard,  # sort by points
@@ -103,30 +117,36 @@ class DTWMChanWorship(commands.Cog):
             else:
                 return await ctx.send("That person does not exist, " + get_title(ctx.author))
 
+        # check if the person has chanted
+        if target_name not in self.chants:
+            return await ctx.send(f"{target_name} has not joined our choir!")
+
+        # count chants within the period
         lifetime_check = days is None  # used for overriding the time check if it's a lifetime count
         now = datetime.now()
         count = 0
-        for chant in self.chants:
-            if chant.name == target_name and (lifetime_check or \
-                (now - chant.timestamp).days <= days):  # check that it falls within the period
+        for timestamp in self.chants[target_name]:
+            # check that it falls within the period
+            if (lifetime_check or (now - timestamp).days <= days):
                 count += 1
         await ctx.send(f"{target_name} has chanted {count} time{'s' if count > 1 else ''}")
 
     @commands.command(aliases = ["SCC"])
     @commands.is_owner()
+    @has_chanted()
     async def set_chant_count(self, ctx, count: int):
         """Add a number of dummy chants to self.chants. Debugging tool."""
-        self.chants.extend([self.Chant(person = ctx.author,
-                                       timestamp = datetime.now())] * count)
+        self.chants[ctx.author.display_name].extend([datetime.now()] * count)
         await ctx.send(f"I have added {count} chants, Adept {ctx.author.display_name}.")
 
     @commands.command(aliases = ["PC"])
     @commands.is_owner()
     async def print_chants(self, ctx):
         """Output self.chants. Debugging tool."""
-        await ctx.send("```\n" + 
-                       dumps(self.chants, indent = 4, sort_keys = True, default = str) +
-                       "```")
+        await send_as_chunks("```\n" + 
+                             dumps(self.chants, indent = 4, sort_keys = True, default = str) +
+                             "```",
+                       ctx)
 
     
 def setup(bot: commands.Bot):
