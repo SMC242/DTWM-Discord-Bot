@@ -451,8 +451,8 @@ class RepostHandler(MessageAuthoritarian):
         if msg.author == self.bot.user:
             return
 
-        # check for embeds and avoid embeds with no URL
-        if msg.embeds is None:
+        # check for embeds
+        if not msg.embeds:
             return
 
         # save each link if it
