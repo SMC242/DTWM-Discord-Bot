@@ -9,6 +9,7 @@ from datetime import datetime
 from traceback import format_exception, print_exc
 from Utils.mestils import send_as_chunks
 from BenUtils.searching import binarySearch
+from sys import exit
 
 # dev settings
 DEV_VERSION = True
@@ -37,8 +38,7 @@ bot = commands.Bot(
 if not os.path.exists("./Text Files/token.txt"):
     # wait for the user to read the message, then exit
     input("There is no token in Text Files/\nPress any key to exit.")
-    import sys
-    sys.exit(0)
+    exit(0)
 
 # ensure that the Images directory exists
 if not os.path.exists("./Images"):
@@ -80,7 +80,6 @@ async def close(ctx):
     print(f"Ow! That hurt @{ctx.author}")
     await bot.logout()
     # close the script
-    from sys import exit
     exit(0)
 
 @bot.command(aliases = ["TC"])
