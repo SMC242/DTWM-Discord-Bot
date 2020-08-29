@@ -36,7 +36,7 @@ class DTWMChanWorship(commands.Cog):
     @commands.cooldown(1, 300, commands.BucketType.user)  # 5 minute cooldown
     async def silence_chanting(self, ctx):
         """Clear the current chants and prevent chanting for five minutes."""
-        self.chants = []
+        self.chants = {}
         self.silenced_at = datetime.now()
         await ctx.send("I shall keep the rabble quiet for five minutes, my lord")
 
@@ -93,7 +93,7 @@ class DTWMChanWorship(commands.Cog):
                               key = lambda record: record[1], reverse = True),
                        self.bot,
                        ctx,
-                       f"Our brothers have chanted {len(self.chants)} times in total. " + 
+                       f"Our brothers have chanted {self.chants_number} times in total. " + 
                        "Here are DTWM-chan's most loyal worshippers:",
                        elements_per_page = 3,
                         )
