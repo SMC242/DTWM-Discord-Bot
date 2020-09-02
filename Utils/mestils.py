@@ -88,8 +88,11 @@ def get_instagram_links(msg: str) -> List[Optional[str]]:
     return re.findall("https:\/\/www\.instagram\.com\/p\/\w*|[-]",
                      msg)
 
-def chunk_message(msg: str, code_block: bool = False) -> Tuple[str]:
+def chunk_message(msg: str, code_block: bool = False) -> List[str]:
     """Split the input string into chunks of 2k characters or less."""
+    # avoid an empty message
+    if not msg:
+        raise ValueError("Cannot send an empty string")
     CHARACTER_CAP = 2000
     if code_block:  # code blocks require 7 characters
         CHARACTER_CAP -= 7
