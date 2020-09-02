@@ -332,7 +332,7 @@ class ReactMenuHandler(commands.Cog):
     async def show_react_menus(self, ctx):
         """Show all of the bound react menus. Debugging tool."""
         await send_as_chunks(
-                       dumps(self.bound_messages, indent = 4, sort_keys = True, default = str),
+                       dumps(self.bound_messages, indent = 4, default = str),
                        ctx, code_block = True)
 
 
@@ -479,7 +479,7 @@ class RepostHandler(MessageAuthoritarian):
     async def show_cache(self, ctx):
         """Output all links that have been cached. Debugging tool."""
         await send_as_chunks(
-                       dumps(self.links, indent = 4, sort_keys = True, default = str),
+                       dumps(self.links, indent = 4, default = str),
                        ctx, code_block = True)
 
 

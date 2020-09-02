@@ -144,7 +144,7 @@ class DTWMChanWorship(commands.Cog):
     async def print_chants(self, ctx):
         """Output self.chants. Debugging tool."""
         await send_as_chunks(
-                             dumps(self.chants, indent = 4, sort_keys = True, default = str),
+                             dumps(self.chants, indent = 4, default = str),
                              ctx, code_block = True)
 
     
