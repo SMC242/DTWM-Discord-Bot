@@ -39,7 +39,7 @@ class DTWMChanWorship(commands.Cog):
     @commands.cooldown(1, 300, commands.BucketType.user)  # 5 minute cooldown
     async def silence_chanting(self, ctx):
         """Clear the current chants and prevent chanting for five minutes."""
-        self.chants = []
+        self.chants = {}
         self.silenced_at = datetime.now()
         await ctx.send("I shall keep the rabble quiet for five minutes, my lord")
 
@@ -165,7 +165,7 @@ class DTWMChanWorship(commands.Cog):
     async def print_chants(self, ctx):
         """Output self.chants. Debugging tool."""
         await send_as_chunks(
-            dumps(self.chants, indent=4, sort_keys=True, default=str),
+            dumps(self.chants, indent=4, default=str),
             ctx, code_block=True)
 
 
