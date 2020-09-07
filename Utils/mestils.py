@@ -151,6 +151,8 @@ def chunk_message(msg: str, code_block: bool = False) -> List[str]:
                 if code_block else msg[chunk_num: chunk_num + CHARACTER_CAP]
                 for chunk_num in range(0, len(msg), CHARACTER_CAP)]
     else:
+        if code_block:  # add code formatting
+            return ["```\n" msg "```"]
         return [msg]
 
 
