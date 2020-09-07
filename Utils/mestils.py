@@ -7,6 +7,7 @@ from asyncio import sleep as async_sleep
 import os
 import re
 import datetime as D
+from Utils import common
 
 
 def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str = None,
@@ -100,7 +101,7 @@ def get_instagram_links(msg: str) -> List[Optional[str]]:
     RETURNS
     List[]: no links
     List[str]: some links found"""
-    return re.findall(r"https:\/\/www\.instagram\.com\/p\/\w*|[-]",
+    return re.findall(r"https:\/\/www\.instagram\.com\/p\/[a-zA-Z-_0-9]*",
                       msg)
 
 

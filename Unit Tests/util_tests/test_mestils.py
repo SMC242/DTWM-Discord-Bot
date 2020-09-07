@@ -97,7 +97,17 @@ class test_mestils(unittest.TestCase):
 
     def test_get_private_instagram_link(self):
         """Integration test for get_instagram_links and is_private"""
-        msg = "Public link:"
+        msg = ("Public link: https://www.instagram.com/p/CEpg-X_gnoQ/?igshid=1wdpesq9044td\n"
+               + "Private link: https://www.instagram.com/p/CEX3iwulAuDq5RFjcI497Hn-vJR27kekHNWASY0/?igshid=pe4425ayywlk\n"
+               + "Public link 2: https://www.instagram.com/p/CErxme8jDsH/?igshid=accz6fofjvvt\n"
+               + "Private link 2: https://www.instagram.com/p/CEsa5dsDv-BG5cmQQE7hDnVB-6RQsbjsmjA1Rw0/?igshid=s8ohcqjdx0dg\n")
+        links = mestils.get_instagram_links(msg)
+        self.assertEqual(list(map(mestils.is_private, links)),
+                         [False,
+                          True,
+                          False,
+                          True])
+
 
 
 if __name__ == '__main__':
