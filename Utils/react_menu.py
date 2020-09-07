@@ -6,12 +6,14 @@ from discord import *
 from discord.ext import commands
 from typing import *
 from BenUtils import callbacks as ca
-import asyncio, random
+import asyncio
+import random
 from contextlib import suppress
+
 
 class ReactMenu:
     """Create an interactable menu within an embedded discord.Message.
-    
+
     ATTRIBUTES
     emotes: Dict[int, str]
         The emotes' ids being used by this instance and their callback type's name.
@@ -56,8 +58,8 @@ class ReactMenu:
                  next_emote_id: int = 712642257995431967,
                  select_emote_id: int = 712642257697767436,
                  reject_emote_id: int = 712642257697767458,
-                 random_colour = False,
-                  **embed_settings):
+                 random_colour=False,
+                 **embed_settings):
         """The Embed colour defaults to pink.
 
         ARGUMENTS
@@ -143,8 +145,8 @@ class ReactMenu:
                         on_select, on_reject):
         """Send the initial message, bind to it, and set up the reactions"""
         # send the initial message
-        self.msg = await self._channel.send(content = message_text,
-                                           embed = embed)
+        self.msg = await self._channel.send(content=message_text,
+                                            embed=embed)
 
         # register the message
         handler = self._bot.get_cog("ReactMenuHandler")
@@ -152,7 +154,7 @@ class ReactMenu:
 
         # add the default reactions
         emotes = [self._bot.get_emoji(id_) for id_ in (last_emote_id, next_emote_id,
-                  select_emote_id, reject_emote_id)]
+                                                       select_emote_id, reject_emote_id)]
         for emote in emotes[:2]:
             await self.msg.add_reaction(emote)
 
@@ -164,8 +166,9 @@ class ReactMenu:
 
         # populate emotes dict
         await asyncio.sleep(1)
-        self.msg = await self._channel.fetch_message(self.msg.id)  # refresh the Message instance once the reactions have been added
-        self.emotes = {r.emoji.id: callback_type for r, callback_type in 
+        # refresh the Message instance once the reactions have been added
+        self.msg = await self._channel.fetch_message(self.msg.id)
+        self.emotes = {r.emoji.id: callback_type for r, callback_type in
                        zip(self.msg.reactions, ("on_last", "on_next", "on_select", "on_reject"))}
 
         # mark self as ready
@@ -180,7 +183,7 @@ class ReactMenu:
         if not slices[0]:
             self._content_index = 0
             slices = self.create_slice()
-        await self.msg.edit(embed = self.create_embed(*slices))
+        await self.msg.edit(embed=self.create_embed(*slices))
 
     @staticmethod
     async def on_last(self):
@@ -191,7 +194,7 @@ class ReactMenu:
         if not slices[0]:
             self._content_index = len(self.content) - 1
             slices = self.create_slice()
-        await self.msg.edit(embed = self.create_embed(*slices))
+        await self.msg.edit(embed=self.create_embed(*slices))
 
     def create_slice(self) -> Tuple[Optional[Any], Optional[Any]]:
         """Return a slice of self.content and self.field_names
@@ -200,15 +203,15 @@ class ReactMenu:
         RETURNS
         The sliced list. It will be empty if the upper bound is fully out of range."""
         return (self.content[self._content_index:
-                            self._content_index + 1],
+                             self._content_index + 1],
                 self.field_names[self._content_index:
-                            self._content_index + 1])
+                                 self._content_index + 1])
 
     def create_embed(self, content_slice: List[Any],
                      field_names_slice: List[Any]) -> Optional[Embed]:
         """Create an Embed from the content and field name
         at _content_index using embed_settings.
-        
+
         RETURNS
         None: there is no more content
         Embed: the Embed was successfully created."""
@@ -217,20 +220,21 @@ class ReactMenu:
             self.embed_settings["colour"] = self.create_colour()
 
         embed = Embed(**self.embed_settings)
-        embed.add_field(name = content_slice,
-                        value = field_names_slice)
+        embed.add_field(name=content_slice,
+                        value=field_names_slice)
         return embed
 
     @staticmethod
     def create_colour() -> int:
         """Create a random colour and return its code"""
         digits = random.randint(1, 8)  # get a random length
-        colour = "".join( (str(random.randint(0, 9)) for i in range(digits)) )
+        colour = "".join((str(random.randint(0, 9)) for i in range(digits)))
 
         # ensure that there isn't a leading 0
-        for i in range(len(colour) - 1):
-            if colour[i] == "0":
-                colour = colour[i:]
+        i = 0
+        while colour[i] == "0":
+            colour = colour[i + 1:]
+            i += 1
 
         # check that all zeroes weren't generated
         if len(colour) == 0:
@@ -264,8 +268,8 @@ class ReactTable(ReactMenu):
     """Interactable tables via reactions as buttons."""
 
     def __init__(self, headers: Tuple[str], *args,
-                elements_per_page: int = 1, inline: bool = False,
-                **kwargs):
+                 elements_per_page: int = 1, inline: bool = False,
+                 **kwargs):
         """ARGUMENTS
         headers:
             The titles of each element for each row of
@@ -291,11 +295,11 @@ class ReactTable(ReactMenu):
         RETURNS
         The sliced list. It will be empty if the upper bound is fully out of range."""
         return [self.content[self._content_index:
-                            self._content_index + self.elements_per_page]]
+                             self._content_index + self.elements_per_page]]
 
     def create_embed(self, slice_: List[Any]) -> Optional[Embed]:
         """Creates a table-like Embed.
-        
+
         ARGUMENTS
         slice_: the slice from self.create_slice"""
         # generate a random colour
@@ -307,23 +311,24 @@ class ReactTable(ReactMenu):
         inline = self.inline  # avoid the overhead of accessing attrs
         for row in slice_:
             for header, value in zip(self.headers, row):
-                embed.add_field(name = header, value = value,
-                                inline = inline)
+                embed.add_field(name=header, value=value,
+                                inline=inline)
             # add a break between rows
-            embed.add_field(name = "||\_-\_-\_-\_-\_-\_||", value = "||**-\_-\_-\_-\_-\_-**||")
+            embed.add_field(name="||\_-\_-\_-\_-\_-\_||",
+                            value="||**-\_-\_-\_-\_-\_-**||")
         return embed
 
     @staticmethod
     async def on_next(self):
         """Show the next content when the next button is clicked.
-        Iterates in sets of self.elements_per_page"""     
+        Iterates in sets of self.elements_per_page"""
         self._content_index += self.elements_per_page
         slice_ = self.create_slice()
         # start from 0 if at end of list
         if not slice_[0]:
             self._content_index = 0
             slice_ = self.create_slice()
-        await self.msg.edit(embed = self.create_embed(*slice_))
+        await self.msg.edit(embed=self.create_embed(*slice_))
 
     @staticmethod
     async def on_last(self):
@@ -336,7 +341,7 @@ class ReactTable(ReactMenu):
         if not slice_[0]:
             self._content_index = len(self.content) - 1
             slice_ = self.create_slice()
-        await self.msg.edit(embed = self.create_embed(*slice_))
+        await self.msg.edit(embed=self.create_embed(*slice_))
 
     def __str__(self) -> str:
         """Converts self to string."""
