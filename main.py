@@ -24,15 +24,15 @@ Special thanks to:
     Profile picture: BoeruChan"""
 bot = commands.Bot(
     f"{'dev' if DEV_VERSION else 'ab'}!",
-    description = description,
-    owner_ids = (395598378387636234, 515163362062237716),
-    activity = Activity(name = f"Waking up...{' [Testing]' if DEV_VERSION else ''}",
-                        url = "https://joindtwm.net",
-                        type = ActivityType.playing, state = "Powering on...",
-                        details = "The adepts have summoned me from my slumber."),
-    case_insensitive = True,
-    allowed_mentions = AllowedMentions(everyone = False, roles = False),
-    )
+    description=description,
+    owner_ids=(395598378387636234, 515163362062237716),
+    activity=Activity(name=f"Waking up...{' [Testing]' if DEV_VERSION else ''}",
+                      url="https://joindtwm.net",
+                      type=ActivityType.playing, state="Powering on...",
+                      details="The adepts have summoned me from my slumber."),
+    case_insensitive=True,
+    allowed_mentions=AllowedMentions(everyone=False, roles=False),
+)
 
 # check that there is a token to run from
 if not os.path.exists("./Text Files/token.txt"):
@@ -59,8 +59,9 @@ for file in os.listdir("./Cogs"):
             print(f"Cog ({cog_name}) failed to load")
             # log loading tracebacks if lod_load_error is True or if it's not set but dev_version is True
             if (LOG_LOAD_ERROR is not None and LOG_LOAD_ERROR) or \
-                (LOG_LOAD_ERROR is None and DEV_VERSION):
+                    (LOG_LOAD_ERROR is None and DEV_VERSION):
                 print_exc()
+
 
 @bot.before_invoke
 async def log_command_info(ctx):
@@ -69,7 +70,9 @@ async def log_command_info(ctx):
     today = datetime.today()
     day = today.strftime("%d.%m.%Y")
     time = today.strftime("%H:%M")
-    print(f'Command: {ctx.command.qualified_name} called in "{ctx.guild.name}".{ctx.channel} on {day} at {time}')
+    print(
+        f'Command: {ctx.command.qualified_name} called in "{ctx.guild.name}".{ctx.channel} on {day} at {time}')
+
 
 @bot.command()
 @commands.is_owner()
@@ -82,14 +85,16 @@ async def close(ctx):
     # close the script
     exit(0)
 
-@bot.command(aliases = ["TC"])
+
+@bot.command(aliases=["TC"])
 @commands.is_owner()
 async def toggle_command(ctx, name: str):
     """Deactivate or activate a faulty command."""
-    commands = list(set([cmd for cmd in bot.walk_commands()]))  # filter out duplicates
-    command = binarySearch(name, sorted(commands, key = lambda cmd: cmd.name),
-                           return_type = "item",
-                           key = lambda cmd: cmd.name)
+    commands = list(set([cmd for cmd in bot.walk_commands()])
+                    )  # filter out duplicates
+    command = binarySearch(name, sorted(commands, key=lambda cmd: cmd.name),
+                           return_type="item",
+                           key=lambda cmd: cmd.name)
     if command:
         command.enabled = False
         await ctx.send(f"I have {'en' if command.enabled else 'dis'}abled" +
@@ -97,17 +102,20 @@ async def toggle_command(ctx, name: str):
     else:
         await ctx.send("I cannot find that command, my lord")
 
-@bot.command(aliases = ["update"])
+
+@bot.command(aliases=["update"])
 @commands.is_owner()
 async def patch(ctx):
     """Attempt to pull the latest git commit
     and replaced Cogs/, Text Files/, and Utils/
     with the new files."""
-    import git, importlib
+    import git
+    import importlib
     async with ctx.typing():
         try:
             # unload everything but the base commands
-            extensions = list(bot.extensions.keys()).copy()  # avoid deletion during iteration
+            # avoid deletion during iteration
+            extensions = list(bot.extensions.keys()).copy()
             for extension in extensions:
                 bot.unload_extension(extension)
 
@@ -117,14 +125,14 @@ async def patch(ctx):
             # pull the new files and get summaries
             info = origin.pull()
             info_string = '\n'.join((ele.commit.summary for ele in info))
-            await ctx.send("Patched successfully! Summary titles (pulls):\n" + 
+            await ctx.send("Patched successfully! Summary titles (pulls):\n" +
                            info_string)
         except Exception as err:  # dump error to chat
             await ctx.send("Patching failed. Error:")
             tb_lines = format_exception(type(err), err,
-                                                err.__traceback__)
+                                        err.__traceback__)
             tb = "\n".join(tb_lines) + f"Occured at: {datetime.now().time()}"
-            await send_as_chunks(tb, ctx, code_block = True)
+            await send_as_chunks(tb, ctx, code_block=True)
         finally:
             # reload the extensions
             for extension in extensions:
@@ -134,11 +142,13 @@ async def patch(ctx):
             for util in (common,):
                 importlib.reload(util)
 
-@bot.command(aliases = ["reload"])
+
+@bot.command(aliases=["reload"])
 @commands.is_owner()
 async def reload_cogs(ctx):
     """Restart all cogs and utils."""
-    extensions = list(bot.extensions.keys()).copy()  # avoid deletion during iteration
+    extensions = list(bot.extensions.keys()).copy(
+    )  # avoid deletion during iteration
     # reload the extensions
     for extension in extensions:
         bot.reload_extension(extension)
@@ -146,6 +156,7 @@ async def reload_cogs(ctx):
     # reload utils
     for util in (common,):
         importlib.reload(util)
+
 
 @bot.listen()
 async def on_ready():
@@ -156,7 +167,7 @@ async def on_ready():
     # load common
     await common.wait_until_loaded(bot)
 
-    #acknowledge startup in #servitors
+    # acknowledge startup in #servitors
     await common.bot_channel.send(f'{"`[DEV VERSION]` " if DEV_VERSION else ""}I have awoken... I am at your service.')
 
     # warn user if they're on the dev version
