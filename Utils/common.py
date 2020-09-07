@@ -9,7 +9,7 @@ from typing import *
 # common variables
 DEV_VERSION = False
 bot = Bot(None)  # temporarily defining the bot
-bot_loaded = False  # flag for raising an error if the bot wasn't loaded already
+bot_loaded: bool = False  # flag for raising an error if the bot wasn't loaded already
 member_roles = ("Astartes", "Champion", "Chaplain", "Watch Leader")
 leader_roles = member_roles[1:]
 extra_roles = (
@@ -21,11 +21,12 @@ extra_roles = (
     "Null Maiden",
     "Noise Marine",
     "Adeptus Custodes",
-    )
+)
 # channels
 bot_channel = None
 server = None
 error_channel = None
+
 
 async def wait_until_loaded(wait_for: Bot):
     """Wait until the bot is ready, then load it."""
@@ -36,6 +37,7 @@ async def wait_until_loaded(wait_for: Bot):
 
     await wait_for.wait_until_ready()
     _load_bot(wait_for)
+
 
 def _load_bot(target_bot: Bot):
     """
@@ -57,7 +59,8 @@ def _load_bot(target_bot: Bot):
     # set up common variables
     # use the bot testing server if it's a dev version
     if DEV_VERSION:
-        bot_channel = bot.get_channel(660950914202599427)  # bot testing.general
+        bot_channel = bot.get_channel(
+            660950914202599427)  # bot testing.general
         server = bot.get_guild(660950914202599424)  # bot testing
     else:
         bot_channel = bot.get_channel(545818844036464670)  # DTWM.servitors

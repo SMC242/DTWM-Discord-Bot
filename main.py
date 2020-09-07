@@ -158,6 +158,25 @@ async def reload_cogs(ctx):
         importlib.reload(util)
 
 
+@bot.command(aliases=["RT"])
+@commands.is_owner()
+async def run_tests(ctx):
+    """Run all of the unit tests and log the failures to the bot channel."""
+    import unittest
+    from json import dumps  # for pretty printing UmU
+    tests = unittest.defaultTestLoader = unittest.TestLoader().discover(
+        "./Unit Tests/", pattern="test_*")  # get the tests in Unit Tests/
+    runner = unittest.TextTestRunner()
+    results = runner.run(tests)  # run the tests
+    failures = dumps(
+        [(result[0], result[1].split("\n"))
+         for result in results.failures],  # format the tracebacks
+        indent=4, default=str)
+    errors = dumps(results.errors, indent=4, default=str)
+    await send_as_chunks(f"Failures: {failures}\nErrors: {errors}",
+                         common.bot_channel, code_block=True)
+
+
 @bot.listen()
 async def on_ready():
     """Control the behaviour when the bot starts."""
