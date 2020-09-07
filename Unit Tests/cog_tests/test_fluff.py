@@ -20,10 +20,15 @@ class TestDTWMChanWorship(unittest.TestCase):
         self.assertEqual(self.cog._chant_inner(), ["DTWM"])
         # test with > 1 message output
         self.cog.chants["401_test"] = [dummy_time] * 401
-        self.assertEqual(self.cog._chant_inner(), [
+        test_402 = [
             " ".join(["DTWM"] * 400),
-            "DTWM"
-        ])
+            "DTWM DTWM"  # 1_test is counted -> 402 chants
+        ]
+        # the last word will be created with a space behind it in _inner
+        # as the string is created before splitting whereas this is pre-split
+        test_402[0] += " "
+        inner_output = self.cog._chant_inner()
+        self.assertEqual(inner_output, test_402)
 
     def test_chants_number(self):
         """Check that the total number of chants is counted correctly"""
@@ -31,7 +36,8 @@ class TestDTWMChanWorship(unittest.TestCase):
         self.cog.chants["chant_no_1"] = [datetime.now()]
         self.assertEqual(self.cog.chants_number, 1)
         self.cog.chants["chant_no_736"] = [datetime.now()] * 736
-        self.assertEqual(self.cog.chants_number, 736)
+        # chant_no_1 is counted too
+        self.assertEqual(self.cog.chants_number, 737)
 
     def test_leaderboard(self):
         """Check that the correct leaderboard has been created."""
