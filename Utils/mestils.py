@@ -151,9 +151,9 @@ def chunk_message(msg: str, code_block: bool = False) -> List[str]:
                 if code_block else msg[chunk_num: chunk_num + CHARACTER_CAP]
                 for chunk_num in range(0, len(msg), CHARACTER_CAP)]
     else:
-        if code_block:  # add code formatting
-            return ["```\n" msg "```"]
-        return [msg]
+        # add code formatting
+        code_block_str = "```\n" if code_block else ""
+        return [f"{code_block_str}{msg}{code_block_str[:-1]}"]
 
 
 async def send_as_chunks(msg: Union[str, List[str]], target: Messageable,
