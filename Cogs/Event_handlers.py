@@ -380,13 +380,26 @@ class AuthoritarianBabySitter(commands.Cog):
                                "false_hit", "resummon_msg"])
     async def resummon_message(self, ctx):
         """Repost the last deleted message."""
-        msg = MessageAuthoritarian.last_msg
+        msg = MessageAuthoritarian.last_msg  # the name is too long
         if msg is None:
             return await ctx.send("I have not deleted anything today, my lord.")
-        await ctx.send(msg.content,
-                       # I can't pass the whole list :/
-                       embed=msg.embeds[0] if msg.embeds else None,
-                       )
+
+        # avoid an empty message and allow adding error messages
+        msg_suffix = "`[placeholder]`" or msg.content
+
+        # attempt to retrieve the attachments
+        to_attach: List[Optional[File]] = []
+        try:
+            to_attach = [await attachment.to_file(use_cached=True)  # use_cached makes it more robust
+                         for attachment in msg.attachments]
+        except (HTTPException, NotFound):
+            msg_suffix += "\n`[Failed to get attachments]`"
+        # send the text and attachments
+        await send_as_chunks(f"{msg.content}{msg_suffix}", ctx,
+                             files=to_attach)
+        # send the embeds(s). Disord.py doesn't allow > 1 embed per msg
+        for embed in msg.embeds:
+            await ctx.send(embed=embed)
 
 
 class InstagramHandler(MessageAuthoritarian):
@@ -472,7 +485,9 @@ class RepostHandler(MessageAuthoritarian):
         # check for uploaded files
         if msg.attachments:
             for attached_file in msg.attachments:
-                await check_duplicate(attached_file.filename)
+                file_name = attached_file.filename
+                if "unknown" not in file_name:  # ignore anonymous uploads
+                    await check_duplicate(file_name)
 
         # check for embeds
         if not msg.embeds:
