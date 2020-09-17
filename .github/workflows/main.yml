@@ -45,5 +45,5 @@ jobs:
           DISCORD_WEBHOOK: ${{secrets.DISCORD_WEBHOOK}}
         uses: Ilshidur/action-discord@master
         with:
-          args: "@ScreaminSteve#8548 new bot update out\n${{EVENT_PAYLOAD.repo.url}}"
+          args: "@ScreaminSteve#8548 new bot update out\n${{EVENT_PAYLOAD.repository.url}}"
   
