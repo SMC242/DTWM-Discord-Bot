@@ -45,5 +45,5 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{secrets.DISCORD_WEBHOOK}}
         with:
-          args: "@ScreaminSteve#
+          args: "@ScreaminSteve#8548 new bot update out\n${{EVENT_PAYLOAD.repo.url}}"
   
