@@ -40,10 +40,10 @@ jobs:
   notify_steve:
     runs-on: ubuntu-latest
     steps:
-      - uses: Ilshidur/action-discord@master
       - name: Discord notification
         env:
           DISCORD_WEBHOOK: ${{secrets.DISCORD_WEBHOOK}}
+        uses: Ilshidur/action-discord@master
         with:
           args: "@ScreaminSteve#8548 new bot update out\n${{EVENT_PAYLOAD.repo.url}}"
   
