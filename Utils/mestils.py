@@ -8,8 +8,6 @@ import os
 import re
 import datetime as D
 from Utils import common
-import aiohttp
-import traceback
 
 
 def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str = None,
@@ -181,54 +179,3 @@ async def send_as_chunks(msg: Union[str, List[str]], target: Messageable,
     for msg in msgs:
         await target.send(msg, **send_kwargs)
         async_sleep(delay)
-
-
-class download_resource:
-    """Context manager to download and return a file handler asynchronously.
-    Removes the .
-
-    ATTRIBUTES
-        url (str): the target URL
-        limit (int): the number of bytes to read
-        reponse (aiohttp.ClientResponse): the response from the
-    """
-
-    def __init__(self, url: str, limit: int = None):
-        """Args:
-        url (str): The URL that identifies the resource to download.
-        limit (int): the number of bytes to read. Defaults to the whole file"""
-        self.url = url
-        self.limit = limit
-        self.response: aiohttp.ClientResponse = None
-
-    async def __aenter__(self) -> 'download_resources':
-        """Returns:
-        None: the download failed.
-        download_resources object: the download was successful."""
-        # request the resource
-        async with aiohttp.ClientSession() as session:
-            # keep the reponse object around until exit
-            self.response = await session.get(self.url)
-            if self.response.status != 200:  # ensure that the request passed
-                return None
-            # get the number of bytes to read if no limit passed
-            self.limit = self.limit or int(
-                self.response.headers["Content-Length"])
-            return self
-
-    @property
-    def content(self) -> Coroutine[ByteString, None, None]:
-        """Return a coroutine that outputs the number of bytes requested."""
-        # it has to be this way because passing -1 wasn't working
-        if self.limit:
-            return self.response.content.read(self.limit)
-        else:
-            return self.response.content.read()
-
-    async def __aexit__(self, *args):
-        """Handle a bad response if it happened. Also close the connection."""
-        # handle errors
-        if args[0]:
-            traceback.print_exc()
-        # close the response connection
-        self.response.close()
