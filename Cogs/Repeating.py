@@ -8,14 +8,16 @@ from .Attendance import Attendance
 from Utils import common, memtils
 from json import load
 from random import choice
-import datetime as D, os
+import datetime as D
+import os
 from traceback import print_exc
 from sqlite3 import OperationalError
 from contextlib import suppress
 
+
 class RepeatingTasks(commands.Cog):
     """Any repeating tasks.
-    
+
     ATTRIBUTES
     Attendance-related:
         scheduled: bool
@@ -32,7 +34,7 @@ class RepeatingTasks(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         # for the rescheduler
-        self.scheduled = False  
+        self.scheduled = False
         # create a dummy start time so that the rescheduler doesn't reject today
         self.start_day = D.datetime(1980, 1, 1).strftime("%Y/%m/%d")
 
@@ -47,7 +49,7 @@ class RepeatingTasks(commands.Cog):
             self.check_registered_members,
             self.images_cleanup,
             self.backup_DB,
-            ]
+        ]
 
         for task in tasks_:
             task.start()
@@ -84,7 +86,7 @@ class RepeatingTasks(commands.Cog):
             # wait until event time
             await async_sleep(run_in_seconds)
 
-            #ping people to get in ops
+            # ping people to get in ops
             await self.att.get_in_ops_inner()
 
             # do attendance
@@ -94,7 +96,7 @@ class RepeatingTasks(commands.Cog):
         except:
             print_exc()
 
-    @tasks.loop(hours = 4)
+    @tasks.loop(hours=4)
     async def att_rescheduler(self):
         """Try to schedule attendance every four hours
         if it's a new day."""
@@ -111,12 +113,12 @@ class RepeatingTasks(commands.Cog):
         except:
             print_exc()
 
-    @tasks.loop(minutes = 30)
+    @tasks.loop(minutes=30)
     async def change_status(self):
         """Change the status every 30 minutes."""
         try:
             # get the responses
-            with open("./Text Files/statuses.json", encoding = "utf-8-sig") as f:
+            with open("./Text Files/statuses.json", encoding="utf-8-sig") as f:
                 statuses = load(f)
 
             # choose a random status from the two lists combined
@@ -127,7 +129,7 @@ class RepeatingTasks(commands.Cog):
 
             # set status
             await common.wait_until_loaded(self.bot)
-            await self.bot.change_presence(activity = Activity(name = chosen_status, type = act_type))
+            await self.bot.change_presence(activity=Activity(name=chosen_status, type=act_type))
         except:
             print_exc()
 
@@ -138,7 +140,7 @@ class RepeatingTasks(commands.Cog):
         await self.bot.wait_until_ready()
         await async_sleep(600)  # wait 10 minutes before starting
 
-    @tasks.loop(hours = 4)
+    @tasks.loop(hours=4)
     async def new_day(self):
         """Add a new day to the DB unless it's Saturday.
         NOTE: This method doesn't need to check if a day passed
@@ -151,7 +153,7 @@ class RepeatingTasks(commands.Cog):
 
             # get event_type for this week
             training_type = self.bot.get_cog("TrainingWeeks").training_type
-            trainings = "AIR" if training_type is "Aerial Superiority" else "ARMOUR"
+            trainings = "AIR" if training_type == "Aerial Superiority" else "ARMOUR"
 
             # get event type for today
             event_types = {
@@ -161,11 +163,11 @@ class RepeatingTasks(commands.Cog):
                 3: "CO-OPS1",
                 4: "CO-OPS2",
                 6: "INTERNAL_OPS",
-                }
+            }
 
             self.att.db.new_day(event_types[day])
 
-    @tasks.loop(hours = 12)
+    @tasks.loop(hours=12)
     async def check_registered_members(self):
         """Check all members against the registered members every 12 hours.
         Any members in the DB but not in the outfit: unregister.
@@ -186,35 +188,36 @@ class RepeatingTasks(commands.Cog):
             for name in in_outfit:
                 if not await memtils.is_member(name, registered):
                     self.att.db.add_member(name)
-                    print(f'"{name}" was detected by the cleanup check. ' + 
+                    print(f'"{name}" was detected by the cleanup check. ' +
                           "I have registered him.")
 
             # remove those who are registered but not in in_outfit
             for name in registered:
                 if not await memtils.is_member(name, in_outfit):
                     self.att.db.delete_member(name)
-                    print(f'"{name}" was detected by the cleanup check. ' + 
+                    print(f'"{name}" was detected by the cleanup check. ' +
                           "I have un-registered him.")
         except:
             print_exc()
 
-    @tasks.loop(hours = 4)
+    @tasks.loop(hours=4)
     async def images_cleanup(self):
         """Delete the built-up images from mestils.create_table."""
         for file_name in os.listdir("./Images"):
             os.remove(f"./Images/{file_name}")
 
-    @tasks.loop(hours = 12)
+    @tasks.loop(hours=12)
     async def backup_DB(self):
         """Sends the DB to Bot Testing.backups every 12 hours.
-        
+
         Messages have a 5MB file size limit.
         I calculated that we should fall well-within that cap
         over the course of a year so this should be safe.
         This will need to be revised if our outfit suddenly becomes
         very large but that's unlikely."""
         # don't back up the dev version's DBs
-        if common.DEV_VERSION:  return
+        if common.DEV_VERSION:
+            return
 
         # search for the first file with "attendance" in its name
         # which has a .db extension
@@ -223,24 +226,26 @@ class RepeatingTasks(commands.Cog):
         for file_name in os.listdir(folder):
             if "attendance" in file_name.lower() and ".db" == file_name[-3:]:
                 db_file = folder + file_name
-        if not db_file:  return  # check that the file was found
+        if not db_file:
+            return  # check that the file was found
 
         # send it to Bot Channel.backups
         try:
             await common.wait_until_loaded(self.bot)
             backups_channel = self.bot.get_channel(712352058035929158)
             await backups_channel.send(f"DB backup from {D.datetime.today().strftime('%d.%m.%Y')}",
-                                       file = File(db_file))
+                                       file=File(db_file))
             print("Backed up the database successfully!")
         except:
             # log to Bot Testing.errors
             print("The database failed to back up.")
             await common.error_channel.send("Failed to back up the DB on " +
-                                             f"{D.datetime.today().strftime('%d.%m.%Y')}")
+                                            f"{D.datetime.today().strftime('%d.%m.%Y')}")
 
 
 def setup(bot):
     bot.add_cog(RepeatingTasks(bot))
+
 
 if __name__ == "__main__":
     setup(commands.Bot("foo"))
