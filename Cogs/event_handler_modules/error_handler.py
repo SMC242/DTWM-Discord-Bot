@@ -6,6 +6,7 @@ from Utils.mestils import list_join
 from Utils import memtils
 from Utils import common
 import datetime as D
+from fuzzywuzzy.process import extractOne
 
 
 class CommandNotImplementedError(commands.CommandError):
@@ -48,8 +49,12 @@ class ErrorHandler(commands.Cog):
             if '@' in ctx.invoked_with:
                 await ctx.send("How dare you try to use me to annoy others!")
             else:
-                await ctx.send(f'Sorry {title}, the archives do not know of this ' +
-                               f'"{ctx.invoked_with}" you speak of')
+                # get close matches
+                cmd_names = [cmd.name for cmd in self.bot.walk_commands()]
+                suggestion = extractOne(ctx.invoked_with, cmd_names)[0]
+                await ctx.send(f'Sorry {title}, the archives do not know of this '
+                               f'"{ctx.invoked_with}" you speak of. '
+                               f"Did you mean `{ctx.prefix}{suggestion}`?")
 
         elif isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(f"Your command is incomplete, {title}! You must tell me my target")
