@@ -3,7 +3,7 @@ import datetime as D
 from asyncio import get_event_loop
 from Utils import common
 from discord import Message, TextChannel
-from typing import Dict
+from typing import Dict, Optional
 from random import choice
 from json import load
 from Utils.mestils import search_word
@@ -144,13 +144,16 @@ class ReactReactions(ReactionParent):
 
         content = msg.content.lower()
         # check if there is a match with regex.
-        match_name: str = None
+        match_name: Optional[str] = None
         if search_word(content, "ayaya") or \
                 search_word(content, "<:w_ayaya:622141714655870982>"):
             match_name = "ayaya"
 
         elif search_word(content, "php"):
             match_name = "php"
+
+        elif search_word(content, "windows") or search_word(content, "linux"):
+            match_name = "os"
 
         # only try to react if a match was found
         if match_name is not None:
@@ -159,7 +162,7 @@ class ReactReactions(ReactionParent):
                 responses = load(f)
 
             self.set_cooldown(msg.channel)
-            await msg.add_reaction(responses[match_name])
+            await msg.add_reaction(choice(responses[match_name]))
 
 
 def setup(bot: commands.Bot):
