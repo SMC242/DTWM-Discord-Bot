@@ -1,14 +1,15 @@
 """This module handles temporarily storing unique values
     """
 
+from typing import TypeVar
 import aiohttp
 import traceback
-from typing import Coroutine, ByteString, Hashable, Callable, Tuple, Iterable, Any, Optional, Dict, List, Union
+from typing import Coroutine, ByteString, Hashable, Callable, Tuple, Iterable, Any, Optional, Dict, List, NewType
 from datetime import datetime
 from json import dumps
 from asyncio import get_event_loop, sleep as async_sleep, gather
 import asyncio
-from collections import abc
+from collections import abc, OrderedDict
 from functools import wraps
 
 
@@ -64,13 +65,15 @@ class download_resource:
 
 
 # Type aliases
-event_args = Callable[['AsyncCache', Tuple[Hashable, Any]], Any]
+event_args = Callable[['AsyncCache', Hashable, Any], Any]
 
 
 class AsyncCache:
     """
     Caches values until the cache overflows
 
+    NOTE: `event_args` = Callable[['AsyncCache', collections.abc.Hashable, `typing.Any`]
+                                  `typing.Any`]
     # Attributes
     `_cache (private Dict[Hashable, Any]`):
         The currently cached items.
@@ -80,19 +83,23 @@ class AsyncCache:
         The maximum number of items in `_cache`.
 
     `on_add_pass (event_args)`:
-        The function to call when a unique item is added to the cache.
+        The function to call after a unique item is added to the cache.
         Arguments: (instance of `AsyncCache`, (the key that was added, the value that was added))
 
     `on_add_fail (event_args)`:
-        The function to call when a duplicate item was attempted to be added to the cache.
+        The function to call after a duplicate item was attempted to be added to the cache.
         Arguments: (instance of `AsyncCache`, (the key that wasn't added, the value that wasn't added))
 
     `on_remove (event_args)`:
-        The function to call when an item is removed from the cache.
+        The function to call after an item is removed from the cache.
         Arguments: (instance of `AsyncCache`, the key-value pair that was removed from the cache)
 
     `_event_loop (asyncio.AbstractEventLoop)`:
         The event loop that is used to run the `on_{events}`
+
+    `_cleaning (bool)`:
+        Whether the cleaning task is running.
+        Used to prevent multiple calls of `clean()` and wiping the cache as a result.
     """
 
     def __init__(self, max_items: int = 128,
@@ -100,7 +107,8 @@ class AsyncCache:
                  on_add_fail: event_args = None,
                  on_remove: event_args = None,
                  ):
-        self._cache: Dict[Hashable, Any] = {}
+        self._cache: OrderedDict[Hashable, Any] = OrderedDict()
+        self._cleaning: bool = False
         self.max_items = max_items
         on_add_pass = on_add_pass or self.on_add_pass
         on_add_fail = on_add_fail or self.on_add_fail
@@ -140,41 +148,144 @@ class AsyncCache:
         """
         if key in self._cache:  # key isn't unique
             task = self._call(self.on_add_fail, key, value)
+        self._cache[key] = value  # key is unique --> add it
         task = self._call(self.on_add_pass, key, value)
 
-        if len(self) >= self.max_items:
-            self.clean()
+        # check if the cache is too big
+        if len(self._cache) >= self.max_items and not self._cleaning:
+            # the cleaning check is to prevent a bug where `clean` was called repeatedly
+            # and wiped the cache
+            self._cleaning = True
+            self._event_loop.create_task(self.clean())
 
-    def clean(self):
+        return task
+
+    async def clean(self):
+        """
+        ### (method) clean()
+        Remove the older half of the cache.
+        """
+        max = int(0.5 * len(self._cache))
+        pairs = list(self._cache.items())
+        new_cache = OrderedDict({key: value for key, value in
+                                 pairs[max:]})
+        old_cache = OrderedDict({key: value for key, value in
+                                 pairs[:max]})
+        self._cache.clear()  # remove all references to the dict's old values
+        self._cache = new_cache
+        self._cleaning = False
+
+        # call on_remove
+        return asyncio.gather(
+            *[self._call(self.on_remove, *pair) for pair in old_cache.items()]
+        )
+
+    def append(self, key: Hashable, value: Any) -> asyncio.Task:
+        """Add the key and value to the cache."""
+        return self.on_add(key, value)
+
+    def extend(self, pairs: Dict[Hashable, Any]) -> List[asyncio.Task]:
+        """Add multiple pairs to the cache"""
+        return asyncio.gather(*[self.on_add(*pair) for pair in pairs.items()])
+
+    @property
+    def cache(self) -> Dict[Hashable, Any]:
+        """Get the current cache"""
+        return self._cache
+
+    # default event callbacks
+    @staticmethod
+    def on_add_pass(self, key: Hashable, value: Any):
+        """This will be called after a unique key is added to the cache.
+        Does nothing by default."""
         pass
 
-    def append(self, key: Hashable, value: Any):
-        """Add the key and value to the cache."""
-        self.on_add(key, value)
+    @staticmethod
+    def on_add_fail(self, key: Hashable, value, Any):
+        """This will be called after a duplicate key is not added to the cache.
+        Does nothing by default."""
+        pass
 
-    def extend(self, pairs: Dict[Hashable, Any]):
-        """Add multiple pairs to the cache"""
-        for pair in pairs.items():
-            self.on_add(*pair)
+    @staticmethod
+    def on_remove(self, key: Hashable, value, Any):
+        """This will be called after a key is removed from the cache.
+        Does nothing by default."""
+        pass
 
+    # beware ye, only magic methods are beyond this place
     def __add__(self, pair: Tuple[Hashable, Any]) -> asyncio.Task:
         """Add the key and value to the cache with the `cache + (key, value)` syntax."""
-        self.on_add(*pair)
+        return self.on_add(*pair)
 
-    def __sub__(self, key: Hashable):
-        pass
+    def __sub__(self, key: Hashable) -> asyncio.Task:
+        """Remove the key from the cache with the `cache - key` syntax"""
+        value = self._cache[key]
+        del self._cache[key]
+        return self._call(self.on_remove, (key, value))
 
     def __getitem__(self, key: Hashable) -> Optional[Any]:
-        pass
+        """Use the `cache[key]` syntax to access values."""
+        try:
+            return self._cache[key]
+        except KeyError:
+            return None
+
+    def __setitem__(self, key: Hashable, value: Any) -> asyncio.Task:
+        """Add an item to the cache using the `cache[key] = value` syntax."""
+        return self.on_add(key, value)
 
     def __delitem__(self, key: Hashable):
-        pass
+        """Delete a key from the cache using the `del cache[key]` syntax"""
+        value = self._cache[key]
+        del self._cache[key]
+        return self._call(self.on_remove, (key, value))
 
     def __len__(self) -> int:
-        pass
+        """Get the number of pairs in the cache."""
+        return len(self._cache)
 
-    def __repr__(self) -> str:
-        pass
+    def __iter__(self) -> Iterable[Tuple[Hashable, Any]]:
+        """Get an iterator for self._cache"""
+        return iter(self._cache.items())
 
     def __contains__(self, key: Hashable) -> bool:
-        pass
+        """Check if a key is in the cache"""
+        return key in self._cache
+
+    def __repr__(self) -> str:
+        """Get the attributes of the cache as a string"""
+        return (
+            f"Utils.caching.{self.__class__}(max_items = {self.max_items}, "
+            f"on_add_pass = {self.on_add_pass}, on_add_fail = {self.on_add_fail}, "
+            f"on_remove = {self.on_remove})\nWith private attributes:"
+            f"_event_loop = {self._event_loop}, _cache = {self._cache}"
+        )
+
+
+if __name__ == "__main__":
+    from asyncio import get_event_loop, sleep
+
+    async def main():
+        i = AsyncCache(max_items=2,
+                       on_add_pass=lambda x, y: print(
+                           f"Added key {x}, value {y}"),
+                       on_add_fail=lambda x, y: print(
+                           f"Failed to add key {x}, value {y}"),
+                       on_remove=lambda x, y: print(
+                           f"Removed key {x}, value {y}"),
+                       )
+
+        i.append(1, 2)
+        i.extend(((1, 2), (3, 4), (5, 6)))
+        print(i)
+        print(5 in i)
+        for k, v in i:
+            print(f"key {k} value {v}")
+        print(len(i))
+        i + (1, 2)
+        print(i)
+        i - 1
+        print(i)
+        print(i[1])
+        i.append(7, 8)
+        print(i[7])
