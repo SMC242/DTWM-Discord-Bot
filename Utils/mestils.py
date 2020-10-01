@@ -198,11 +198,3 @@ async def send_as_chunks(msg: Union[str, List[str]], target: Messageable,
     for msg in msgs:
         await target.send(msg, **send_kwargs)
         async_sleep(delay)
-
-
-def get_links(msg: str) -> Optional[List[str]]:
-    """Use regex to extract any links from the message."""
-    # thank stackoverflow for this voodoo
-    # I have no clue how this works
-    return re.findall(r"https?: \/\/(www\.)?[-a-zA-Z0-9@: % ._\+ ~  # =]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)",
-                      msg)
