@@ -258,7 +258,8 @@ class AsyncCache:
             f"Utils.caching.{self.__class__}(max_items = {self.max_items}, "
             f"on_add_pass = {self.on_add_pass}, on_add_fail = {self.on_add_fail}, "
             f"on_remove = {self.on_remove})\nWith private attributes:"
-            f"_event_loop = {self._event_loop}, _cache = {self._cache}"
+            f"_event_loop = {self._event_loop}, _cleaning = {self._cleaning},"
+            f"_cache = {self._cache}"
         )
 
 
