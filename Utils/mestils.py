@@ -204,5 +204,5 @@ def get_links(msg: str) -> Optional[List[str]]:
     """Use regex to extract any links from the message."""
     # thank stackoverflow for this voodoo
     # I have no clue how this works
-    return re.findall(r"https?: \/\/(www\.)?[-a-zA-Z0-9@: % ._\+ ~  # =]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)",
+    return re.findall(r"^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$",
                       msg)
