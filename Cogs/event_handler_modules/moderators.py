@@ -1,8 +1,10 @@
+from Utils.caching import download_resource, AsyncCache
+from discord.message import Attachment
 from Utils import mestils
 from json import dumps
 from discord.ext import commands, tasks
-from discord import Message, Member, HTTPException, NotFound, File, Embed
-from typing import Optional, List, Dict, Union
+from discord import Message, Member, HTTPException, NotFound, File, Embed, Attachment
+from typing import Optional, List, Dict, Set, Union, Iterable
 import datetime as D
 
 
@@ -12,6 +14,23 @@ class MessageAuthoritarian(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    @staticmethod
+    async def _get_urls(msg: Message) -> Set[str]:
+        """Get all of the unique urls from a message"""
+        urls = set()
+        if msg.attachments:
+            urls.update((attachment.url for attachment in msg.attachments
+                         if "unknown" not in attachment.url))  # ignore anonymous uploads
+        if msg.embeds:
+            for embed in msg.embeds:
+                to_add = filter(lambda attr: attr != Embed.Empty,  # remove empty attrs
+                                (embed.url, embed.video.url, embed.image.url))
+                urls.update(list(to_add))
+        # try to get links from the content
+        raw_links = mestils.get_links(msg.content)
+        urls.update(raw_links)
+        return urls
 
     async def on_message(self, msg: Message):
         """Do your check here. This must be deccorated with commands.Cog.listener()
@@ -25,7 +44,7 @@ class MessageAuthoritarian(commands.Cog):
         # example
         if "ayaya" in msg.contents:
             await msg.channel.send(">={", delete_after=20)
-            MessageAuthoritarian.last_msg = msg
+            self.bot.get_cog("AuthoritarianBabySitter").last_msg = msg
             await msg.delete(delay=2)
 
 
@@ -34,33 +53,25 @@ class AuthoritarianBabySitter(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.disabled: bool = False
+        self.last_msg: Message = None
 
     @commands.command(aliases=["RS", "resummon", "come_back", "false_positive"
                                "false_hit", "resummon_msg"])
     async def resummon_message(self, ctx):
         """Repost the last deleted message."""
-        msg = MessageAuthoritarian.last_msg  # the name is too long
-        if msg is None:
+        # avoid no message deleted
+        if self.last_msg is None:
             return await ctx.send("I have not deleted anything today, my lord.")
 
         # avoid an empty message and allow adding error messages
-        to_send = msg.content or "`[placeholder]`"
+        to_send = self.last_msg.content or "`[placeholder]`"
 
         # attempt to retrieve the attachments
-        to_attach: List[Optional[File]] = []
-        try:
-            to_attach = [await attachment.to_file(use_cached=True)  # use_cached makes it more robust
-                         for attachment in msg.attachments]
-        except (HTTPException, NotFound):
-            to_send += "\n`[Failed to get attachments]`"
-        # send the text and attachments
-        await mestils.send_as_chunks(f"{to_send}", ctx,
-                                     files=to_attach,
-                                     embed=msg.embeds[0])
-        # send the embeds(s). Disord.py doesn't allow > 1 embed per msg
-        if len(msg.embeds > 1):
-            for embed in msg.embeds:
-                await ctx.send(embed=embed)
+        urls = list((await MessageAuthoritarian._get_urls(self.last_msg)))
+
+        # chunk the message into sets of 5 (only 5 links will embed per message)
+        await mestils.send_as_chunks(urls, self.last_msg.channel, character_cap=5)
 
 
 class InstagramHandler(MessageAuthoritarian):
@@ -86,7 +97,7 @@ class InstagramHandler(MessageAuthoritarian):
             if mestils.is_private(link):
                 await msg.channel.send("That link was private, brother. I will remove it " + "<:s_40k_adeptus_mechanicus_shocked:585598378721673226>", delete_after=20)
                 # cache the message in case of a false-positive
-                MessageAuthoritarian.last_msg = msg
+                self.bot.get_cog("AuthoritarianBabySitter").last_msg = msg
                 await msg.delete(delay=2)
 
 
@@ -99,71 +110,43 @@ class RepostHandler(MessageAuthoritarian):
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)
         # all of the hashed images from the past 48 hours
-        self.hashes: Dict[str, D.datetime] = {}
-        self.clean_up_hashes.start()
+        self.hashes: AsyncCache = AsyncCache(max_items=256,  # the hashes are 32 bytes so it's 8KB at max
+                                             on_add_pass=lambda x, y, z: print(
+                                                 f"Added Key {y} Value {z}"),
+                                             on_add_fail=lambda x, y, z: print(
+                                                 f"Failed to add Key {y} Value {z}"),
+                                             on_remove=lambda x, y, z: print(
+                                                 f"Removed Key {y} Value {z}")
+                                             )
 
-    @tasks.loop(hours=12)
-    async def clean_up_hashes(self) -> tasks.Loop:
-        """Removes all links that are more than 2 days old"""
-        now = D.datetime.now()
-        # this will replace self.links to avoid deleting during iteration
-        self.hashes = dict(
-            filter(lambda pair: (now - pair[1]).days < 2, self.hashes.items()))  # filter by date within 2 days of now
-
-    @ commands.Cog.listener()
+    @commands.Cog.listener()
     async def on_message(self, msg: Message):
-        """Deletes reposted images"""
-        async def check_duplicate(hash: str):
-            """Check if the hash is already in self.hashes. If so, delete the message.
-            Otherwise: cache the hash."""
-            if hash in self.hashes:
-                # the link has been saved, so delete the message
-                await msg.channel.send("}=< No repostium in this discordium >={",
-                                       delete_after=20)
-                MessageAuthoritarian.last_msg = msg
-                await msg.delete(delay=2)
-            else:  # save the link
-                self.hashes[hash] = D.datetime.now()
-
-                # don't reply to self
+        """Check for duplicate images."""
+        # don't respond to self
         if msg.author == self.bot.user:
             return
 
-        # the hash of the pixels of the media (loaded as bytes)
-        media_hashes: List[str] = []
-        # check for uploaded files
-        if msg.attachments:
-            for attached_file in msg.attachments:
-                # this can't be limited so maybe use another method to save memory
-                attached_file_bytes = await attached_file.read(use_cached=True)
-                media_hashes.append(hash(attached_file_bytes))
+        # get the urls of all media in the message
+        urls = await self._get_urls(msg)
 
-        # check for embeds
-        if not msg.embeds:
-            return
+        # download all media
+        LIMIT = 1024  # 1024 bytes = 1 KB
+        for url in urls:
+            async with download_resource(url, LIMIT) as file:
+                bytes = await file.content
+            await self._check_duplicate(msg, hash(bytes))
 
-        # get hashes of the media (loaded as bytes)
-        # must be separate ifs because there could be a video, article, and image
-        for embed in msg.embeds:
-            # avoid empty embed
-            if (embed.image == Embed.Empty and embed.video == Embed.Empty
-                    and embed.url == Embed.Empty):
-                print(f"Empty embed ignored. Object: {embed}")
-                return
-            if embed.video != Embed.Empty:
-                # save video link
-                async with mestils.download_resource(embed.video.url, limit=1024) as rss:
-                    media_hashes.append(hash(await rss.content))
-            if embed.url != Embed.Empty:  # it's some kind of article
-                # save article link
-                check_duplicate(embed.url)
-            if embed.image != Embed.Empty:  # it's an image
-                async with mestils.download_resource(embed.image.url, limit=1024) as rss:
-                    media_hashes.append(hash(await rss.content))
-
-        # check each of the hashes
-        for hash_ in media_hashes:
-            await check_duplicate(hash_)
+    async def _check_duplicate(self, msg: Message, hash: str):
+        """Check if the hash is already in self.hashes. If so, delete the message.
+        Otherwise: cache the hash."""
+        if hash in self.hashes:
+            # the link has been saved, so delete the message
+            await msg.channel.send("}=< No repostium in this discordium >={",
+                                   delete_after=20)
+            self.bot.get_cog("AuthoritarianBabySitter").last_msg = msg
+            await msg.delete(delay=2)
+        else:  # save the link
+            self.hashes[hash] = D.datetime.now()
 
     @ commands.command(aliases=["SCa"])
     @ commands.is_owner()
