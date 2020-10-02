@@ -9,6 +9,12 @@ import re
 import datetime as D
 #from Utils import common
 
+# pre-compile the regexs
+REGEX = {
+    "instagram": re.compile(r"https:\/\/www\.instagram\.com\/p\/[a-zA-Z-_0-9]*"),
+    "get_links": re.compile(r"(https?:\/\/)?([a-zA-Z0-9-]+\.[a-zA-Z0-9\.-]+)([^\s\n]+)*"),
+}
+
 
 def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str = None,
                  col_labels: List[str] = None, row_labels: List[str] = None) -> str:
@@ -101,7 +107,7 @@ def get_instagram_links(msg: str) -> List[Optional[str]]:
     RETURNS
     List[]: no links
     List[str]: some links found"""
-    return re.findall(r"https:\/\/www\.instagram\.com\/p\/[a-zA-Z-_0-9]*",
+    return re.findall(REGEX["instagram"],
                       msg)
 
 
@@ -204,7 +210,7 @@ def get_links(msg: str) -> Optional[List[str]]:
     """Use regex to extract any links from the message.
     NOTE: the regex will match anything after '/' until a new line or space is reached"""
     # credit to Auroram for this expression
-    matches = re.findall(r"(https?:\/\/)?([a-zA-Z0-9-]+\.[a-zA-Z0-9\.-]+)([^\s\n]+)*",
+    matches = re.findall(REGEX["get_links"],
                          msg)
     # NOTE matches is in this format:
     #     [
