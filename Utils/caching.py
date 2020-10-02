@@ -207,7 +207,7 @@ class AsyncCache:
         pass
 
     @staticmethod
-    def on_remove(self, key: Hashable, value, Any):
+    def on_remove(self, key: Hashable, value: Any):
         """This will be called after a key is removed from the cache.
         Does nothing by default."""
         pass
@@ -261,32 +261,3 @@ class AsyncCache:
             f"_event_loop = {self._event_loop}, _cleaning = {self._cleaning},"
             f"_cache = {self._cache}"
         )
-
-
-if __name__ == "__main__":
-    from asyncio import get_event_loop, sleep
-
-    async def main():
-        i = AsyncCache(max_items=2,
-                       on_add_pass=lambda x, y: print(
-                           f"Added key {x}, value {y}"),
-                       on_add_fail=lambda x, y: print(
-                           f"Failed to add key {x}, value {y}"),
-                       on_remove=lambda x, y: print(
-                           f"Removed key {x}, value {y}"),
-                       )
-
-        i.append(1, 2)
-        i.extend(((1, 2), (3, 4), (5, 6)))
-        print(i)
-        print(5 in i)
-        for k, v in i:
-            print(f"key {k} value {v}")
-        print(len(i))
-        i + (1, 2)
-        print(i)
-        i - 1
-        print(i)
-        print(i[1])
-        i.append(7, 8)
-        print(i[7])
