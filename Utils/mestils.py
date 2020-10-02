@@ -7,7 +7,7 @@ from asyncio import sleep as async_sleep
 import os
 import re
 import datetime as D
-from Utils import common
+#from Utils import common
 
 
 def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str = None,
@@ -201,8 +201,14 @@ async def send_as_chunks(msg: Union[str, List[str]], target: Messageable,
 
 
 def get_links(msg: str) -> Optional[List[str]]:
-    """Use regex to extract any links from the message."""
-    # thank stackoverflow for this voodoo
-    # I have no clue how this works
-    return re.findall(r"^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$",
-                      msg)
+    """Use regex to extract any links from the message.
+    NOTE: the regex will match anything after '/' until a new line or space is reached"""
+    # credit to Auroram for this expression
+    matches = re.findall(r"(https?:\/\/)?([a-zA-Z0-9-]+\.[a-zA-Z0-9\.-]+)([^\s\n]+)*",
+                         msg)
+    # NOTE matches is in this format:
+    #     [
+    #         (protocol, domain, anything after until whitespace or `\n`),
+    #     ]
+    # convert matches to List[str]
+    return ["".join(row) for row in matches]
