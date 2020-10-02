@@ -221,7 +221,7 @@ class AsyncCache:
         """Remove the key from the cache with the `cache - key` syntax"""
         value = self._cache[key]
         del self._cache[key]
-        return self._call(self.on_remove, (key, value))
+        return self._call(self.on_remove, key, value)
 
     def __getitem__(self, key: Hashable) -> Optional[Any]:
         """Use the `cache[key]` syntax to access values."""
@@ -238,7 +238,7 @@ class AsyncCache:
         """Delete a key from the cache using the `del cache[key]` syntax"""
         value = self._cache[key]
         del self._cache[key]
-        return self._call(self.on_remove, (key, value))
+        return self._call(self.on_remove, key, value)
 
     def __len__(self) -> int:
         """Get the number of pairs in the cache."""
