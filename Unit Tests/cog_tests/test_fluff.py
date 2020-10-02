@@ -61,6 +61,11 @@ class TestDTWMChanWorship(unittest.TestCase):
         """Check that the number of chants for a person is counted correctly.
         Will not work until the 4th of each month."""
         now = datetime.now()
+        # check that today is at least the 4th
+        if now.day < 4:
+            print("This test cannot be run until the 4th of this month")
+            return
+
         self.cog.chants["count_test"] = [
             now,
             datetime.now(),
