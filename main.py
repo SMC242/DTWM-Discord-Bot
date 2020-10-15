@@ -182,6 +182,7 @@ async def run_tests(ctx):
 @bot.command()
 async def patchtest(ctx):
     await ctx.send("it worked")
+    await ctx.send("ayaya")
 
 
 @bot.listen()
