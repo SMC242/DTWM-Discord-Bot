@@ -14,6 +14,7 @@ class MessageAuthoritarian(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.babysitter = self.bot.get_cog("AuthoritarianBabySitter")
 
     @staticmethod
     async def _get_urls(msg: Message) -> Set[str]:
@@ -73,6 +74,11 @@ class AuthoritarianBabySitter(commands.Cog):
         # chunk the message into sets of 5 (only 5 links will embed per message)
         await mestils.send_as_chunks(urls, self.last_msg.channel, character_cap=5)
 
+    @commands.command()
+    async def toggle_auto_mods(self):
+        """Enable or disable the auto moderators."""
+        self.disabled = not self.disabled
+
 
 class InstagramHandler(MessageAuthoritarian):
     """Responds to Instagam links"""
@@ -85,6 +91,9 @@ class InstagramHandler(MessageAuthoritarian):
         """Warns the user if they post a private Instagram link."""
         # don't respond to the bot
         if self.bot.user == msg.author:
+            return
+
+        if self.babysitter.disabled:
             return
 
         # check if there was an Instagram link
@@ -124,6 +133,9 @@ class RepostHandler(MessageAuthoritarian):
         """Check for duplicate images."""
         # don't respond to self
         if msg.author == self.bot.user:
+            return
+
+        if self.babysitter.disabled:
             return
 
         # get the urls of all media in the message
