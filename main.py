@@ -7,8 +7,6 @@ import os
 from Utils import common
 from datetime import datetime
 from traceback import format_exception, print_exc
-from Utils.mestils import send_as_chunks
-from BenUtils.searching import binarySearch
 from sys import exit
 
 # dev settings
@@ -90,6 +88,7 @@ async def close(ctx):
 @commands.is_owner()
 async def toggle_command(ctx, name: str):
     """Deactivate or activate a faulty command."""
+    from BenUtils.searching import binarySearch
     commands = list(set([cmd for cmd in bot.walk_commands()])
                     )  # filter out duplicates
     command = binarySearch(name, sorted(commands, key=lambda cmd: cmd.name),
@@ -111,6 +110,7 @@ async def patch(ctx):
     with the new files."""
     import git
     import importlib
+    from Utils.mestils import send_as_chunks
     async with ctx.typing():
         try:
             # unload everything but the base commands
@@ -147,6 +147,7 @@ async def patch(ctx):
 @commands.is_owner()
 async def reload_cogs(ctx):
     """Restart all cogs and utils."""
+    import importlib
     extensions = list(bot.extensions.keys()).copy(
     )  # avoid deletion during iteration
     # reload the extensions
@@ -164,6 +165,7 @@ async def run_tests(ctx):
     """Run all of the unit tests and log the failures to the bot channel."""
     import unittest
     from json import dumps  # for pretty printing UmU
+    from Utils.mestils import send_as_chunks
     tests = unittest.defaultTestLoader = unittest.TestLoader().discover(
         "./Unit Tests/", pattern="test_*")  # get the tests in Unit Tests/
     runner = unittest.TextTestRunner()

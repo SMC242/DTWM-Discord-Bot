@@ -8,16 +8,17 @@ import datetime as D
 from Utils import common, memtils, AttendanceDB as db, react_menu
 from asyncio import sleep as async_sleep, get_event_loop
 from Utils.mestils import create_table
-from .Event_handlers import CommandNotImplementedError
+from .event_handler_modules.error_handler import CommandNotImplementedError
+
 
 class KickSuggestionMenu(react_menu.ReactTable):
     """A specialised reaction table for kicking people."""
 
     def __init__(self, table_rows: Tuple[
-                                      List[Tuple[str, int, str, str, str]],
-                                      str, str],
-                 ctx: commands.Context, percent_warned: str,
-                 percent_kicked: str):
+            List[Tuple[str, int, str, str, str]],
+            str, str],
+            ctx: commands.Context, percent_warned: str,
+            percent_kicked: str):
         self._att_cog = ctx.bot.get_cog("Attendance")
         headers = ("Name", "Attendance Ratio (%)", "Recommended Action",
                    "Away (True/False)", "Join Date")
@@ -28,14 +29,14 @@ class KickSuggestionMenu(react_menu.ReactTable):
         info = ("This is my opinion, my lord. " +
                 f"{self.stats[0]} of the outfit would be warned " +
                 f"and {self.stats[1]} would be kicked. " +
-                "Click the ban hammer to kick the currently selected member " + 
+                "Click the ban hammer to kick the currently selected member " +
                 "or click the X to skip them.")
 
         # initialise the ReactMenu
         super().__init__(headers, table_rows, ctx.bot,
-                         ctx.channel, on_select = self.kick,
-                         on_reject = self.skip, message_text = info,
-                         select_emote_id = 594462835082526721)
+                         ctx.channel, on_select=self.kick,
+                         on_reject=self.skip, message_text=info,
+                         select_emote_id=594462835082526721)
 
     @staticmethod
     async def kick(self):
@@ -66,20 +67,20 @@ class KickSuggestionMenu(react_menu.ReactTable):
         # kicked or rejected
         else:
             embed = Embed(**self.embed_settings)
-            embed.add_field(name = "All done", value = "No suggested actions left")
-            await self.msg.edit(embed = embed)
+            embed.add_field(name="All done", value="No suggested actions left")
+            await self.msg.edit(embed=embed)
 
             # remove all the reactions
             for reaction in self.msg.reactions:
                 await reaction.remove(self._bot.user)
-            
+
             # remove self from the tracked instances
             self.unregister()
 
 
 class Attendance(commands.Cog):
     """Commands relating to attendance.
-    
+
     Commands and their alias:
         add_all_members, AAM
         add_member, AM
@@ -91,7 +92,7 @@ class Attendance(commands.Cog):
         get_event_att, Eatt
         joined_at, JA
         joined_at_by_ID, JAI
-    
+
     New Scouts are automatically registered to the database."""
 
     def __init__(self, bot: commands.Bot):
@@ -103,18 +104,19 @@ class Attendance(commands.Cog):
     async def on_member_update(self, before: Member, after: Member):
         """Add new scouts to the Members table automatically"""
         # get the roles that were added
-        new_role_names = [role_.name for role_ in after.roles if role_ not in before.roles]
+        new_role_names = [
+            role_.name for role_ in after.roles if role_ not in before.roles]
         if "Scout" in new_role_names:
             # get their name
             name = memtils.NameParser(after.display_name).parsed
 
             # only register them if they're not already registered
-            if not await memtils.is_member(name, 
+            if not await memtils.is_member(name,
                                            [r[1] for r in self.db.get_all_members()]):
                 self.db.add_member(name)
                 print(f"New member detected: {name}")
 
-    @commands.command(aliases = ["AAM"])
+    @commands.command(aliases=["AAM"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def add_all_members(self, ctx):
@@ -133,12 +135,12 @@ class Attendance(commands.Cog):
             # give feedback
             await ctx.send(f"{count} new brothers have been registered, my lord.")
 
-    @commands.command(aliases = ["AM"])
+    @commands.command(aliases=["AM"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def add_member(self, ctx, name: str):
         """Register a member with their name."""
-        
+
         # check that the name isn't registered
         if not await memtils.is_member(name,
                                        [r[1] for r in self.db.get_all_members()]):
@@ -147,7 +149,7 @@ class Attendance(commands.Cog):
         else:
             await ctx.send(f"{name} is already registered!")
 
-    @commands.command(aliases = ["RM"])
+    @commands.command(aliases=["RM"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def remove_member(self, ctx, name: str):
@@ -162,7 +164,7 @@ class Attendance(commands.Cog):
         self.db.delete_member(name)
         await ctx.send("Another brother lost to the warp...")
 
-    @commands.command(aliases = ["RMI"])
+    @commands.command(aliases=["RMI"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def remove_member_by_id(self, ctx, id: int):
@@ -174,14 +176,15 @@ class Attendance(commands.Cog):
         self.db.delete_member_by_id(id)
         await ctx.send("Another brother lost to the warp...")
 
-    @commands.command(aliases = ["DATT"])
+    @commands.command(aliases=["DATT"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5400, commands.BucketType.user)
     async def do_attendance(self, ctx):
         """Get the names of all people in the event voice channels
         then send it to the DB in 90 minutes."""
         # calculate when attendance_inner will finish
-        return_time = (D.datetime.today() + D.timedelta(minutes = 90)).strftime("%H:%M")
+        return_time = (D.datetime.today() +
+                       D.timedelta(minutes=90)).strftime("%H:%M")
         await ctx.send(f"I will return at {return_time}, my lord")
         attendees = await self.attendance_inner()
         return await ctx.send(f"Our men have been counted.\nAttendees: {list(attendees)}")
@@ -204,7 +207,7 @@ class Attendance(commands.Cog):
                 for name in [person.display_name for person in channel.members]:
                     attendees.add(memtils.NameParser(name).parsed)
 
-            # sleep for 30 minutes 
+            # sleep for 30 minutes
             # but don't wait a fourth time
             print(f"{attendees} at roll call {i}")
             if i == 3:
@@ -217,7 +220,7 @@ class Attendance(commands.Cog):
         self.db.record_att(attendees)
         return attendees
 
-    @commands.command(aliases = ["LM"])
+    @commands.command(aliases=["LM"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 20, commands.BucketType.user)
     async def list_members(self, ctx):
@@ -235,15 +238,15 @@ class Attendance(commands.Cog):
         async with ctx.typing():
             try:
                 react_menu.ReactTable(("ID", "Name"), await wrap(self),
-                                  self.bot, ctx.channel,
-                                  message_text = "They are ready to serve, my lord:",
-                                  elements_per_page = 3,
-                                  random_colour = True,
-                                  )
+                                      self.bot, ctx.channel,
+                                      message_text="They are ready to serve, my lord:",
+                                      elements_per_page=3,
+                                      random_colour=True,
+                                      )
             except ValueError:
                 await ctx.send("None of our men have been registered, my lord")
 
-    @commands.command(aliases = ["att"])
+    @commands.command(aliases=["att"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 20, commands.BucketType.user)
     async def get_attendance(self, ctx):
@@ -261,14 +264,14 @@ class Attendance(commands.Cog):
                                       await wrap(self),
                                       self.bot,
                                       ctx,
-                                      elements_per_page = 3,
-                                      random_colour = True,
+                                      elements_per_page=3,
+                                      random_colour=True,
                                       )
             # handle no attendance data
             except ValueError:
                 await ctx.send("Our archives fail us... I cannot find any roll calls")
 
-    @commands.command(aliases = ["Eatt"])
+    @commands.command(aliases=["Eatt"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 20, commands.BucketType.user)
     async def get_event_attendance(self, ctx):
@@ -278,17 +281,17 @@ class Attendance(commands.Cog):
 
         async with ctx.typing():
             try:
-                react_menu.ReactTable(("Event type", "Attendance %"), 
+                react_menu.ReactTable(("Event type", "Attendance %"),
                                       await wrap(self),
                                       self.bot,
                                       ctx,
-                                      elements_per_page = 2,
+                                      elements_per_page=2,
                                       )
             # handle no attendance data
             except ValueError:
                 await ctx.send("Our archives fail us... I cannot find any roll calls")
 
-    @commands.command(aliases = ["JA"])
+    @commands.command(aliases=["JA"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def joined_at(self, ctx, name: str):
@@ -302,7 +305,7 @@ class Attendance(commands.Cog):
         else:
             await ctx.send(f"He joined our chapter on {joined_at.strftime('%d.%m')}")
 
-    @commands.command(aliases = ["JAI"])
+    @commands.command(aliases=["JAI"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def joined_at_by_id(self, ctx, id: int):
@@ -314,7 +317,7 @@ class Attendance(commands.Cog):
         else:
             await ctx.send(f"He joined our chapter on {joined_at.strftime('%d.%m')}")
 
-    @commands.command(aliases = ["ND"])
+    @commands.command(aliases=["ND"])
     @commands.is_owner()
     async def new_day(self, ctx, event_type: str):
         """Create a new day in the database. The event type must be one of the following:
@@ -328,7 +331,7 @@ class Attendance(commands.Cog):
             self.db.new_day(event_type)
             await ctx.send("A new day has begun")
 
-    @commands.command(aliases = ["MATT", "MY_ATT"])
+    @commands.command(aliases=["MATT", "MY_ATT"])
     @commands.has_any_role(*common.member_roles)
     @commands.cooldown(1, 20, commands.BucketType.user)
     async def get_my_attendance(self, ctx):
@@ -340,7 +343,7 @@ class Attendance(commands.Cog):
         else:
             await ctx.send(f"{memtils.get_title(ctx.author)}, your attendance ratio is: {ratio}")
 
-    @commands.command(aliases = ["V5", "hop_in"])
+    @commands.command(aliases=["V5", "hop_in"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5400, commands.BucketType.user)
     async def get_in_ops(self, ctx):
@@ -358,9 +361,9 @@ class Attendance(commands.Cog):
             # get people playing PS2
             in_game = [person for person in in_outfit
                        if "Planetside 2" in [
-                            act.name for act in person.activities
-                            ]
-                        ]
+                           act.name for act in person.activities
+                       ]
+                       ]
 
             # get the event voice channel ids
             with open("./Text Files/channels.txt") as f:
@@ -374,7 +377,7 @@ class Attendance(commands.Cog):
                 found = False
                 for channel in channels:
                     if person in channel.members:
-                        found = True 
+                        found = True
                         break
 
                 # ping them if they weren't found
@@ -382,7 +385,7 @@ class Attendance(commands.Cog):
                     await common.bot_channel.send(
                         f"Come quickly, brother, an event is starting {person.mention}!")
 
-    @commands.command(aliases = ["away", "A"])
+    @commands.command(aliases=["away", "A"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def mark_as_away(self, ctx, name: str):
@@ -397,7 +400,7 @@ class Attendance(commands.Cog):
         else:
             await ctx.send(f'''Our archives don't know of this "{name}", my lord.''')
 
-    @commands.command(aliases = ["IA"])
+    @commands.command(aliases=["IA"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def is_away(self, ctx, name: str):
@@ -413,7 +416,7 @@ class Attendance(commands.Cog):
     async def kick_member(self, person: Member):
         """Remove the person from the outfit, move them to Guardsman,
            and DM them about it.
-           
+
            This is its own method so that get_attendance can be
            extended to auto-kick people."""
         # remove them from the DB
@@ -433,26 +436,26 @@ class Attendance(commands.Cog):
             545804149821014036,  # Scout
             545804220763340810,  # Champion,
             545819032868356395,  # Chaplain
-            ]
+        ]
         guild = person.guild
         member_roles = [guild.get_role(id) for id in member_role_ids]
 
         # move them to Guardsman
-        await person.remove_roles(*member_roles, reason = "Kicked from the outfit")
-        await person.add_roles(guild.get_role(545803265741291521), reason = "Kicked from the outfit")
+        await person.remove_roles(*member_roles, reason="Kicked from the outfit")
+        await person.add_roles(guild.get_role(545803265741291521), reason="Kicked from the outfit")
 
         # DM them
         try:
-            await person.send("You've been kicked from the chapter because you haven't" + 
+            await person.send("You've been kicked from the chapter because you haven't" +
                               " attended enough events this month." +
                               " You can return in 2 weeks if you have more time :)")
         # ping them in the bot channel if they can't be DMed
         except Forbidden:
-            await common.bot_channel.send(f"{person.mention} You've been kicked from the chapter " + 
+            await common.bot_channel.send(f"{person.mention} You've been kicked from the chapter " +
                                           "because you haven't attended enough events this month." +
                                           " You can return in 2 weeks if you have more time :)")
 
-    @commands.command(aliases = ["K"])
+    @commands.command(aliases=["K"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 20, commands.BucketType.user)
     async def kick(self, ctx, person: Union[Member, str]):
@@ -467,8 +470,8 @@ class Attendance(commands.Cog):
                     return await ctx.send("I can't find that person, my lord")
 
             # validate the person
-            if not await memtils.is_member(person.display_name, 
-                                     [r[1] for r in self.db.get_all_members()]):
+            if not await memtils.is_member(person.display_name,
+                                           [r[1] for r in self.db.get_all_members()]):
                 await ctx.send("That person is not in our chapter!")
             else:
                 # easter-egg
@@ -479,7 +482,7 @@ class Attendance(commands.Cog):
                 await self.kick_member(person)
                 await ctx.send("He has been expelled, my lord")
 
-    @commands.command(aliases = ["RA"])
+    @commands.command(aliases=["RA"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def remove_away(self, ctx, name: str):
@@ -492,15 +495,14 @@ class Attendance(commands.Cog):
             self.db.unmark_away(name)
             await ctx.send("An old face has returned :D")
 
-
-    @commands.command(aliases = ["SK", "SKSKSKSKSKSKSKSKSK_GIVE_ME_THE_TEA_SIS"])
+    @commands.command(aliases=["SK", "SKSKSKSKSKSKSKSKSK_GIVE_ME_THE_TEA_SIS"])
     @commands.has_any_role(*common.leader_roles)
     @commands.cooldown(1, 20, commands.BucketType.user)
     async def suggest_kicks(self, ctx):
         """Suggest who should be kicked this month."""
         async def wrap(self) -> Tuple[
-                                      List[Tuple[str, int, str, str, str]],
-                                      str, str]:
+                List[Tuple[str, int, str, str, str]],
+                str, str]:
             return self.db.suggest_kicks()
 
         async with ctx.typing():
@@ -511,17 +513,19 @@ class Attendance(commands.Cog):
                 KickSuggestionMenu(table_rows, ctx, *stats)
             except ValueError:
                 await ctx.send("I have no archive entries to base my opinion on, my lord")
-            
-    #@commands.command(aliases = ["K"])
-    #@commands.has_any_role(*common.leader_roles)
+
+    # @commands.command(aliases = ["K"])
+    # @commands.has_any_role(*common.leader_roles)
     async def get_attendance_plus(self, ctx):
         """get_attendance but it allows browsing each person and kicking them."""
         # use mestils.search_member to get the person
         # then use ReactMenu on_reject to call Attendance.kick on them
         raise CommandNotImplementedError()
 
+
 def setup(bot):
     bot.add_cog(Attendance(bot))
+
 
 if __name__ == "__main__":
     setup(commands.Bot("TEST"))

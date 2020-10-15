@@ -7,7 +7,13 @@ from asyncio import sleep as async_sleep
 import os
 import re
 import datetime as D
-from Utils import common
+#from Utils import common
+
+# pre-compile the regexs
+REGEX = {
+    "instagram": re.compile(r"https:\/\/www\.instagram\.com\/p\/[a-zA-Z-_0-9]*"),
+    "get_links": re.compile(r"(https?:\/\/)?([a-zA-Z0-9-]+\.[a-zA-Z0-9\.-]+)([^\s\n]+)*"),
+}
 
 
 def create_table(cell_contents: Iterable[Iterable[Any]], file_name: str = None,
@@ -101,7 +107,7 @@ def get_instagram_links(msg: str) -> List[Optional[str]]:
     RETURNS
     List[]: no links
     List[str]: some links found"""
-    return re.findall(r"https:\/\/www\.instagram\.com\/p\/[a-zA-Z-_0-9]*",
+    return re.findall(REGEX["instagram"],
                       msg)
 
 
@@ -137,19 +143,38 @@ def is_private(instagram_link: str) -> bool:
     return len(parsed_post_id) > 11
 
 
-def chunk_message(msg: str, code_block: bool = False) -> List[str]:
-    """Split the input string into chunks of 2k characters or less."""
+def chunk_message(msg: str, code_block: bool = False, character_cap: int = 2000) -> List[str]:
+    """
+    # (method) chunk_message(msg, code_block = False, CHARACTER_CAP = 2000, )
+    Split the input string into chunks of 2k characters or less.
+
+    # Parameters
+        - `msg`: `str`
+            The text to send
+        - `code_block`: `bool`
+            Whether it should be marked as a code block.
+            Defaults to `False`.
+        - `character_cap`: `int`
+            The maximum characters per message.
+            Defaults to `2000`.
+
+    # Raises
+        - ValueError: An empty string was passed
+
+    # Returns
+        `List[str]`:
+            The chunks
+    """
     # avoid an empty message
     if not msg:
         raise ValueError("Cannot chunk an empty string")
-    CHARACTER_CAP = 2000
     if code_block:  # code blocks require 7 characters
-        CHARACTER_CAP -= 7
+        character_cap -= 7
     # split the message into chunks that can be sent
-    if len(msg) > CHARACTER_CAP:
-        return [f"```\n{msg[chunk_num: chunk_num + CHARACTER_CAP]}```"  # create code block for each message
-                if code_block else msg[chunk_num: chunk_num + CHARACTER_CAP]
-                for chunk_num in range(0, len(msg), CHARACTER_CAP)]
+    if len(msg) > character_cap:
+        return [f"```\n{msg[chunk_num: chunk_num + character_cap]}```"  # create code block for each message
+                if code_block else msg[chunk_num: chunk_num + character_cap]
+                for chunk_num in range(0, len(msg), character_cap)]
     else:
         # add code formatting
         code_block_str = "```\n" if code_block else ""
@@ -179,3 +204,17 @@ async def send_as_chunks(msg: Union[str, List[str]], target: Messageable,
     for msg in msgs:
         await target.send(msg, **send_kwargs)
         async_sleep(delay)
+
+
+def get_links(msg: str) -> Optional[List[str]]:
+    """Use regex to extract any links from the message.
+    NOTE: the regex will match anything after '/' until a new line or space is reached"""
+    # credit to Auroram for this expression
+    matches = re.findall(REGEX["get_links"],
+                         msg)
+    # NOTE matches is in this format:
+    #     [
+    #         (protocol, domain, anything after until whitespace or `\n`),
+    #     ]
+    # convert matches to List[str]
+    return ["".join(row) for row in matches]
