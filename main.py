@@ -179,6 +179,11 @@ async def run_tests(ctx):
                          common.bot_channel, code_block=True)
 
 
+@bot.command()
+async def patchtest(ctx):
+    await ctx.send("it worked")
+
+
 @bot.listen()
 async def on_ready():
     """Control the behaviour when the bot starts."""
