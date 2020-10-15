@@ -5,6 +5,7 @@ __pycache__/classes.cpython-37.pyc
 *.db
 *.pyc
 Text Files/token.txt
+Text\ Files/ssh_key.txt
 *.sln
 *.config
 Images/

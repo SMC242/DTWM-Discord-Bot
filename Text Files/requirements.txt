@@ -10,3 +10,4 @@ python-levenshtein
 requests
 beautifulsoup4
 GitPython
+aiohttp
