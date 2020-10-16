@@ -7,6 +7,7 @@ from discord.ext.commands import Context
 from Utils import common
 from fuzzywuzzy import process, fuzz  # this module has a great name :D
 from BenUtils.searching import binarySearch
+from string import ascii_letters
 
 
 class NameParser:
@@ -70,6 +71,9 @@ class NameParser:
             True = uppercase
             False = lowercase.
         """
+        # validate the name
+        if not name:
+            raise ValueError("Empty name.")
         self._original_name = name
         self.check_tag = check_tag
         self.check_english = check_english
@@ -102,7 +106,7 @@ class NameParser:
         # convert the case
         if self.case is None:
             return name
-        if self.case:
+        elif self.case:
             return name.upper()
         else:
             return name.lower()
@@ -114,7 +118,7 @@ class NameParser:
         if "]" in name:
             tag_index = name.index("]")
             name = name[tag_index + 1:]
-        return name.strip()  # remove extra spaces
+        return name
 
     def convert_to_english(self, name: str) -> str:
         """Check for non-english characters. What happens to them
