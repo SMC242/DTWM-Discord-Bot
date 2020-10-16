@@ -14,6 +14,7 @@ class MessageAuthoritarian(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.babysitter = self.bot.get_cog("AuthoritarianBabySitter")
 
     @staticmethod
     async def _get_urls(msg: Message) -> Set[str]:
@@ -94,6 +95,9 @@ class InstagramHandler(MessageAuthoritarian):
         if self.bot.user == msg.author:
             return
 
+        if self.babysitter.disabled:
+            return
+
         # check if there was an Instagram link
         links = mestils.get_instagram_links(msg.content)
 
@@ -131,6 +135,9 @@ class RepostHandler(MessageAuthoritarian):
         """Check for duplicate images."""
         # don't respond to self
         if msg.author == self.bot.user:
+            return
+
+        if self.babysitter.disabled:
             return
 
         # get the urls of all media in the message

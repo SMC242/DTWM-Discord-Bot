@@ -10,7 +10,7 @@ from traceback import format_exception, print_exc
 from sys import exit
 
 # dev settings
-DEV_VERSION = True
+DEV_VERSION = False
 common.DEV_VERSION = DEV_VERSION
 LOG_LOAD_ERROR = True
 
@@ -177,6 +177,12 @@ async def run_tests(ctx):
     errors = dumps(results.errors, indent=4, default=str)
     await send_as_chunks(f"Failures: {failures}\nErrors: {errors}",
                          common.bot_channel, code_block=True)
+
+
+@bot.command()
+async def patchtest(ctx):
+    await ctx.send("it worked")
+    await ctx.send("ayaya")
 
 
 @bot.listen()
