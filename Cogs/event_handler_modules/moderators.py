@@ -73,6 +73,13 @@ class AuthoritarianBabySitter(commands.Cog):
         # chunk the message into sets of 5 (only 5 links will embed per message)
         await mestils.send_as_chunks(urls, self.last_msg.channel, character_cap=5)
 
+    @commands.command()
+    async def toggle_auto_mods(self, ctx):
+        """Enable or disable the auto moderators."""
+        self.disabled = not self.disabled
+        auto_mod_status = "disabled" if self.disabled else "enabled"
+        await ctx.send(f"I have {auto_mod_status} the auto-moderators")
+
 
 class InstagramHandler(MessageAuthoritarian):
     """Responds to Instagam links"""
