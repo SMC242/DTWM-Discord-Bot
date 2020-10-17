@@ -10,7 +10,7 @@ from traceback import format_exception, print_exc
 from sys import exit
 
 # dev settings
-DEV_VERSION = True
+DEV_VERSION = False
 common.DEV_VERSION = DEV_VERSION
 LOG_LOAD_ERROR = True
 

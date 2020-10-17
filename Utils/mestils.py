@@ -183,6 +183,7 @@ def chunk_message(msg: str, code_block: bool = False, character_cap: int = 2000)
 
 async def send_as_chunks(msg: Union[str, List[str]], target: Messageable,
                          delay: float = 1, code_block: bool = False,
+                         character_cap: int = 2000,
                          **send_kwargs):
     """Wrapper for chunk_messages that also sends the messages
     at a rate of 1/sec
@@ -197,7 +198,7 @@ async def send_as_chunks(msg: Union[str, List[str]], target: Messageable,
     """
     # chunk the message if it hasn't been chunked
     if isinstance(msg, str):
-        msgs = chunk_message(msg, code_block)
+        msgs = chunk_message(msg, code_block, character_cap)
     else:
         msgs = msg
     # send the messages

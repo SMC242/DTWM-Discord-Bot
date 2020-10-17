@@ -21,13 +21,12 @@ class MessageAuthoritarian(commands.Cog):
         """Get all of the unique urls from a message"""
         urls = set()
         if msg.attachments:
-            urls.update((attachment.url for attachment in msg.attachments
-                         if "unknown" not in attachment.url))  # ignore anonymous uploads
+            urls.update((attachment.url for attachment in msg.attachments))
         if msg.embeds:
             for embed in msg.embeds:
                 to_add = filter(lambda attr: attr != Embed.Empty,  # remove empty attrs
                                 (embed.video.url, embed.image.url))
-                urls.update(list(to_add))
+                urls.update(to_add)
         return urls
 
     @staticmethod
@@ -179,11 +178,6 @@ class RepostHandler(MessageAuthoritarian):
         # check if the articles have been posted before
         for url in article_links:
             await self._check_duplicate(msg, hash(url))
-
-        # TODO: test embedded videos, images
-        # TODO: test different youtube links
-        # TODO: test articles
-        # TODO: test different articles
 
     @ commands.command(aliases=["SCa"])
     @ commands.is_owner()
