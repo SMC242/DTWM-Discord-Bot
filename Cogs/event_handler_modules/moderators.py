@@ -26,11 +26,18 @@ class MessageAuthoritarian(commands.Cog):
         if msg.embeds:
             for embed in msg.embeds:
                 to_add = filter(lambda attr: attr != Embed.Empty,  # remove empty attrs
-                                (embed.url, embed.video.url, embed.image.url))
+                                (embed.video.url, embed.image.url))
                 urls.update(list(to_add))
+        return urls
+
+    @staticmethod
+    async def _get_msg_links(msg: Message) -> Set[str]:
+        """Get the links in the message from the text.
+        NOTE: this is a separate method from `_get_urls` because I don't want to download
+        things like articles."""
+        urls = set()
         # try to get links from the content
-        raw_links = mestils.get_links(msg.content)
-        urls.update(raw_links)
+        urls.update(mestils.get_links(msg.content))
         return urls
 
     async def on_message(self, msg: Message):
@@ -140,15 +147,7 @@ class RepostHandler(MessageAuthoritarian):
         if self.babysitter.disabled:
             return
 
-        # get the urls of all media in the message
-        urls = await self._get_urls(msg)
-
-        # download all media
-        LIMIT = 1024  # 1024 bytes = 1 KB
-        for url in urls:
-            async with download_resource(url, LIMIT) as file:
-                bytes = await file.content
-            await self._check_duplicate(msg, hash(bytes))
+        await self.hash_check(msg)
 
     async def _check_duplicate(self, msg: Message, hash: str):
         """Check if the hash is already in self.hashes. If so, delete the message.
@@ -161,6 +160,30 @@ class RepostHandler(MessageAuthoritarian):
             await msg.delete(delay=2)
         else:  # save the link
             self.hashes[hash] = D.datetime.now()
+
+    async def hash_check(self, msg: Message):
+        """Hash all of the media and article links and delete the message if it had any duplicates."""
+        # get the urls of all media in the message
+        urls = await self._get_urls(msg)
+        # find out which links are articles
+        article_links = (await self._get_msg_links(msg)).difference(urls)
+
+        # download all media
+        LIMIT = 1024  # 1024 bytes = 1 KB
+        for url in urls:
+            # hash the first KB of the media and check if it was already posted
+            async with download_resource(url, LIMIT) as file:
+                bytes = await file.content
+            await self._check_duplicate(msg, hash(bytes))
+
+        # check if the articles have been posted before
+        for url in article_links:
+            await self._check_duplicate(msg, hash(url))
+
+        # TODO: test embedded videos, images
+        # TODO: test different youtube links
+        # TODO: test articles
+        # TODO: test different articles
 
     @ commands.command(aliases=["SCa"])
     @ commands.is_owner()
