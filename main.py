@@ -109,8 +109,8 @@ async def patch(ctx):
     and replaced Cogs/, Text Files/, and Utils/
     with the new files."""
     import git
-    import subprocess
     from Utils.mestils import send_as_chunks
+    from os import startfile
     async with ctx.typing():
         try:
             # unload everything but the base commands
@@ -142,8 +142,8 @@ async def patch(ctx):
 
         # restart the bot with the new files
         finally:
-            ctx.send("Restarting...")
-            subprocess.Popen(["python", "main.py"])
+            await ctx.send("Restarting...")
+            startfile(__file__)
             exit(0)
 
 
