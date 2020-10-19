@@ -10,7 +10,7 @@ from traceback import format_exception, print_exc
 from sys import exit
 
 # dev settings
-DEV_VERSION = False
+DEV_VERSION = True
 common.DEV_VERSION = DEV_VERSION
 LOG_LOAD_ERROR = True
 
@@ -109,8 +109,8 @@ async def patch(ctx):
     and replaced Cogs/, Text Files/, and Utils/
     with the new files."""
     import git
-    import importlib
     from Utils.mestils import send_as_chunks
+    from os import startfile
     async with ctx.typing():
         try:
             # unload everything but the base commands
@@ -122,25 +122,29 @@ async def patch(ctx):
             # get the origin of the repo
             repo = git.Repo(".")
             origin = repo.remote()
+
+            # remove stashed changes
+            repo.git.reset('--hard')
+
             # pull the new files and get summaries
             info = origin.pull()
             info_string = '\n'.join((ele.commit.summary for ele in info))
             await ctx.send("Patched successfully! Summary titles (pulls):\n" +
                            info_string)
-        except Exception as err:  # dump error to chat
+
+        # dump error to chat
+        except Exception as err:
             await ctx.send("Patching failed. Error:")
             tb_lines = format_exception(type(err), err,
                                         err.__traceback__)
             tb = "\n".join(tb_lines) + f"Occured at: {datetime.now().time()}"
             await send_as_chunks(tb, ctx, code_block=True)
-        finally:
-            # reload the extensions
-            for extension in extensions:
-                bot.load_extension(extension)
 
-            # reload utils
-            for util in (common,):
-                importlib.reload(util)
+        # restart the bot with the new files
+        finally:
+            await ctx.send("Restarting...")
+            startfile(__file__)
+            exit(0)
 
 
 @bot.command(aliases=["reload"])
@@ -177,12 +181,6 @@ async def run_tests(ctx):
     errors = dumps(results.errors, indent=4, default=str)
     await send_as_chunks(f"Failures: {failures}\nErrors: {errors}",
                          common.bot_channel, code_block=True)
-
-
-@bot.command()
-async def patchtest(ctx):
-    await ctx.send("it worked")
-    await ctx.send("ayaya")
 
 
 @bot.listen()
