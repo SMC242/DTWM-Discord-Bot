@@ -38,7 +38,11 @@ class download_resource:
         # request the resource
         async with aiohttp.ClientSession() as session:
             # keep the reponse object around until exit
-            self.response = await session.get(self.url)
+            try:
+                self.response = await session.get(self.url)
+            except aiohttp.client_exceptions.InvalidURL:  # log error if a weird URL is passed
+                print(f"Bad URL: {self.url}")
+
             if self.response.status != 200:  # ensure that the request passed
                 return None
             # get the number of bytes to read if no limit passed
