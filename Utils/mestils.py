@@ -13,6 +13,7 @@ import datetime as D
 REGEX = {
     "instagram": re.compile(r"https:\/\/www\.instagram\.com\/p\/[a-zA-Z-_0-9]*"),
     "get_links": re.compile(r"(https?:\/\/)?([a-zA-Z0-9-]+\.[a-zA-Z0-9\.-]+)([^\s\n]+)*"),
+    "timezone": re.compile(r"(CET|CEST)", re.IGNORECASE),
 }
 
 
@@ -99,6 +100,22 @@ def search_word(contents: str, target_word: str) -> bool:
 
     return (re.compile(r'\b({0})\b'.format(target_word.lower()), flags=re.IGNORECASE).search(
         contents.lower())) is not None
+
+
+def get_eu_timezone(contents: str) -> List[Optional[str]]:
+    """
+    ### (method) get_eu_timezone(contents, )
+    Get 'CET'/'CEST' if mentioned in `contents`. Not case sensitive.
+
+    ### Parameters
+        - `contents`: `str`
+            The text to search within
+
+    ### Returns
+        `List[Optional[str]]`:
+            The timezone found, if any.
+    """
+    return re.findall(REGEX["timezone"], contents)
 
 
 def get_instagram_links(msg: str) -> List[Optional[str]]:

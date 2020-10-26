@@ -20,5 +20,7 @@
     "<:wojak_brainlet_1:546362460110716940>",
     "<:wojak_brainlet_bottomless_pit:547581209090326528>",
     "<:wojak_brainlet_2:546362511641935872>"
-  ]
+  ],
+  "CEST": ["The current timezone is CEST, not CET :)"],
+  "CET": ["The current timezone is CET, not CEST :)"]
 }

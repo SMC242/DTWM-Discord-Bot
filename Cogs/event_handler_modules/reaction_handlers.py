@@ -6,7 +6,7 @@ from discord import Message, TextChannel
 from typing import Dict, Optional
 from random import choice
 from json import load
-from Utils.mestils import search_word
+from Utils.mestils import search_word, get_eu_timezone
 
 
 class ReactionParent(commands.Cog):
@@ -103,19 +103,27 @@ class TextReactions(ReactionParent):
         if not await self.off_cooldown(msg):
             return
 
+        match_name: str = None
         # react if ben or the bot is mentioned
-        to_send: str = None
         mentioned_ids = [person.id for person in msg.mentions]
+        timezones = get_eu_timezone(msg.content)
         if self.bot.user.id in mentioned_ids or 395598378387636234 in mentioned_ids:
+            match_name = "ping"
+
+        # correct people if they use the wrong timezone
+        elif timezones:
+            found_zone = timezones[0]
+            winter: bool = D.date.today().isocalendar()[1] > 26
+            current_zone = "CET" if winter else "CEST"
+            if found_zone != current_zone:
+                match_name = current_zone
+
+        # send a message if a match was found
+        if match_name:
+            self.set_cooldown(msg.channel)
             with open("./Text Files/responses.json") as f:
                 responses = load(f)
-
-            to_send = choice(responses["ping"])
-
-        # only try to send if a match was found
-        if to_send is not None:
-            self.set_cooldown(msg.channel)
-            await msg.channel.send(to_send)
+            await msg.channel.send(choice(responses[match_name]))
 
 
 class ReactReactions(ReactionParent):
