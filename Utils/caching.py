@@ -261,3 +261,15 @@ class AsyncCache:
             f"_event_loop = {self._event_loop}, _cleaning = {self._cleaning},"
             f"_cache = {self._cache}"
         )
+
+    @property
+    def pretty_cache(self) -> str:
+        """
+        ### (method) pretty_cache()
+        Get the contents of the cache in pretty JSON format.
+
+        ### Returns
+            `str`:
+                The prettified cache.
+        """
+        return dumps(self._cache, indent=4, default=str)
