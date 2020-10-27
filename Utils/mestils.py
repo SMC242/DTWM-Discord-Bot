@@ -221,7 +221,7 @@ async def send_as_chunks(msg: Union[str, List[str]], target: Messageable,
     # send the messages
     for msg in msgs:
         await target.send(msg, **send_kwargs)
-        async_sleep(delay)
+        await async_sleep(delay)
 
 
 def get_links(msg: str) -> Optional[List[str]]:
