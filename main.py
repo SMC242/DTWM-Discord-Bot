@@ -7,11 +7,25 @@ import os
 from Utils import common
 from datetime import datetime
 from traceback import format_exception, print_exc
-from sys import exit
+import sys
+from getopt import getopt
+
+bot = None
+
+
+def set_dev_mode(is_dev: bool) -> bool:
+    """Sets `DEV_VERSION` in `main` and `common`"""
+    global DEV_VERSION, bot
+    DEV_VERSION = is_dev
+    common.DEV_VERSION = is_dev
+    # modify the bot if it's been instantiated already
+    if bot:
+        bot.command_prefix = f"{'dev' if DEV_VERSION else 'ab'}!"
+    return DEV_VERSION
+
 
 # dev settings
-DEV_VERSION = True
-common.DEV_VERSION = DEV_VERSION
+DEV_VERSION = set_dev_mode(True)
 LOG_LOAD_ERROR = True
 
 # instantiate the bot
@@ -36,7 +50,7 @@ bot = commands.Bot(
 if not os.path.exists("./Text Files/token.txt"):
     # wait for the user to read the message, then exit
     input("There is no token in Text Files/\nPress any key to exit.")
-    exit(0)
+    sys.exit(0)
 
 # ensure that the Images directory exists
 if not os.path.exists("./Images"):
@@ -81,7 +95,7 @@ async def close(ctx):
     print(f"Ow! That hurt @{ctx.author}")
     await bot.logout()
     # close the script
-    exit(0)
+    sys.exit(0)
 
 
 @bot.command(aliases=["TC"])
@@ -144,7 +158,7 @@ async def patch(ctx):
         finally:
             await ctx.send("Restarting...")
             startfile(__file__)
-            exit(0)
+            sys.exit(0)
 
 
 @bot.command(aliases=["reload"])
@@ -204,4 +218,9 @@ if __name__ == "__main__":
     # get the token and start the bot
     with open("Text Files/token.txt") as f:
         TOKEN = f.readline().strip("\n")
+
+    # get the dev version from the command line if available
+    dev_mode_arg: str = getopt(
+        sys.argv, [], ("dev_mode=true", "dev_mode=false"))[1][1]
+    set_dev_mode(True if "true" in dev_mode_arg else False)
     bot.run(TOKEN)
