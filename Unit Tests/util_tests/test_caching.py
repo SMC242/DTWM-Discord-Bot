@@ -8,7 +8,8 @@ def async_test(f):
     """Block until the async test finishes"""
     def wrapper(*args, **kwargs):
         future = f(*args, **kwargs)
-        asyncio.get_event_loop().run_until_complete(future)
+        # ensure_future used for py 3.6 compatibility
+        asyncio.ensure_future(future, loop=asyncio.get_event_loop())
     return wrapper
 
 

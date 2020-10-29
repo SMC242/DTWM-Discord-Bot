@@ -28,11 +28,12 @@ class RepeatingTasks(commands.Cog):
         att: Attendance.Attendance
             The object used to call attendance functions."""
 
-    # ATTRIBUTES
-    EVENT_START_TIME = D.time(19, 00)  # in UTC
-
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        # sense which timezone it is
+        winter: bool = D.date.today().isocalendar()[1] > 26
+        self.EVENT_START_TIME = D.time(
+            20, 00) if winter else D.time(19, 00)  # in UTC
         # for the rescheduler
         self.scheduled = False
         # create a dummy start time so that the rescheduler doesn't reject today

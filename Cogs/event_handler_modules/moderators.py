@@ -184,7 +184,7 @@ class RepostHandler(MessageAuthoritarian):
     async def show_cache(self, ctx):
         """Output all hashes that have been cached. Debugging tool."""
         await mestils.send_as_chunks(
-            dumps(self.hashes, indent=4, default=str),
+            self.hashes.pretty_cache,
             ctx, code_block=True)
 
 
