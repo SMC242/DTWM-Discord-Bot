@@ -10,12 +10,17 @@ from traceback import format_exception, print_exc
 import sys
 from getopt import getopt
 
+bot = None
+
 
 def set_dev_mode(is_dev: bool) -> bool:
     """Sets `DEV_VERSION` in `main` and `common`"""
-    global DEV_VERSION
+    global DEV_VERSION, bot
     DEV_VERSION = is_dev
     common.DEV_VERSION = is_dev
+    # modify the bot if it's been instantiated already
+    if bot:
+        bot.command_prefix = f"{'dev' if DEV_VERSION else 'ab'}!"
     return DEV_VERSION
 
 
