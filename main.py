@@ -9,6 +9,7 @@ from datetime import datetime
 from traceback import format_exception, print_exc
 import sys
 from getopt import getopt
+from asyncio.exceptions import CancelledError
 
 bot = None
 
@@ -220,7 +221,14 @@ if __name__ == "__main__":
         TOKEN = f.readline().strip("\n")
 
     # get the dev version from the command line if available
-    dev_mode_arg: str = getopt(
-        sys.argv, [], ("dev_mode=true", "dev_mode=false"))[1][1]
-    set_dev_mode(True if "true" in dev_mode_arg else False)
-    bot.run(TOKEN)
+    options: List[str] = getopt(
+        sys.argv, [], ("dev_mode=true", "dev_mode=false"))
+
+    if options:
+        dev_mode_arg: str = options[1][0]
+        set_dev_mode(True if "true" in dev_mode_arg else False)
+    try:
+        bot.run(TOKEN)
+    # suppress all of the errors from coroutines not being awaited before exiting
+    except (CancelledError, RuntimeError):
+        print("I breathe my last breath...")
