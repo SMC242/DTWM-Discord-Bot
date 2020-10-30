@@ -193,13 +193,16 @@ class Attendance(commands.Cog):
         """Get the names of all people in the event voice channels,
         then send it to the Attendees table in 90 minutes,
         and return the attendees' names"""
+        PERIOD = 5400 if not common.DEV_VERSION else 300  # the total period in seconds
+        STEP = PERIOD // 4  # how long to wait per scan
+
         # get the event channels
         with open("./Text Files/channels.txt") as f:
             channel_ids = [int(line.strip("\n")) for line in f.readlines()]
 
         channels = [self.bot.get_channel(id) for id in channel_ids]
 
-        # repeat every 30 minutes
+        # repeat every `STEP` minutes
         attendees = set()  # ensure no duplicates
         for i in range(4):
             # add each person in each event channel to attendees
@@ -213,7 +216,7 @@ class Attendance(commands.Cog):
             if i == 3:
                 break
             else:
-                await async_sleep(1800)
+                await async_sleep(STEP)
 
         # record the attendance
         print(f"Recording attendees: {attendees}")
