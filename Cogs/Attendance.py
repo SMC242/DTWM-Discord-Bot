@@ -212,7 +212,7 @@ class Attendance(commands.Cog):
 
             # sleep for 30 minutes
             # but don't wait a fourth time
-            print(f"{attendees} at roll call {i}")
+            print(f"({D.datetime.now()}): {attendees} at roll call {i}")
             if i == 3:
                 break
             else:
