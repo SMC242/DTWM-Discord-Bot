@@ -316,7 +316,7 @@ class Attendance(commands.Cog):
         joined_at = self.db.get_join_date_by_id(id)
         # handle no member found
         if not joined_at:
-            await ctx.send(f'Our archives do not know this "{name}"')
+            await ctx.send(f'Our archives do not know this "{id}"')
         else:
             await ctx.send(f"He joined our chapter on {joined_at.strftime('%d.%m')}")
 
