@@ -118,6 +118,12 @@ class TextReactions(ReactionParent):
             if found_zone != current_zone:
                 match_name = current_zone
 
+        # sometimes echo a message with 'DTWM' replaced with a wrong version of our tag
+        elif search_word(msg.content, "DTWM"):
+            weighting = [True, *[False] * 9]  # 1/10 chance
+            if choice(weighting):
+                match_name = "weird_DTWM"
+
         # send a message if a match was found
         if match_name:
             self.set_cooldown(msg.channel)
