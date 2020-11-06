@@ -1,13 +1,15 @@
 """A class for handling databases."""
 
-import sqlite3 as sql, os
+import sqlite3 as sql
+import os
 from typing import Any, List
 from contextlib import contextmanager
+
 
 class DBWriter:
     """
     Handles the database connection and reading and writing to it.
-    
+
     ATTRIBUTES
     path: str
         The path to the .db file.
@@ -22,7 +24,7 @@ class DBWriter:
     def __init__(self, name: str, useRow: bool = False, use16Bit: bool = False):
         """Create sqlite3 Connection and Cursor to the database called `name`.
         If said DB doesn't exist, it'll be created at .../Databases/`name`.db
-        
+
         name:
             The name describing what the database contains.
         useRow:
@@ -39,7 +41,7 @@ class DBWriter:
 
         self.createDB(name)
         self.createConnection()
-         # allow dict accessing of query results
+        # allow dict accessing of query results
         self.useRow = useRow
 
         # set up the foreign keys on each connection
@@ -53,6 +55,10 @@ class DBWriter:
         else:
             self.doQuery("PRAGMA encoding = 'UTF-8';")
 
+        # check if there's any problems with the database
+        errors = self.doQuery("PRAGMA integrity_check;")
+        if errors[0] != "ok":
+            print(f"Database integrity check failed. Errors: {errors}")
 
     def createDB(self, name: str):
         """Create a directory and a DB if not exists. Return the path to self.path."""
@@ -68,7 +74,7 @@ class DBWriter:
         except FileExistsError:
             pass
 
-        #create file
+        # create file
         filePath = os.path.join(newPath, f"{name}.db")
         try:
             with open(filePath):
@@ -80,12 +86,10 @@ class DBWriter:
 
         self.path = filePath
 
-
     def createConnection(self):
         """Create DB connection. Return connection object to self.connection"""
 
         self.connection = sql.connect(self.path)
-
 
     def doQuery(self, query: str, vars: tuple = (), many: bool = False) -> List[Any]:
         """Do one or many queries to the connection and commit the changes.
@@ -106,7 +110,6 @@ class DBWriter:
 
             self.connection.commit()
             return cursor.fetchall()
-
 
     def _executeFromFile(self, path: str):
         """Execute all commands in a file located at path.
