@@ -57,7 +57,7 @@ class DBWriter:
 
         # check if there's any problems with the database
         errors = self.doQuery("PRAGMA integrity_check;")
-        if errors[0] != "ok":
+        if errors[0][0] != "ok":
             print(f"Database integrity check failed. Errors: {errors}")
 
     def createDB(self, name: str):
