@@ -158,7 +158,7 @@ class Attendance(commands.Cog):
         name = memtils.NameParser(name).parsed
 
         # validate the name
-        if not memtils.is_member(name, [r[1] for r in self.db.get_all_members()]):
+        if not await memtils.is_member(name, [r[1] for r in self.db.get_all_members()]):
             return await ctx.send("That person is not in our chapter!")
 
         self.db.delete_member(name)
