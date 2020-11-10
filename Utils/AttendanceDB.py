@@ -27,14 +27,17 @@ class AttendanceDBWriter(db.DBWriter):
             raise ValueError("Invalid event_type")
 
         # if the day was already registered
-        with suppress(sql.IntegrityError):
+        try:
             with self.cursor() as cursor:
                 cursor.execute("""INSERT INTO Days(date, eventType) VALUES (
                         ( SELECT DATE('now') ),
                         ?
                     );""", [event_type]
-                    )
-                self.connection.commit()
+                )
+        except sql.IntegrityError:
+            self.connection.rollback()
+        finally:
+            self.connection.commit()
 
     def create_tables(self):
         """Create the tables if they're not already created."""
