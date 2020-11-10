@@ -9,7 +9,10 @@ from datetime import datetime
 from traceback import format_exception, print_exc
 import sys
 from getopt import getopt
-from asyncio.exceptions import CancelledError
+if sys.version[2] >= "7":  # python 3.6 doesn't have the exceptions module
+    from asyncio.exceptions import CancelledError
+else:
+    from asyncio import CancelledError
 
 bot = None
 
