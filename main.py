@@ -35,6 +35,8 @@ Special thanks to:
     My mentors: Auroram, Stalkopat
     The host, admin, and debugging helper: ScreaminSteve
     Profile picture: BoeruChan"""
+intents = Intents(guilds=True, members=True, voice_states=True, presences=True,
+                  guild_messages=True, guild_reactions=True, guild_typing=True)
 bot = commands.Bot(
     f"{'dev' if DEV_VERSION else 'ab'}!",
     description=description,
@@ -45,6 +47,7 @@ bot = commands.Bot(
                       details="The adepts have summoned me from my slumber."),
     case_insensitive=True,
     allowed_mentions=AllowedMentions(everyone=False, roles=False),
+    intents=intents,
 )
 
 # check that there is a token to run from
@@ -226,7 +229,7 @@ if __name__ == "__main__":
 
     if options:
         dev_mode_arg: str = options[1][0]
-        set_dev_mode(True if "true" in dev_mode_arg else False)
+        set_dev_mode(False if "false" in dev_mode_arg else True)
     try:
         bot.run(TOKEN)
     # suppress all of the errors from coroutines not being awaited before exiting
