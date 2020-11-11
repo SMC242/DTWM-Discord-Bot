@@ -175,18 +175,20 @@ class Trains(commands.Cog):
         period: float
         started: datetime
         text: str
+        name: str
         content: str
         DEFAULT_TEMPLATE = """🚅*chugga chugga \|choo choo!*
 **{content}**
 *chugga chugga \|choo choo!*🚋"""
 
         def __init__(self, channel_id: int, msg_id: int, content: str,
-                     period: float = 24, started: datetime = None,
+                     name: str, period: float = 24, started: datetime = None,
                      text: str = None):
             self.channel_id = channel_id
             self.msg_id = msg_id
             self.period = period
             self.content = content
+            self.name = name
             self.started = started or datetime.now()
             self.text = text or self.create_text(content)
 
@@ -241,9 +243,9 @@ class Trains(commands.Cog):
             return self.text
 
         @property
-        def sendable_form(self) -> str:
+        def sendable(self) -> str:
             """
-            ### (method) sendable_form()
+            ### (method) sendable()
             Get the train as a single message.
             This will return an error string if the train gets too big or it has expired.
 
@@ -265,10 +267,12 @@ class Trains(commands.Cog):
         if name in self.active_trains:
             return await ctx.send("That name is already in use.")
 
-        text = self.create_train(msg_content)
-        self.active_trains[name] = self.Train(
-            ctx.channel.id, ctx.msg.id, msg_content, period, ctx.msg.created_at, )
-        await send_as_chunks(text, ctx)
+        train = self.Train(ctx.channel.id, ctx.msg.id,
+                           msg_content, name, period,
+                           ctx.msg.created_at,
+                           )
+        self.active_trains[name] = train
+        await ctx.send(train.sendable)
 
     async def edit_train(self, train: Train) -> Optional[Train]:
         """
