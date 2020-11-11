@@ -1,16 +1,15 @@
 """Any extra commands"""
 
 from discord import *
-from discord.ext import commands
+from discord.ext import commands, tasks
 from typing import *
 from Utils.common import leader_roles
 from datetime import datetime
-from asyncio import sleep as async_sleep
-from Utils.memtils import get_title, NameParser
+from Utils.memtils import get_title
 from Utils.mestils import send_as_chunks, chunk_message
 from Utils.react_menu import ReactTable
 from json import dumps
-from functools import wraps
+from collections import namedtuple
 
 
 def has_chanted():
@@ -167,6 +166,171 @@ class DTWMChanWorship(commands.Cog):
         await send_as_chunks(
             dumps(self.chants, indent=4, default=str),
             ctx, code_block=True)
+
+
+class Trains(commands.Cog):
+    class Train:
+        channel_id: int
+        msg_id: int
+        period: float
+        started: datetime
+        name: str
+        text: str
+
+        def __init__(self, channel_id: int, msg_id: int,
+                     period: float = 24, started: datetime = None,
+                     text: str = None):
+            self.channel_id = channel_id
+            self.msg_id = msg_id
+            self.period = period
+            self.started = started or datetime.now()
+            self.text = text or self.create_text()
+
+        def create_text(self):
+            """
+            ### (method) create_text()
+            Create the train text and update `self.text`
+
+            ### Returns
+                `str`:
+                    The train text
+            """
+            pass
+
+        def update_text(self) -> str:
+            """
+            ### (method) update_text()
+            Update the train text and `self.text`
+
+            ### Returns
+                `str`:
+                    The new train text
+            """
+            pass
+
+        @property
+        def sendable_form(self) -> str:
+            """
+            ### (method) sendable_form()
+            Get the train as a single message.
+            This will return an error string if the train gets too big or it has expired.
+
+            ### Returns
+                `str`:
+                    [description]
+            """
+            pass
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        # format: train name: TrainInfo
+        self.active_trains: Dict[str, self.TrainInfo] = {}
+
+    async def create_train_msg(self, ctx, msg_content: str, name: str, period: float = 24.0):
+        """Create a train message that has `msg_content` in the middle of it.
+        The train will get progressively bigger over the next `period` hours"""
+        if name in self.active_trains:
+            return await ctx.send("That name is already in use.")
+
+        text = self.create_train(msg_content)
+        self.active_trains[name] = self.TrainInfo(
+            ctx.channel.id,
+            ctx.msg.id,
+            period,
+            ctx.msg.created_at,
+            text
+        )
+        await send_as_chunks(text, ctx)
+
+    def create_train(self, content: str, template: str = None) -> str:
+        """
+        ### (method) create_train(content, template)
+        Create a new text train.
+        NOTE: seek the "/|" substrings to find where to insert the chuggas before.
+
+        ### Parameters
+            - `content`: `str`
+                The text to put in the middle of the train
+            - `template`: `str`
+                The f-string template to create the train with.
+                This should contain `{content}` at least once
+
+        ### Returns
+            - `str`: The text train
+        """
+        if not template:
+            template = """🚅*chugga chugga \|choo choo!*
+**{content}**
+*chugga chugga \|choo choo!*🚋"""
+
+        if "{content}" not in template:
+            raise ValueError("Invalid template format")
+        return template.format(content=content)
+
+    def grow_train(self, train: str) -> str:
+        """
+        ### (method) grow_train(train, )
+        Add some 'chugga chugga's to the train
+
+        ### Parameters
+            - `train`: `str`
+                The text train to grow
+
+        ### Returns
+            - `str`: The new text train
+        """
+        portions = msg.content.split("choo")
+        text_portions = list(filter(lambda x: len(x) > 2, portions))
+        chuggas = "chugga chugga "
+        new_portions = [text_portions[0] + chuggas,
+                        text_portions[1] + chuggas, text_portions[2]]
+        new_content = (new_portions[0] + "choo choo" +
+                       new_portions[1] + "choo choo" + new_portions[2])
+
+    def to_sendable_form(self, train_text: str) -> str:
+        """
+        ### (method) sendable(train_text, )
+        Check if the input train is within the character cap of Discord.
+        If not, return an error text
+
+        ### Parameters
+            - `train`: `str`
+                The train to check
+
+        ### Returns
+            `str`:
+                [description]
+        """
+
+    async def edit_train(self, train: TrainInfo) -> Optional[TrainInfo]:
+        """
+        ### (method) edit_train(train, )
+        Update the train with more chuggas
+
+        ### Parameters
+            - `train`: `TrainInfo`
+                The train to edit
+
+        ### Returns
+            `Optional[TrainInfo]`:
+                The train if it was edited successfully.
+        """
+        # handle the message being deleted
+        try:
+            msg = await self.bot.get_channel(train.channel_id).fetch_message(train.msg_id)
+        except (HTTPException, AttributeError):
+            return False
+
+        train_text = self.grow_train(train.text)
+        await msg.edit(content=train_text)
+
+    @tasks.loop(hours=2)
+    async def update_trains(self):
+        """
+        ### (method) update_trains()
+        Grow all of the active trains every 2 hours
+        """
+        pass
 
 
 def setup(bot: commands.Bot):
