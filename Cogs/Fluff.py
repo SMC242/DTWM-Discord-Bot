@@ -215,6 +215,30 @@ class Trains(commands.Cog):
             self.text = template.format(content=content)
             return self.text
 
+        def grow_train(self) -> str:
+            """
+            ### (method) grow_train(train, )
+            Add some 'chugga chugga's to the train
+
+            ### Returns
+                - `str`: The new text train
+            """
+            portions = msg.content.split("choo")
+            text_portions = list(filter(lambda x: len(x) > 2, portions))
+            chuggas = "chugga chugga "
+            new_portions = [text_portions[0] + chuggas,
+                            text_portions[1] + chuggas, text_portions[2]]
+            new_content = (new_portions[0] + "choo choo" +
+                           new_portions[1] + "choo choo" + new_portions[2])
+
+            # find the `\|`s
+            portions = self.text.split("\|")
+            # NOTE: the split removes the delimiter so it must be added again
+            to_insert = "chugga chugga \|"
+            portions[0] = portions[0] + to_insert
+            portions[1] = portions[1] + to_insert
+            self.
+
         def update_text(self) -> str:
             """
             ### (method) update_text()
