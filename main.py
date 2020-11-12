@@ -230,8 +230,8 @@ if __name__ == "__main__":
     options: List[str] = getopt(
         sys.argv, [], ("dev_mode=true", "dev_mode=false"))
 
-    if options:
-        dev_mode_arg: str = options[1][0]
+    if options and len(options[1]) > 1:
+        dev_mode_arg: str = options[1][1]
         set_dev_mode(False if "false" in dev_mode_arg else True)
     try:
         bot.run(TOKEN)
