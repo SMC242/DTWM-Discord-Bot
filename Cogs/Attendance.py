@@ -517,14 +517,6 @@ class Attendance(commands.Cog):
             except ValueError:
                 await ctx.send("I have no archive entries to base my opinion on, my lord")
 
-    # @commands.command(aliases = ["K"])
-    # @commands.has_any_role(*common.leader_roles)
-    async def get_attendance_plus(self, ctx):
-        """get_attendance but it allows browsing each person and kicking them."""
-        # use mestils.search_member to get the person
-        # then use ReactMenu on_reject to call Attendance.kick on them
-        raise CommandNotImplementedError()
-
 
 def setup(bot):
     bot.add_cog(Attendance(bot))
