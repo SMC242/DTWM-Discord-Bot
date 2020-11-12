@@ -1,16 +1,14 @@
 """Any extra commands"""
 
 from discord import *
-from discord.ext import commands
+from discord.ext import commands, tasks
 from typing import *
 from Utils.common import leader_roles
 from datetime import datetime
-from asyncio import sleep as async_sleep
-from Utils.memtils import get_title, NameParser
+from Utils.memtils import get_title
 from Utils.mestils import send_as_chunks, chunk_message
 from Utils.react_menu import ReactTable
 from json import dumps
-from functools import wraps
 
 
 def has_chanted():
@@ -169,10 +167,191 @@ class DTWMChanWorship(commands.Cog):
             ctx, code_block=True)
 
 
+class Trains(commands.Cog):
+    class Train:
+        channel_id: int
+        msg_id: int
+        period: float
+        started: datetime
+        text: str
+        name: str
+        content: str
+        DEFAULT_TEMPLATE = """🚅*chugga chugga \|choo choo!*
+**{content}**
+*chugga chugga \|choo choo!* 🚋"""
+        ERROR_STRING = "👮‍♂️The train has reached the station👮‍♂️"
+
+        def __init__(self, channel_id: int, msg_id: Optional[int], content: str,
+                     name: str, period: float = 24, started: datetime = None,
+                     text: str = None, send_now: bool = True):
+            self.channel_id = channel_id
+            self.msg_id = msg_id
+            self.period = period
+            self.content = content
+            self.name = name
+            self.started = started or datetime.now()
+            self.text = text or self.create_text(content)
+
+        def create_text(self, content: str, template: str = None) -> str:
+            """
+            # (method) create_text(content, template)
+            Create a new text train.
+            NOTE: seek the "/|" substrings to find where to insert the chuggas before.
+
+            # Parameters
+                - `content`: `str`
+                    The text to put in the middle of the train
+                - `template`: `str`
+                    The f-string template to create the train with.
+                    This should contain `{content}` at least once
+
+            # Returns
+                - `str`: The text train
+            """
+            if not template:
+                template = self.DEFAULT_TEMPLATE
+
+            if "{content}" not in template:
+                raise ValueError("Invalid template format")
+
+            self.text = template.format(content=content)
+            return self.text
+
+        def grow_train(self) -> str:
+            """
+            # (method) grow_train(train, )
+            Add some 'chugga chugga's to the train
+
+            # Returns
+                - `str`: The new text train
+            """
+
+            # find the `\|`s
+            portions = self.text.split("\|")
+            # NOTE: the split removes the delimiter so it must be added again
+            to_insert = "chugga chugga "
+            portions[0] = portions[0] + to_insert
+            portions[1] = portions[1] + to_insert
+            self.text = "\|".join(portions)
+            return self.text
+
+        @property
+        def sendable(self) -> str:
+            """
+            # (method) sendable()
+            Get the train as a single message.
+            This will return an error string if the train gets too big or it has expired.
+
+            # Returns
+                `str`:
+                    The string to send.
+            """
+            return self.text if len(self.text) < 2000 else self.ERROR_STRING
+
+        @property
+        def expired(self) -> bool:
+            """Get whether the train has been running past its period."""
+            return (datetime.now() - self.started).total_seconds() / 60**2 > self.period
+
+        def __repr__(self) -> str:
+            return (f"Train(channel_id = {self.channel_id}, msg_id = {self.msg_id}, "
+                    + f"content = {self.content}, name = {self.name}, period = {self.period}, "
+                    + f"started = {self.started}, text = {self.text}, "
+                    + f"DEFAULT_TEMPLATE = {self.DEFAULT_TEMPLATE}, expired = {self.expired}, "
+                    + f"DEFAULT_ERROR_STRING = {self.ERROR_STRING})"
+                    )
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        # format: train name: TrainInfo
+        self.active_trains: Dict[str, self.Train] = {}
+        self.period = 24.0
+        self.update_trains.start()
+
+    @commands.command(aliases=["CT"])
+    async def create_train(self, ctx, *, msg_content: str):
+        """Create a train message that has `msg_content` in the middle of it.
+        The train will get progressively bigger over the next `period` hours.
+        You should wrap `msg_content` in double quotes.
+        The period can be set with `set_default_period`"""
+        # generate name
+        name = ctx.message.author.display_name + str(datetime.now())
+        train = self.Train(ctx.channel.id, None,
+                           msg_content, name, self.period,
+                           ctx.message.created_at,
+                           )
+        msg = await ctx.send(train.sendable)
+        train.msg_id = msg.id
+        self.active_trains[name] = train
+
+    @commands.command()
+    async def set_default_period(self, ctx, period: float = 24.0):
+        """Set the period that the trains will be active for."""
+        old_period = self.period
+        self.period = period
+        await ctx.send(f"The default period has been changed from {old_period} hours to {self.period} hours")
+
+    async def edit_train(self, train: Train, error: bool = False) -> Optional[Train]:
+        """
+        # (method) edit_train(train, )
+        Update the train with more chuggas
+
+        # Parameters
+            - `train`: `Train`
+                The train to edit
+            - `error`: `bool`
+                Whether to edit in the error string.
+
+        # Returns
+            `Optional[Train]`:
+                The train if it was edited successfully.
+        """
+        # handle the message being deleted
+        try:
+            channel = self.bot.get_channel(train.channel_id)
+            msg = await channel.fetch_message(train.msg_id)
+        except (HTTPException, AttributeError):
+            return None
+
+        train.grow_train()
+        if error:
+            await msg.edit(content=train.ERROR_STRING)
+        else:
+            await msg.edit(content=train.sendable)
+        return train
+
+    @tasks.loop(hours=2)
+    async def update_trains(self):
+        """
+        # (method) update_trains()
+        Grow all of the active trains every 2 hours and clean up deleted/expired trains.
+        """
+        bad_keys = []
+        for name, train in self.active_trains.items():
+            error = False
+            if train.expired:
+                bad_keys.append(name)
+                error = True
+
+            success = await self.edit_train(train, error)
+            if not success:
+                bad_keys.append(name)
+
+        # clean up the bad trains
+        self.active_trains = {k: v for k, v in self.active_trains.items()
+                              if k not in bad_keys}
+
+    @commands.command()
+    async def show_trains(self, ctx):
+        """Dump all of the trains to chat"""
+        await send_as_chunks(dumps(self.active_trains, default=str, indent=4), ctx)
+
+
 def setup(bot: commands.Bot):
     cogs = (
-        DTWMChanWorship(bot),
+        DTWMChanWorship,
+        Trains,
     )
 
     for cog in cogs:
-        bot.add_cog(cog)
+        bot.add_cog(cog(bot))
