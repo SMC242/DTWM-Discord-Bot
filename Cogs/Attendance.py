@@ -1,14 +1,12 @@
 """The database interface."""
 
-from discord import Member, File, Forbidden, Embed
+from discord import Member, Forbidden, Embed
 from discord.ext import commands
 from typing import *
-from contextlib import suppress
 import datetime as D
 from Utils import common, memtils, AttendanceDB as db, react_menu
-from asyncio import sleep as async_sleep, get_event_loop
-from Utils.mestils import create_table
-from .event_handler_modules.error_handler import CommandNotImplementedError
+from asyncio import sleep as async_sleep
+from Utils.mestils import send_as_chunks, shuffle
 
 
 class KickSuggestionMenu(react_menu.ReactTable):
@@ -355,7 +353,7 @@ class Attendance(commands.Cog):
         await self.get_in_ops_inner()
 
     async def get_in_ops_inner(self):
-        """See the parent method. 
+        """See the parent method.
         This exists so that it can be called outside of the bot command"""
         async with common.bot_channel.typing():
             # get all the outfit members
@@ -516,6 +514,34 @@ class Attendance(commands.Cog):
                 KickSuggestionMenu(table_rows, ctx, *stats)
             except ValueError:
                 await ctx.send("I have no archive entries to base my opinion on, my lord")
+
+    @commands.command()
+    @commands.has_any_role(*common.leader_roles)
+    async def create_pairs(self, ctx):
+        """Pair up every person in the voice channel."""
+        in_voice = ctx.author.voice
+        if not in_voice:
+            return await ctx.send("You must be in a voice channel to do that, my lord")
+        channel = in_voice.channel
+        members = channel.members
+
+        if len(members) < 2:
+            return await ctx.send("You are lonely, my lord. Fret not, I will keep you company ❤")
+
+        shuffled: List[Member] = shuffle(members)
+        # make a leader go solo if there's an odd number
+        extra_leader: Optional[Member] = None
+        if len(shuffled) % 2 != 0:
+            extra_leader = list(
+                filter(lambda m: any([n in common.leader_roles for n in [ro.name for ro in m.roles]]), shuffled))[0]
+            shuffled = list(filter(lambda m: m != extra_leader), shuffled)
+
+        pairs = [(shuffled[i], shuffled[i - 1])
+                 for i in range(0, len(shuffled), 2)]
+        suffix = f"\n{extra_leader.mention} you will be solo" if extra_leader else ""
+        pair_table = list(
+            map(lambda pair: f"{pair[0].mention} your partner is {pair[1].mention}"))
+        await send_as_chunks(pair_table + suffix, ctx)
 
 
 def setup(bot):
