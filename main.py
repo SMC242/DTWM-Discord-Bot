@@ -13,8 +13,7 @@ if sys.version[2] >= "7":  # python 3.6 doesn't have the exceptions module
     from asyncio.exceptions import CancelledError, get_event_loop
 else:
     from asyncio import CancelledError, get_event_loop
-from concurrent.futures._base import TimeoutError
-from asyncio import sleep as async_sleep
+from asyncio import sleep as async_sleep, TimeoutError
 
 bot = None
 
@@ -225,17 +224,36 @@ async def join_vc(ctx: commands.Context):
     if not in_voice:
         return await ctx.send("You aren't in a voice channel, brother")
 
-    channel = in_voice.channel
+    channel: VoiceChannel = in_voice.channel
     try:
-        connection = await channel.connect()
+        connection = await channel.connect(timeout=10)
         get_event_loop().create_task(check_vc_empty())
         await ctx.send("I will stay a while, brother")
-    except TimeoutError:
+    except (TimeoutError, AttributeError):
         await ctx.send("I couldn't reach you :,(")
     except Forbidden:
         await ctx.send("I cannot enter those halls, brother")
     except ClientException:
         await ctx.send("I am already there, brother")
+
+
+@bot.command()
+@commands.has_any_role(*common.member_roles)
+@commands.cooldown(1, 60, commands.BucketType.user)
+async def leave_vc(ctx: commands.Context):
+    """Make the bot leave the voice channel that you're in"""
+    in_voice = ctx.author.voice
+    if not in_voice:
+        return await ctx.send("You aren't in a voice channel, brother")
+
+    channel: VoiceChannel = in_voice.channel
+    try:
+        target_channel_index = [
+            vc.channel for vc in bot.voice_clients].index(channel)
+        await bot.voice_clients[target_channel_index].disconnect()
+        await ctx.send("Goodbye, brother")
+    except ValueError:
+        await ctx.send("I am not in your channel, brother")
 
 
 @bot.listen()
