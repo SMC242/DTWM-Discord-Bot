@@ -123,8 +123,6 @@ census.daybreakgames.com/get/ps2/item?name.en=PSA-02 Diamondback'''
                     "https://images.ctfassets.net/hrltx12pl8hq/4f6DfV5DbqaQUSw0uo0mWi/ff068ff5fc855601751499d694c0111a/shutterstock_376532611.jpg?fit=fill&w=800&h=300",
                     "https://theindianrover.com/wp-content/uploads/2020/05/10-Top-Websites-for-awesome-free-and-royalty-free-photos-e1531386171536.jpg",
                     "https://images.ctfassets.net/hrltx12pl8hq/VZW7M82mrxByGHjvze4wu/216d9ff35b6980d850d108a50ae387bf/Carousel_01_FreeTrial.jpg?fit=fill&w=800&h=450",
-                    "python.org",
-                    "census.daybreakgames.com/get/ps2/item?name.en=PSA-02",
                     ]
         result = mestils.get_links(test_string)
         self.assertEqual(result, expected)
