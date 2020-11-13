@@ -171,7 +171,7 @@ class Trains(commands.Cog):
     class Train:
         channel_id: int
         msg_id: int
-        period: float
+        lifespan: float
         started: datetime
         text: str
         name: str
@@ -182,11 +182,11 @@ class Trains(commands.Cog):
         ERROR_STRING = "👮‍♂️The train has reached the station👮‍♂️"
 
         def __init__(self, channel_id: int, msg_id: Optional[int], content: str,
-                     name: str, period: float = 24, started: datetime = None,
+                     name: str, lifespan: float = 24, started: datetime = None,
                      text: str = None, send_now: bool = True):
             self.channel_id = channel_id
             self.msg_id = msg_id
-            self.period = period
+            self.lifespan = lifespan
             self.content = content
             self.name = name
             self.started = started or datetime.now()
@@ -250,12 +250,12 @@ class Trains(commands.Cog):
 
         @property
         def expired(self) -> bool:
-            """Get whether the train has been running past its period."""
-            return (datetime.now() - self.started).total_seconds() / 60**2 > self.period
+            """Get whether the train has been running past its lifespan."""
+            return (datetime.now() - self.started).total_seconds() / 60**2 > self.lifespan
 
         def __repr__(self) -> str:
             return (f"Train(channel_id = {self.channel_id}, msg_id = {self.msg_id}, "
-                    + f"content = {self.content}, name = {self.name}, period = {self.period}, "
+                    + f"content = {self.content}, name = {self.name}, lifespan = {self.lifespan}, "
                     + f"started = {self.started}, text = {self.text}, "
                     + f"DEFAULT_TEMPLATE = {self.DEFAULT_TEMPLATE}, expired = {self.expired}, "
                     + f"DEFAULT_ERROR_STRING = {self.ERROR_STRING})"
@@ -265,19 +265,19 @@ class Trains(commands.Cog):
         self.bot = bot
         # format: train name: TrainInfo
         self.active_trains: Dict[str, self.Train] = {}
-        self.period = 24.0
+        self.lifespan = 24.0
         self.update_trains.start()
 
     @commands.command(aliases=["CT"])
     async def create_train(self, ctx, *, msg_content: str):
         """Create a train message that has `msg_content` in the middle of it.
-        The train will get progressively bigger over the next `period` hours.
+        The train will get progressively bigger over the next `lifespan` hours.
         You should wrap `msg_content` in double quotes.
-        The period can be set with `set_default_period`"""
+        The lifespan can be set with `set_default_lifespan`"""
         # generate name
         name = ctx.message.author.display_name + str(datetime.now())
         train = self.Train(ctx.channel.id, None,
-                           msg_content, name, self.period,
+                           msg_content, name, self.lifespan,
                            ctx.message.created_at,
                            )
         msg = await ctx.send(train.sendable)
@@ -285,11 +285,23 @@ class Trains(commands.Cog):
         self.active_trains[name] = train
 
     @commands.command()
-    async def set_default_period(self, ctx, period: float = 24.0):
-        """Set the period that the trains will be active for."""
-        old_period = self.period
-        self.period = period
-        await ctx.send(f"The default period has been changed from {old_period} hours to {self.period} hours")
+    @commands.has_any_role(*leader_roles)
+    async def set_default_lifespan(self, ctx, lifespan: float = 24.0):
+        """Set the lifespan that the trains will be active for."""
+        old_lifespan = self.lifespan
+        self.lifespan = lifespan
+        await ctx.send(f"The default lifespan has been changed from {old_lifespan} hours to {self.lifespan} hours")
+
+    @commands.command()
+    @commands.has_any_role(*leader_roles)
+    async def set_default_period(self, ctx, refresh_period: float = 2.0):
+        """Set how often new trains will have 'chugga chugga' added to them."""
+        old_period = self.update_trains.hours
+        self.update_trains.change_interval(hours=refresh_period)
+        # restart necessary or else it will wait for the last iteration to finish
+        self.update_trains.restart()
+        await ctx.send(f"The default refresh rate has been changed from {old_period}"
+                       + f" hours to {refresh_period} hours")
 
     async def edit_train(self, train: Train, error: bool = False) -> Optional[Train]:
         """
