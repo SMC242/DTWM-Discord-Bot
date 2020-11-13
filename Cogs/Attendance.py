@@ -534,14 +534,15 @@ class Attendance(commands.Cog):
         if len(shuffled) % 2 != 0:
             extra_leader = list(
                 filter(lambda m: any([n in common.leader_roles for n in [ro.name for ro in m.roles]]), shuffled))[0]
-            shuffled = list(filter(lambda m: m != extra_leader), shuffled)
+            shuffled.pop(shuffled.index(extra_leader))
 
-        pairs = [(shuffled[i], shuffled[i - 1])
+        pairs = [f"{shuffled[i].mention} your partner is {shuffled[i - 1].mention}"
                  for i in range(0, len(shuffled), 2)]
+
+        # add the suffx to the last pair
         suffix = f"\n{extra_leader.mention} you will be solo" if extra_leader else ""
-        pair_table = list(
-            map(lambda pair: f"{pair[0].mention} your partner is {pair[1].mention}"))
-        await send_as_chunks(pair_table + suffix, ctx)
+        pairs[-1] = pairs[-1] + suffix
+        await send_as_chunks("\n".join(pairs), ctx)
 
 
 def setup(bot):
