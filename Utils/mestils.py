@@ -228,7 +228,7 @@ def get_links(msg: str) -> Optional[List[str]]:
     """Use regex to extract any links from the message.
     NOTE: the regex will match anything after '/' until a new line or space is reached"""
     # credit to Auroram for this expression
-    matches = re.findall(REGEX["newtest"],
+    matches = re.findall(REGEX["get_links"],
                          msg)
     # NOTE matches is in this format:
     #     [
