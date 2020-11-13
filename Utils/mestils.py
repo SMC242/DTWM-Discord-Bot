@@ -4,16 +4,16 @@ from typing import *
 from discord.abc import Messageable
 from matplotlib import pyplot, transforms
 from asyncio import sleep as async_sleep
-import os
 import re
 import datetime as D
-#from Utils import common
+from random import randint
 
 # pre-compile the regexs
 REGEX = {
     "instagram": re.compile(r"https:\/\/www\.instagram\.com\/p\/[a-zA-Z-_0-9]*"),
-    "get_links": re.compile(r"(https?:\/\/)?([a-zA-Z0-9-]+\.[a-zA-Z0-9\.-]+)([^\s\n]+)*"),
     "timezone": re.compile(r"(CET|CEST)", re.IGNORECASE),
+    # source for the below RegEx: https://stackoverflow.com/a/8234912/12399357
+    "get_links": re.compile(r"((([A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)((?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)")
 }
 
 
@@ -228,11 +228,38 @@ def get_links(msg: str) -> Optional[List[str]]:
     """Use regex to extract any links from the message.
     NOTE: the regex will match anything after '/' until a new line or space is reached"""
     # credit to Auroram for this expression
-    matches = re.findall(REGEX["get_links"],
+    matches = re.findall(REGEX["newtest"],
                          msg)
     # NOTE matches is in this format:
     #     [
     #         (protocol, domain, anything after until whitespace or `\n`),
     #     ]
     # convert matches to List[str]
-    return ["".join(row) for row in matches]
+    # return ["".join(row) for row in matches]
+    return [row[0] for row in matches]
+
+
+def shuffle(target: List[Any]) -> List[Any]:
+    """
+    ### (method) shuffle(target, )
+    Mix up the elements of `target`
+
+    ### Parameters
+        - `target`: `List[Any]`
+            The list to mix up
+
+    ### Returns
+        `List[Any]`:
+            The shuffled list
+    """
+    limit = len(target) - 1
+    output: List[Any] = [None] * (limit + 1)
+
+    def generate_index():
+        index = randint(0, limit)
+        return index if output[index] is None else generate_index()
+
+    for ele in target:
+        # get an index that hasn't been used yet
+        output[generate_index()] = ele
+    return output

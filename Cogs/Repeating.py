@@ -27,13 +27,14 @@ class RepeatingTasks(commands.Cog):
             Format: %Y/%m/%d
         att: Attendance.Attendance
             The object used to call attendance functions."""
+    WINTER_START_TIME = D.time(20, 00)
+    SUMMER_START_TIME = D.time(19, 00)
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         # sense which timezone it is
         winter: bool = D.date.today().isocalendar()[1] > 26
-        self.EVENT_START_TIME = D.time(
-            20, 00) if winter else D.time(19, 00)  # in UTC
+        self.EVENT_START_TIME = self.WINTER_START_TIME if winter else self.SUMMER_START_TIME  # in UTC
         # for the rescheduler
         self.scheduled = False
         # create a dummy start time so that the rescheduler doesn't reject today

@@ -1,14 +1,12 @@
 """The database interface."""
 
-from discord import Member, File, Forbidden, Embed
+from discord import Member, Forbidden, Embed
 from discord.ext import commands
 from typing import *
-from contextlib import suppress
 import datetime as D
 from Utils import common, memtils, AttendanceDB as db, react_menu
-from asyncio import sleep as async_sleep, get_event_loop
-from Utils.mestils import create_table
-from .event_handler_modules.error_handler import CommandNotImplementedError
+from asyncio import sleep as async_sleep
+from Utils.mestils import send_as_chunks, shuffle
 
 
 class KickSuggestionMenu(react_menu.ReactTable):
@@ -158,7 +156,7 @@ class Attendance(commands.Cog):
         name = memtils.NameParser(name).parsed
 
         # validate the name
-        if not memtils.is_member(name, [r[1] for r in self.db.get_all_members()]):
+        if not await memtils.is_member(name, [r[1] for r in self.db.get_all_members()]):
             return await ctx.send("That person is not in our chapter!")
 
         self.db.delete_member(name)
@@ -193,13 +191,16 @@ class Attendance(commands.Cog):
         """Get the names of all people in the event voice channels,
         then send it to the Attendees table in 90 minutes,
         and return the attendees' names"""
+        PERIOD = 5400 if not common.DEV_VERSION else 300  # the total period in seconds
+        STEP = PERIOD // 4  # how long to wait per scan
+
         # get the event channels
         with open("./Text Files/channels.txt") as f:
             channel_ids = [int(line.strip("\n")) for line in f.readlines()]
 
         channels = [self.bot.get_channel(id) for id in channel_ids]
 
-        # repeat every 30 minutes
+        # repeat every `STEP` minutes
         attendees = set()  # ensure no duplicates
         for i in range(4):
             # add each person in each event channel to attendees
@@ -209,11 +210,11 @@ class Attendance(commands.Cog):
 
             # sleep for 30 minutes
             # but don't wait a fourth time
-            print(f"{attendees} at roll call {i}")
+            print(f"({D.datetime.now()}): {attendees} at roll call {i}")
             if i == 3:
                 break
             else:
-                await async_sleep(1800)
+                await async_sleep(STEP)
 
         # record the attendance
         print(f"Recording attendees: {attendees}")
@@ -313,7 +314,7 @@ class Attendance(commands.Cog):
         joined_at = self.db.get_join_date_by_id(id)
         # handle no member found
         if not joined_at:
-            await ctx.send(f'Our archives do not know this "{name}"')
+            await ctx.send(f'Our archives do not know this "{id}"')
         else:
             await ctx.send(f"He joined our chapter on {joined_at.strftime('%d.%m')}")
 
@@ -352,7 +353,7 @@ class Attendance(commands.Cog):
         await self.get_in_ops_inner()
 
     async def get_in_ops_inner(self):
-        """See the parent method. 
+        """See the parent method.
         This exists so that it can be called outside of the bot command"""
         async with common.bot_channel.typing():
             # get all the outfit members
@@ -514,13 +515,34 @@ class Attendance(commands.Cog):
             except ValueError:
                 await ctx.send("I have no archive entries to base my opinion on, my lord")
 
-    # @commands.command(aliases = ["K"])
-    # @commands.has_any_role(*common.leader_roles)
-    async def get_attendance_plus(self, ctx):
-        """get_attendance but it allows browsing each person and kicking them."""
-        # use mestils.search_member to get the person
-        # then use ReactMenu on_reject to call Attendance.kick on them
-        raise CommandNotImplementedError()
+    @commands.command()
+    @commands.has_any_role(*common.leader_roles)
+    async def create_pairs(self, ctx):
+        """Pair up every person in the voice channel."""
+        in_voice = ctx.author.voice
+        if not in_voice:
+            return await ctx.send("You must be in a voice channel to do that, my lord")
+        channel = in_voice.channel
+        members = channel.members
+
+        if len(members) < 2:
+            return await ctx.send("You are lonely, my lord. Fret not, I will keep you company ❤")
+
+        shuffled: List[Member] = shuffle(members)
+        # make a leader go solo if there's an odd number
+        extra_leader: Optional[Member] = None
+        if len(shuffled) % 2 != 0:
+            extra_leader = list(
+                filter(lambda m: any([n in common.leader_roles for n in [ro.name for ro in m.roles]]), shuffled))[0]
+            shuffled.pop(shuffled.index(extra_leader))
+
+        pairs = [f"{shuffled[i].mention} your partner is {shuffled[i - 1].mention}"
+                 for i in range(0, len(shuffled), 2)]
+
+        # add the suffx to the last pair
+        suffix = f"\n{extra_leader.mention} you will be solo" if extra_leader else ""
+        pairs[-1] = pairs[-1] + suffix
+        await send_as_chunks("\n".join(pairs), ctx)
 
 
 def setup(bot):

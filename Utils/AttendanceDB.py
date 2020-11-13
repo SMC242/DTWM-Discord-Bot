@@ -2,9 +2,11 @@
 
 from typing import *
 from BenUtils import db
-import sqlite3 as sql, datetime as D
+import sqlite3 as sql
+import datetime as D
 from contextlib import suppress
 from .mestils import create_table
+
 
 class AttendanceDBWriter(db.DBWriter):
     """Handles the attendance database and accessing it."""
@@ -17,7 +19,7 @@ class AttendanceDBWriter(db.DBWriter):
 
     def new_day(self, event_type: str):
         """Add a new day to the Days table.
-        
+
         ARGUMENTS
         event_type:
             Must be within: AIR, ARMOUR, INFANTRY, CO-OPS1,
@@ -27,14 +29,17 @@ class AttendanceDBWriter(db.DBWriter):
             raise ValueError("Invalid event_type")
 
         # if the day was already registered
-        with suppress(sql.IntegrityError):
+        try:
             with self.cursor() as cursor:
                 cursor.execute("""INSERT INTO Days(date, eventType) VALUES (
                         ( SELECT DATE('now') ),
                         ?
                     );""", [event_type]
-                    )
-                self.connection.commit()
+                )
+        except sql.IntegrityError:
+            self.connection.rollback()
+        finally:
+            self.connection.commit()
 
     def create_tables(self):
         """Create the tables if they're not already created."""
@@ -43,8 +48,8 @@ class AttendanceDBWriter(db.DBWriter):
     # any methods that the bot will access have been made coroutines
     def add_member(self, name: str):
         """Add a member to the Members table."""
-        self.doQuery("INSERT INTO Members(name) VALUES(?);", vars = [name])
-        
+        self.doQuery("INSERT INTO Members(name) VALUES(?);", vars=[name])
+
     def get_member_by_name(self, name: str) -> Optional[Tuple[int, str, bool, D.date]]:
         """
         Get the row of a member by their name.
@@ -58,8 +63,8 @@ class AttendanceDBWriter(db.DBWriter):
         """
         # fetch the row(s)
         rows = self.doQuery(
-            "SELECT memberID, name, away, joinedAt FROM Members WHERE name = ?;", 
-            vars = [name])
+            "SELECT memberID, name, away, joinedAt FROM Members WHERE name = ?;",
+            vars=[name])
 
         # check if nothing was found
         if not rows:
@@ -87,7 +92,7 @@ class AttendanceDBWriter(db.DBWriter):
         """
         # fetch the row(s)
         rows = self.doQuery(
-            "SELECT memberID, name, away, joinedAt FROM Members WHERE memberID = ?;", 
+            "SELECT memberID, name, away, joinedAt FROM Members WHERE memberID = ?;",
             [id])
 
         # check if nothing was found
@@ -131,38 +136,40 @@ class AttendanceDBWriter(db.DBWriter):
         # mark attended = True/False depending on whether their name is in attendees
         to_insert = [
             (name, 1) if name in attendees else (name, 0)
-            for name in members         
-            ]
-        
+            for name in members
+        ]
+
         # send to DB
         self.doQuery("""INSERT INTO Attendees(date, memberID, attended) VALUES(
                 ( SELECT DATE('now') ),
                 ( SELECT memberID FROM Members WHERE name = ? ),
                 ?
             );""",
-            to_insert, True
-            )
+                     to_insert, True
+                     )
 
     def get_join_date_by_name(self, name: str) -> Optional[D.date]:
         """Get the join date of a member by their name.
-        
+
         RETURNS
         None: the member wasn't found.
         datetime.Date: the date that the member joined at."""
         try:
-            row = self.doQuery("SELECT joinedAt FROM Members WHERE name = ?;", [name])[0]
+            row = self.doQuery(
+                "SELECT joinedAt FROM Members WHERE name = ?;", [name])[0]
             return D.datetime.strptime(row[0], "%Y-%m-%d").date()
         except IndexError:
             return None
 
     def get_join_date_by_id(self, id: int) -> Optional[D.date]:
         """Get the join date of a member by their name
-        
+
         RETURNS
         None: the member wasn't found.
         datetime.Date: the date that the member joined at."""
         try:
-            row = self.doQuery("SELECT joinedAt FROM Members WHERE memberID = ?;", [id])[0]
+            row = self.doQuery(
+                "SELECT joinedAt FROM Members WHERE memberID = ?;", [id])[0]
             return D.datetime.strptime(row[0], "%Y-%m-%d").date()
         except IndexError:
             return None
@@ -172,7 +179,7 @@ class AttendanceDBWriter(db.DBWriter):
 
         RETURNS
             The path the the table image.
-            
+
         RAISES
             ValueError: No attendance data returned from Attendees."""
         # get the target month for the LIKE clause
@@ -184,35 +191,35 @@ class AttendanceDBWriter(db.DBWriter):
                                 WHERE Attendees.memberID = Members.memberID
     	                            AND date LIKE ?
                                 GROUP BY name;""",
-                vars = [target_month]
-                )
+                            vars=[target_month]
+                            )
 
         # handle no attendance data returned
         if not rows:
             raise ValueError("No attendance data returned from Attendees.")
 
         # convert to a dict
-        rows: Dict[str, Tuple[float, int]] = {name : (avg, away)
+        rows: Dict[str, Tuple[float, int]] = {name: (avg, away)
                                               for avg, away, name in rows}
 
         # convert no attendance to 0%
         new_rows = [(0.0, 0, name) if name not in rows
                     else (*rows[name], name)
-                    for name in 
+                    for name in
                     [r[1] for r in self.get_all_members()]
-                   ]
+                    ]
 
         # convert away and avg. attendance to more readable forms
-        averages = map( lambda row: int( round( row[0] * 100, 0 ) ), new_rows )
+        averages = map(lambda row: int(round(row[0] * 100, 0)), new_rows)
         aways = ["Yes" if row[1] else "No" for row in new_rows]
 
         # convert the lists to a list of rows
         table_rows = [(name, average, away)
-                      for name, average, away in \
-                        zip([row[2] for row in new_rows], averages, aways)]
+                      for name, average, away in
+                      zip([row[2] for row in new_rows], averages, aways)]
 
         # sort it by attendance %
-        sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)
+        sorted_rows = sorted(table_rows, key=lambda row: row[1], reverse=True)
 
         # create a table
         return sorted_rows
@@ -223,7 +230,7 @@ class AttendanceDBWriter(db.DBWriter):
 
         RETURNS
             The path the the table image.
-            
+
         RAISES
             ValueError: No attendance data returned from Attendees."""
         # get the target month for the LIKE clause
@@ -235,8 +242,8 @@ class AttendanceDBWriter(db.DBWriter):
                             WHERE Attendees.date = Days.date
     	                        AND Attendees.date LIKE ?
                             GROUP BY eventType;""",
-            vars = [target_month]
-            )
+                            vars=[target_month]
+                            )
 
         # handle no attendance data returned
         # which looks like [(None, None)...]
@@ -251,27 +258,27 @@ class AttendanceDBWriter(db.DBWriter):
             "CO-OPS1",
             "Co-OPS2",
             "INTERNAL_OPS",
-            )
+        )
         rows = {event_type: avg for avg, event_type in rows}
         new_rows = [(0.0, event_type) if event_type not in rows
                     else (rows[event_type], event_type)
                     for event_type in event_types
-            ]
-        
+                    ]
+
         # convert no average for an event type to (event type, 0%) instead of (None, None)
         # and convert average from decimal to percentage
-        table_rows: List[str, int] = [( event_type, int(round(avg * 100, 0)) )
-                                        for avg, event_type in new_rows]
+        table_rows: List[Tuple[str, int]] = [(event_type, int(round(avg * 100, 0)))
+                                             for avg, event_type in new_rows]
 
         # sort it by attendance %
-        sorted_rows = sorted(table_rows, key = lambda row: row[1], reverse = True)
+        sorted_rows = sorted(table_rows, key=lambda row: row[1], reverse=True)
 
         # create table
         return sorted_rows
 
     def get_member_att(self, name: str) -> Optional[str]:
         """Get the attendance % of a member.
-        
+
         RETURNS
         None: they have attended no events
         'x%': x % of events were attended by the person"""
@@ -282,8 +289,8 @@ class AttendanceDBWriter(db.DBWriter):
                             WHERE Members.memberID = Attendees.memberID
                             AND Members.name = ?
                             AND Attendees.date LIKE ?;""",
-                            vars = (name, target_month)
-                        )
+                            vars=(name, target_month)
+                            )
 
         # handle no attended events
         if not rows or not rows[0][0]:
@@ -293,14 +300,15 @@ class AttendanceDBWriter(db.DBWriter):
 
     def get_all_members(self) -> List[Tuple[int, str, bool, D.date]]:
         """Get the memberID, name, joinedAt of all registered members in the Members table."""
-        rows = self.doQuery("SELECT memberID, name, away, joinedAt FROM Members;")
-        return [ ( row[0], row[1], bool(row[2]), D.datetime.strptime(row[3], "%Y-%m-%d").date() ) 
-                for row in rows ]
+        rows = self.doQuery(
+            "SELECT memberID, name, away, joinedAt FROM Members;")
+        return [(row[0], row[1], bool(row[2]), D.datetime.strptime(row[3], "%Y-%m-%d").date())
+                for row in rows]
 
     def mark_away(self, name: str) -> bool:
         '''
         Mark the person as away in the Members table.
-        
+
         RETURNS
         True: a member was found and modified.
         False: " "     "  not "  "   "
@@ -313,7 +321,7 @@ class AttendanceDBWriter(db.DBWriter):
     def unmark_away(self, name: str) -> bool:
         '''
         Mark the person as away in the Members table.
-        
+
         RETURNS
         True: a member was found and modified.
         False: " "     "  not "  "   "
@@ -324,8 +332,8 @@ class AttendanceDBWriter(db.DBWriter):
         return self.connection.total_changes > changes_before
 
     def suggest_kicks(self) -> Tuple[
-                                     List[Tuple[str, int, str, str, str]],
-                                     str, str]:
+            List[Tuple[str, int, str, str, str]],
+            str, str]:
         """
         Get all members under 50% attendance and their priority for kicking.
 
@@ -350,7 +358,7 @@ class AttendanceDBWriter(db.DBWriter):
 
         if not rows:
             raise ValueError("No attendance data returned from the DB.")
-        
+
         # this could be faster in a list comp but that would be less readable
         table_rows = []
         num_kicked = 0
@@ -363,11 +371,12 @@ class AttendanceDBWriter(db.DBWriter):
             # convert joinedAt to D.date
             joined_at = D.datetime.strptime(joined_at, "%Y-%m-%d")
             # assign each member a priority level
-            priority_score = (50 - ratio) // 10  # +1 point per 10% under 50% attendance
+            # +1 point per 10% under 50% attendance
+            priority_score = (50 - ratio) // 10
             # reduce the priority of those who were away or joined within a month
             if away or (D.datetime.today() - joined_at).days < 30:
                 priority_score = 0
-                
+
             # count how many people are being recommended to be kicked/warned
             if priority_score <= 1:
                 priority_level = "Warn/monitor"
@@ -377,8 +386,8 @@ class AttendanceDBWriter(db.DBWriter):
                 num_kicked += 1
 
             table_rows.append((name, ratio, priority_level,
-                              away, joined_at.strftime("%d.%m.%y"))
-                             )
+                               away, joined_at.strftime("%d.%m.%y"))
+                              )
 
         # get kicked/warned %
         num_members = len(self.get_all_members())

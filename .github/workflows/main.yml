@@ -6,9 +6,9 @@ name: CI
 # events but only for the master branch
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -24,7 +24,7 @@ jobs:
       # download python
       - name: set up Python
         uses: actions/setup-python@v2
-        with: 
+        with:
           python-version: 3.8
 
       # Install dependencies
@@ -36,14 +36,3 @@ jobs:
       # Run tests
       - name: Run unit tests
         run: python -m unittest discover "./Unit Tests"
-
-  notify_steve:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Discord notification
-        env:
-          DISCORD_WEBHOOK: ${{secrets.DISCORD_WEBHOOK}}
-        uses: Ilshidur/action-discord@master
-        with:
-          args: "<@515163362062237716> new bot update out\n${{github.repository.url}}"
-  

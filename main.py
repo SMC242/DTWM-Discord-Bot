@@ -9,6 +9,11 @@ from datetime import datetime
 from traceback import format_exception, print_exc
 import sys
 from getopt import getopt
+if sys.version[2] >= "7":  # python 3.6 doesn't have the exceptions module
+    from asyncio.exceptions import CancelledError, get_event_loop
+else:
+    from asyncio import CancelledError, get_event_loop
+from asyncio import sleep as async_sleep, TimeoutError
 
 bot = None
 
@@ -34,6 +39,8 @@ Special thanks to:
     My mentors: Auroram, Stalkopat
     The host, admin, and debugging helper: ScreaminSteve
     Profile picture: BoeruChan"""
+intents = Intents(guilds=True, members=True, voice_states=True, presences=True,
+                  guild_messages=True, guild_reactions=True, guild_typing=True)
 bot = commands.Bot(
     f"{'dev' if DEV_VERSION else 'ab'}!",
     description=description,
@@ -44,6 +51,7 @@ bot = commands.Bot(
                       details="The adepts have summoned me from my slumber."),
     case_insensitive=True,
     allowed_mentions=AllowedMentions(everyone=False, roles=False),
+    intents=intents,
 )
 
 # check that there is a token to run from
@@ -197,6 +205,57 @@ async def run_tests(ctx):
                          common.bot_channel, code_block=True)
 
 
+@bot.command()
+@commands.has_any_role(*common.member_roles)
+@commands.cooldown(1, 60, commands.BucketType.user)
+async def join_vc(ctx: commands.Context):
+    """Make the bot join the voice channel you're in."""
+    async def check_vc_empty():
+        """Disconnect if nobody is in the VC anymore"""
+        not_alone = True
+        while not_alone:
+            if len(channel.members) == 1:
+                not_alone = False
+            await async_sleep(30)
+        await connection.disconnect()
+        await ctx.send("I see you are gone. I too will take my leave")
+
+    in_voice = ctx.author.voice
+    if not in_voice:
+        return await ctx.send("You aren't in a voice channel, brother")
+
+    channel: VoiceChannel = in_voice.channel
+    try:
+        connection = await channel.connect(timeout=10)
+        get_event_loop().create_task(check_vc_empty())
+        await ctx.send("I will stay a while, brother")
+    except (TimeoutError, AttributeError):
+        await ctx.send("I couldn't reach you :,(")
+    except Forbidden:
+        await ctx.send("I cannot enter those halls, brother")
+    except ClientException:
+        await ctx.send("I am already there, brother")
+
+
+@bot.command()
+@commands.has_any_role(*common.member_roles)
+@commands.cooldown(1, 60, commands.BucketType.user)
+async def leave_vc(ctx: commands.Context):
+    """Make the bot leave the voice channel that you're in"""
+    in_voice = ctx.author.voice
+    if not in_voice:
+        return await ctx.send("You aren't in a voice channel, brother")
+
+    channel: VoiceChannel = in_voice.channel
+    try:
+        target_channel_index = [
+            vc.channel for vc in bot.voice_clients].index(channel)
+        await bot.voice_clients[target_channel_index].disconnect()
+        await ctx.send("Goodbye, brother")
+    except ValueError:
+        await ctx.send("I am not in your channel, brother")
+
+
 @bot.listen()
 async def on_ready():
     """Control the behaviour when the bot starts."""
@@ -220,7 +279,14 @@ if __name__ == "__main__":
         TOKEN = f.readline().strip("\n")
 
     # get the dev version from the command line if available
-    dev_mode_arg: str = getopt(
-        sys.argv, [], ("dev_mode=true", "dev_mode=false"))[1][1]
-    set_dev_mode(True if "true" in dev_mode_arg else False)
-    bot.run(TOKEN)
+    options: List[str] = getopt(
+        sys.argv, [], ("dev_mode=true", "dev_mode=false"))
+
+    if options and len(options[1]) > 1:
+        dev_mode_arg: str = options[1][1]
+        set_dev_mode(False if "false" in dev_mode_arg else True)
+    try:
+        bot.run(TOKEN)
+    # suppress all of the errors from coroutines not being awaited before exiting
+    except (CancelledError, RuntimeError):
+        print("I breathe my last breath...")
