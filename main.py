@@ -10,9 +10,9 @@ from traceback import format_exception, print_exc
 import sys
 from getopt import getopt
 if sys.version[2] >= "7":  # python 3.6 doesn't have the exceptions module
-    from asyncio.exceptions import CancelledError
+    from asyncio.exceptions import CancelledError, TimeoutError, get_event_loop
 else:
-    from asyncio import CancelledError
+    from asyncio import CancelledError, TimeoutError, get_event_loop
 
 bot = None
 
@@ -202,6 +202,31 @@ async def run_tests(ctx):
     errors = dumps(results.errors, indent=4, default=str)
     await send_as_chunks(f"Failures: {failures}\nErrors: {errors}",
                          common.bot_channel, code_block=True)
+
+
+@bot.command()
+@commands.has_any_role(*common.member_roles)
+async def join_vc(ctx):
+    """Make the bot join the voice channel you're in."""
+    async def check_vc_empty(channel: VoiceChannel, connection: VoiceProtocol):
+        """Disconnect if nobody is in the VC anymore"""
+        not_alone = True
+        while not_alone:
+            if len(channel.members) == 1:
+                not_alone = False
+        await connection.disconnect()
+
+    in_voice = ctx.author.voice
+    if not in_voice:
+        return await ctx.send("You aren't in a voice channel, brother")
+
+    channel = in_voice.channel
+    try:
+        connection = await channel.connect()
+        get_event_loop().create_task(check_vc_empty(channel, connection))
+        await ctx.send("I will stay a while, brother")
+    except TimeoutError:
+        await ctx.send("I couldn't reach you :,(")
 
 
 @bot.listen()
