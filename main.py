@@ -10,9 +10,11 @@ from traceback import format_exception, print_exc
 import sys
 from getopt import getopt
 if sys.version[2] >= "7":  # python 3.6 doesn't have the exceptions module
-    from asyncio.exceptions import CancelledError, TimeoutError, get_event_loop
+    from asyncio.exceptions import CancelledError, get_event_loop
 else:
-    from asyncio import CancelledError, TimeoutError, get_event_loop
+    from asyncio import CancelledError, get_event_loop
+from concurrent.futures._base import TimeoutError
+from asyncio import sleep as async_sleep
 
 bot = None
 
@@ -206,15 +208,18 @@ async def run_tests(ctx):
 
 @bot.command()
 @commands.has_any_role(*common.member_roles)
-async def join_vc(ctx):
+@commands.cooldown(1, 60, commands.BucketType.user)
+async def join_vc(ctx: commands.Context):
     """Make the bot join the voice channel you're in."""
-    async def check_vc_empty(channel: VoiceChannel, connection: VoiceProtocol):
+    async def check_vc_empty():
         """Disconnect if nobody is in the VC anymore"""
         not_alone = True
         while not_alone:
             if len(channel.members) == 1:
                 not_alone = False
+            await async_sleep(30)
         await connection.disconnect()
+        await ctx.send("I see you are gone. I too will take my leave")
 
     in_voice = ctx.author.voice
     if not in_voice:
@@ -223,10 +228,14 @@ async def join_vc(ctx):
     channel = in_voice.channel
     try:
         connection = await channel.connect()
-        get_event_loop().create_task(check_vc_empty(channel, connection))
+        get_event_loop().create_task(check_vc_empty())
         await ctx.send("I will stay a while, brother")
     except TimeoutError:
         await ctx.send("I couldn't reach you :,(")
+    except Forbidden:
+        await ctx.send("I cannot enter those halls, brother")
+    except ClientException:
+        await ctx.send("I am already there, brother")
 
 
 @bot.listen()
