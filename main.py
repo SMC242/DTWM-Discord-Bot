@@ -10,10 +10,10 @@ from traceback import format_exception, print_exc
 import sys
 from getopt import getopt
 if sys.version[2] >= "7":  # python 3.6 doesn't have the exceptions module
-    from asyncio.exceptions import CancelledError, get_event_loop
+    from asyncio.exceptions import CancelledError
 else:
-    from asyncio import CancelledError, get_event_loop
-from asyncio import sleep as async_sleep, TimeoutError
+    from asyncio import CancelledError
+from asyncio import sleep as async_sleep, TimeoutError, get_event_loop
 
 bot = None
 
