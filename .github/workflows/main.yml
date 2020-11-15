@@ -31,7 +31,7 @@ jobs:
       - name: Get dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r "./Text Files/requirements.txt"
+          pip install -r "./requirements.txt"
 
       # Run tests
       - name: Run unit tests
