@@ -3,7 +3,7 @@ import datetime as D
 from asyncio import get_event_loop
 from Utils import common
 from discord import Message, TextChannel
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Callable
 from random import choice
 from json import load
 from Utils.mestils import search_word, get_eu_timezone
@@ -177,6 +177,17 @@ class ReactReactions(ReactionParent):
 
             self.set_cooldown(msg.channel)
             await msg.add_reaction(choice(responses[match_name]))
+
+
+class ReactionOverlord(ReactionParent):
+    def __init__(self, bot: commands.Bot,
+                 callbacks: List[Callable[['ReactionOverlord'], None]]):
+        self.bot = bot
+        # validate callbacks
+        for callback in callbacks:
+            if not callable(callback):
+                raise ValueError("One or more callback is not callable")
+        self.callbacks = callbacks
 
 
 def setup(bot: commands.Bot):
