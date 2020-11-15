@@ -132,7 +132,6 @@ async def patch(ctx):
     with the new files."""
     import git
     from Utils.mestils import send_as_chunks
-    from os import startfile
     async with ctx.typing():
         try:
             # unload everything but the base commands
@@ -165,7 +164,8 @@ async def patch(ctx):
         # restart the bot with the new files
         finally:
             await ctx.send("Restarting...")
-            startfile(__file__)
+            cmd = ' '.join((sys.executable, *sys.argv))
+            os.system(cmd)
             sys.exit(0)
 
 
