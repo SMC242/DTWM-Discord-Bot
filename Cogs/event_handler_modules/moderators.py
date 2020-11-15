@@ -34,10 +34,18 @@ class MessageAuthoritarian(commands.Cog):
         """Get the links in the message from the text.
         NOTE: this is a separate method from `_get_urls` because I don't want to download
         things like articles."""
-        urls = set()
+        def is_emote(url: str) -> bool:
+            url_index = content.index(url)
+            left = content[url_index - 1]
+            right = content[url_index + len(url)]
+            return left == ":" and right == ">"
+
         # try to get links from the content
-        urls.update(mestils.get_links(msg.content))
-        return urls
+        content = msg.content
+        urls = set(mestils.get_links(content))
+        # don't hit on emotes
+        non_emotes = set((url for url in urls if not is_emote(url)))
+        return non_emotes
 
     async def on_message(self, msg: Message):
         """Do your check here. This must be deccorated with commands.Cog.listener()
