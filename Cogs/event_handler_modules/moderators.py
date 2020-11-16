@@ -4,8 +4,95 @@ from Utils import mestils
 from json import dumps
 from discord.ext import commands, tasks
 from discord import Message, Member, HTTPException, NotFound, File, Embed, Attachment
-from typing import Optional, List, Dict, Set, Union, Iterable
+from typing import Optional, List, Dict, Set, Union, Iterable, Any, Tuple
 import datetime as D
+from asyncio import get_event_loop, sleep as async_sleep
+
+
+class StoredMsg:
+    """This class will cache a message for a while so that it can be resummoned."""
+
+    def __init__(self, msg: Message, cache_period: float = 60) -> None:
+        self.msg = msg
+        self.cache_period = cache_period
+        self.content: Optional[str] = ""
+        self.attachments: Optional[List[bytes]] = []
+        self.embed_links: Optional[List[str]] = []
+        self._parsed = False
+        self.expired = False
+
+        loop = get_event_loop()
+        loop.create_task(self.parse_msg())
+        loop.create_task(self.cache_msg())
+
+    async def parse_msg(self):
+        """
+        # (method) parse_msg()
+        Get all of the interesting attributes of the message.
+        """
+        def parse_attrs(embed: Embed) -> Tuple[str, ]:
+            """Get all of the non-empty attributes of an embed."""
+            def is_empty(embed_attr: Any) -> bool:
+                return embed_attr == Embed.Empty
+
+            def attrs_from_embed(embed: Embed) -> Tuple[str, str, str, str]:
+                return (embed.url, embed.image.url, embed.video.url)
+
+            return (attr for attr in attrs_from_embed(embed) if not is_empty(attr))
+
+        self.embed_links = [
+            attr for e in self.embeds
+            for attr in parse_attrs(e)]
+        self.content = self.msg.content or "`[placeholder]`"
+        self.attachments = [await a.read(use_cached=True) for a in self.msg.attachments]
+        self._parsed = True
+
+    async def cache_msg(self):
+        """
+        # (method) cache_msg()
+        Cache the mssage for `self.cache_period` seconds.
+        """
+        await async_sleep(self.cache_period)
+        self._expired = True
+        self.release()
+
+    def release(self):
+        """Clear all of the attributes."""
+        self.content = None
+        self.attachments = []
+        self.embeds = []
+
+    @property
+    def expired(self) -> bool:
+        """Check if this object has been uncached."""
+        return self._expired
+
+    @property
+    def parsed(self) -> bool:
+        """Check if this object's message has been parsed."""
+        return self._parsed
+
+    def retrieve(self) -> Optional[dict]:
+        """
+        # (method) retrieve()
+        Retrieve all of the message attributes as a dictionary
+
+        # Returns
+            `Optional[dict]`:
+                The message attributes with the following keys:
+                - `content`: the text of the message
+                - `embed_links`: `List[str]`
+                - `files`: `List[File]`
+                Returns `None` if expired.
+        """
+        if self.expired:
+            return None
+        files: List[File] = [File(a) for a in self.attachments]
+        return {
+            "content": self.content,
+            "embed_links": self.embed_links,
+            "files": files,
+        }
 
 
 class MessageAuthoritarian(commands.Cog):
@@ -16,7 +103,7 @@ class MessageAuthoritarian(commands.Cog):
         self.bot = bot
         self.babysitter = self.bot.get_cog("AuthoritarianBabySitter")
 
-    @staticmethod
+    @ staticmethod
     async def _get_urls(msg: Message) -> Set[str]:
         """Get all of the unique urls from a message"""
         urls = set()
@@ -29,7 +116,7 @@ class MessageAuthoritarian(commands.Cog):
                 urls.update(to_add)
         return urls
 
-    @staticmethod
+    @ staticmethod
     async def _get_msg_links(msg: Message) -> Set[str]:
         """Get the links in the message from the text.
         NOTE: this is a separate method from `_get_urls` because I don't want to download
@@ -71,8 +158,8 @@ class AuthoritarianBabySitter(commands.Cog):
         self.disabled: bool = False
         self.last_msg: Message = None
 
-    @commands.command(aliases=["RS", "resummon", "come_back", "false_positive"
-                               "false_hit", "resummon_msg"])
+    @ commands.command(aliases=["RS", "resummon", "come_back", "false_positive"
+                                "false_hit", "resummon_msg"])
     async def resummon_message(self, ctx):
         """Repost the last deleted message."""
         # avoid no message deleted
@@ -88,7 +175,7 @@ class AuthoritarianBabySitter(commands.Cog):
         # chunk the message into sets of 5 (only 5 links will embed per message)
         await mestils.send_as_chunks(urls, self.last_msg.channel, character_cap=5)
 
-    @commands.command()
+    @ commands.command()
     async def toggle_auto_mods(self, ctx):
         """Enable or disable the auto moderators."""
         self.disabled = not self.disabled
@@ -102,7 +189,7 @@ class InstagramHandler(MessageAuthoritarian):
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)
 
-    @commands.Cog.listener()
+    @ commands.Cog.listener()
     async def on_message(self, msg: Message):
         """Warns the user if they post a private Instagram link."""
         # don't respond to the bot
@@ -144,7 +231,7 @@ class RepostHandler(MessageAuthoritarian):
                                                  f"Removed Key {y} Value {z}")
                                              )
 
-    @commands.Cog.listener()
+    @ commands.Cog.listener()
     async def on_message(self, msg: Message):
         """Check for duplicate images."""
         # don't respond to self
