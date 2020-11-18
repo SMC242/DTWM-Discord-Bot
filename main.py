@@ -174,15 +174,20 @@ async def patch(ctx):
 async def reload_cogs(ctx):
     """Restart all cogs and utils."""
     import importlib
-    extensions = list(bot.extensions.keys()).copy(
-    )  # avoid deletion during iteration
-    # reload the extensions
-    for extension in extensions:
-        bot.reload_extension(extension)
+    # avoid deletion during iteration
+    extensions = list(bot.extensions.keys()).copy()
+    try:
+        # reload the extensions
+        for extension in extensions:
+            bot.reload_extension(extension)
 
-    # reload utils
-    for util in (common,):
-        importlib.reload(util)
+        # reload utils
+        for util in (common,):
+            importlib.reload(util)
+        return await ctx.send("Reload successful!")
+    except:  # I don't want to handle the error, I want it to go to the error handler
+        await ctx.send("Reload failed :(")
+        raise Exception("Cog reload failed.")
 
 
 @bot.command(aliases=["RT"])
