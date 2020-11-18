@@ -249,5 +249,13 @@ def setup(bot):
     bot.add_cog(RepeatingTasks(bot))
 
 
+def teardown(bot):
+    cogs = (
+        "RepeatingTasks",
+    )
+    for cog in cogs:
+        bot.remove_cog(cog)
+
+
 if __name__ == "__main__":
     setup(commands.Bot("foo"))
