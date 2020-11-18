@@ -84,6 +84,28 @@ for file in os.listdir("./Cogs"):
                 print_exc()
 
 
+def unload_all_extensions():
+    # unload everything but the base commands
+    # avoid deletion during iteration
+    extensions = list(bot.extensions.keys()).copy()
+    for extension in extensions:
+        bot.unload_extension(extension)
+
+    commands = (
+        "close",
+        "toggle_command",
+        "patch",
+        "reload_cogs",
+        "run_tests",
+        "join_vc",
+        "leave_vc",
+        "restart"
+    )
+
+    for cmd in commands:
+        bot.remove_command(cmd)
+
+
 async def graceful_exit(restart=False):
     """Kill the bot gracefully"""
     print("I breathe my last breath...")
@@ -158,12 +180,7 @@ async def patch(ctx):
     from Utils.mestils import send_as_chunks
     async with ctx.typing():
         try:
-            # unload everything but the base commands
-            # avoid deletion during iteration
-            extensions = list(bot.extensions.keys()).copy()
-            for extension in extensions:
-                bot.unload_extension(extension)
-
+            unload_all_extensions()
             # get the origin of the repo
             repo = git.Repo(".")
             origin = repo.remote()
