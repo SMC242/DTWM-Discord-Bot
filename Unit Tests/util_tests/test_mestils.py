@@ -127,6 +127,20 @@ census.daybreakgames.com/get/ps2/item?name.en=PSA-02 Diamondback'''
         result = mestils.get_links(test_string)
         self.assertEqual(result, expected)
 
+    def test_has_emote(self):
+        """Check if emotes are detected properly"""
+        tests = [
+            "laugh:546357041891901464"
+            ":w_ayaya:622141714655870982>"
+            ":02Salute:483120555990712322>"
+            "<:02Salute:483120555990712322>"
+            "<:MeguGasm:538051441705615370>"
+            "<:w_komi_yes:622139235738058793>"
+            "<a:an_rainbow_100_pretty_gay:590549490482544651>"
+        ]
+        outputs = [mestils.is_emote(test) for test in tests]
+        self.assertEqual([True] * len(tests), outputs)
+
 
 if __name__ == '__main__':
     unittest.main()
