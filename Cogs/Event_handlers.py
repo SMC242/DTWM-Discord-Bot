@@ -15,5 +15,17 @@ def setup(bot):
         module.setup(bot)
 
 
+def teardown(bot):
+    modules = (
+        error_handler,
+        moderators,
+        react_menu_handling,
+        reaction_handlers,
+    )
+
+    for module in modules:
+        module.teardown(bot)
+
+
 if __name__ == "__main__":
     setup(commands.Bot("test"))

@@ -84,13 +84,34 @@ for file in os.listdir("./Cogs"):
                 print_exc()
 
 
+def unload_all_extensions():
+    # unload everything but the base commands
+    # avoid deletion during iteration
+    extensions = list(bot.extensions.keys()).copy()
+    for extension in extensions:
+        bot.unload_extension(extension)
+
+    commands = (
+        "close",
+        "toggle_command",
+        "patch",
+        "reload_cogs",
+        "run_tests",
+        "join_vc",
+        "leave_vc",
+        "restart"
+    )
+
+    for cmd in commands:
+        bot.remove_command(cmd)
+
+
 async def graceful_exit(restart=False):
     """Kill the bot gracefully"""
     print("I breathe my last breath...")
     if restart:
         cmd = ' '.join((sys.executable, *sys.argv))
         os.system(cmd)
-        print("started new process")
 
     # clean up asyncio loop
     tasks = [t for t in all_tasks() if t is not
@@ -119,6 +140,14 @@ async def log_command_info(ctx):
     time = today.strftime("%H:%M")
     print(
         f'Command: {ctx.command.qualified_name} called in "{ctx.guild.name}".{ctx.channel} on {day} at {time}')
+
+
+@bot.command()
+@commands.is_owner()
+async def restart(ctx):
+    """Restart the bot"""
+    await ctx.send("Restarting...")
+    await graceful_exit(restart=True)
 
 
 @bot.command()
@@ -159,12 +188,7 @@ async def patch(ctx):
     from Utils.mestils import send_as_chunks
     async with ctx.typing():
         try:
-            # unload everything but the base commands
-            # avoid deletion during iteration
-            extensions = list(bot.extensions.keys()).copy()
-            for extension in extensions:
-                bot.unload_extension(extension)
-
+            unload_all_extensions()
             # get the origin of the repo
             repo = git.Repo(".")
             origin = repo.remote()
@@ -302,7 +326,6 @@ async def on_ready():
         print("WARNING: you are on the dev version. Change main.DEV_VERSION to False if you're a user")
 
 if __name__ == "__main__":
-    print("process started")
     global TOKEN
     # get the token and start the bot
     with open("Text Files/token.txt") as f:

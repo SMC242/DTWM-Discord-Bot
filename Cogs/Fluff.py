@@ -367,3 +367,12 @@ def setup(bot: commands.Bot):
 
     for cog in cogs:
         bot.add_cog(cog(bot))
+
+
+def teardown(bot):
+    cogs = (
+        "DTWMChanWorship",
+        "Trains"
+    )
+    for cog in cogs:
+        bot.remove_cog(cog)

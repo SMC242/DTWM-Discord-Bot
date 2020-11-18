@@ -549,5 +549,14 @@ def setup(bot):
     bot.add_cog(Attendance(bot))
 
 
+def teardown(bot):
+    cogs = (
+        "Attendance",
+    )
+
+    for cog in cogs:
+        bot.remove_cog(cog)
+
+
 if __name__ == "__main__":
     setup(commands.Bot("TEST"))

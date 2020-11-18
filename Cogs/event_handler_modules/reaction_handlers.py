@@ -204,3 +204,14 @@ def setup(bot: commands.Bot):
 
     for cog in cogs:
         bot.add_cog(cog(bot))
+
+
+def teardown(bot):
+    cogs = (
+        "ReactionController",
+        "TextReactions",
+        "ReactReactions",
+    )
+
+    for cog in cogs:
+        bot.remove_cog(cog)
