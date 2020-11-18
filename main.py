@@ -15,7 +15,7 @@ else:
     from asyncio import CancelledError
 from asyncio import sleep as async_sleep, TimeoutError, get_event_loop, current_task, all_tasks
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 bot = None
 
 
@@ -199,7 +199,8 @@ async def patch(ctx):
             # pull the new files and get summaries
             info = origin.pull()
             info_string = '\n'.join((ele.commit.summary for ele in info))
-            await ctx.send(f"Patched successfully! New version: '{__version__}'. "
+            from main import __version__ as new_version
+            await ctx.send(f"Patched successfully! New version: '{new_version}'. "
                            + "Summary titles (pulls):\n"
                            + info_string)
 
