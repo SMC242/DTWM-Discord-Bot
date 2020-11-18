@@ -15,6 +15,7 @@ else:
     from asyncio import CancelledError
 from asyncio import sleep as async_sleep, TimeoutError, get_event_loop
 
+__version__ = "1.0.0"
 bot = None
 
 
@@ -150,8 +151,9 @@ async def patch(ctx):
             # pull the new files and get summaries
             info = origin.pull()
             info_string = '\n'.join((ele.commit.summary for ele in info))
-            await ctx.send("Patched successfully! Summary titles (pulls):\n" +
-                           info_string)
+            await ctx.send(f"Patched successfully! New version: '{__version__}'. "
+                           + "Summary titles (pulls):\n"
+                           + info_string)
 
         # dump error to chat
         except Exception as err:
