@@ -90,7 +90,6 @@ async def graceful_exit(restart=False):
     if restart:
         cmd = ' '.join((sys.executable, *sys.argv))
         os.system(cmd)
-        print("started new process")
 
     # clean up asyncio loop
     tasks = [t for t in all_tasks() if t is not
@@ -302,7 +301,6 @@ async def on_ready():
         print("WARNING: you are on the dev version. Change main.DEV_VERSION to False if you're a user")
 
 if __name__ == "__main__":
-    print("process started")
     global TOKEN
     # get the token and start the bot
     with open("Text Files/token.txt") as f:
