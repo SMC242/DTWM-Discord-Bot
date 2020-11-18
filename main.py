@@ -13,7 +13,7 @@ if sys.version[2] >= "7":  # python 3.6 doesn't have the exceptions module
     from asyncio.exceptions import CancelledError
 else:
     from asyncio import CancelledError
-from asyncio import sleep as async_sleep, TimeoutError, get_event_loop
+from asyncio import sleep as async_sleep, TimeoutError, get_event_loop, current_task, all_tasks
 
 __version__ = "1.0.0"
 bot = None
@@ -84,6 +84,32 @@ for file in os.listdir("./Cogs"):
                 print_exc()
 
 
+async def graceful_exit(restart=False):
+    """Kill the bot gracefully"""
+    print("I breathe my last breath...")
+    if restart:
+        cmd = ' '.join((sys.executable, *sys.argv))
+        os.system(cmd)
+        print("started new process")
+
+    # clean up asyncio loop
+    tasks = [t for t in all_tasks() if t is not
+             current_task()]
+    [task.cancel() for task in tasks]
+    await bot.close()
+    loop = get_event_loop()
+    loop.stop()
+    from time import sleep as sync_sleep
+    sync_sleep(1)
+    loop.close()
+
+    # close the thread
+    try:
+        sys.exit(0)
+    except (RuntimeError, SystemExit):
+        pass
+
+
 @bot.before_invoke
 async def log_command_info(ctx):
     """Log information about each command call."""
@@ -102,9 +128,7 @@ async def close(ctx):
     # shut down the bot
     await ctx.send("Power core depleted. Shutting down...")
     print(f"Ow! That hurt @{ctx.author}")
-    await bot.logout()
-    # close the script
-    sys.exit(0)
+    await graceful_exit()
 
 
 @bot.command(aliases=["TC"])
@@ -166,9 +190,7 @@ async def patch(ctx):
         # restart the bot with the new files
         finally:
             await ctx.send("Restarting...")
-            cmd = ' '.join((sys.executable, *sys.argv))
-            os.system(cmd)
-            sys.exit(0)
+            await graceful_exit(restart=True)
 
 
 @bot.command(aliases=["reload"])
@@ -280,6 +302,7 @@ async def on_ready():
         print("WARNING: you are on the dev version. Change main.DEV_VERSION to False if you're a user")
 
 if __name__ == "__main__":
+    print("process started")
     global TOKEN
     # get the token and start the bot
     with open("Text Files/token.txt") as f:
@@ -294,6 +317,5 @@ if __name__ == "__main__":
         set_dev_mode(False if "false" in dev_mode_arg else True)
     try:
         bot.run(TOKEN)
-    # suppress all of the errors from coroutines not being awaited before exiting
-    except (CancelledError, RuntimeError):
-        print("I breathe my last breath...")
+    except RuntimeError:  # bot killed
+        pass
