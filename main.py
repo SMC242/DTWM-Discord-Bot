@@ -144,6 +144,14 @@ async def log_command_info(ctx):
 
 @bot.command()
 @commands.is_owner()
+async def restart(ctx):
+    """Restart the bot"""
+    await ctx.send("Restarting...")
+    await graceful_exit(restart=True)
+
+
+@bot.command()
+@commands.is_owner()
 async def close(ctx):
     """End me rightly."""
     # shut down the bot
