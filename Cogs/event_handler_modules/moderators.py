@@ -174,6 +174,8 @@ class RepostHandler(MessageAuthoritarian):
         for url in urls:
             # hash the first KB of the media and check if it was already posted
             async with download_resource(url, LIMIT) as file:
+                if file is None:
+                    continue
                 bytes = await file.content
             await self._check_duplicate(msg, hash(bytes))
 
