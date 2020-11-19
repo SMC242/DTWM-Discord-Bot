@@ -15,7 +15,7 @@ else:
     from asyncio import CancelledError
 from asyncio import sleep as async_sleep, TimeoutError, get_event_loop, current_task, all_tasks
 
-__version__ = "1.1.1"
+__version__ = "1.1.3"
 bot = None
 
 
