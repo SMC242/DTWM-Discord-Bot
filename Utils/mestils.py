@@ -11,7 +11,7 @@ from random import randint
 # pre-compile the regexs
 REGEX = {
     "instagram": re.compile(r"https:\/\/www\.instagram\.com\/p\/[a-zA-Z-_0-9]*"),
-    "timezone": re.compile(r"(CET|CEST)", re.IGNORECASE),
+    "timezone": re.compile(r"\b(CET|CEST)\b", re.IGNORECASE),
     # source for the below RegEx: https://stackoverflow.com/a/8234912/12399357
     "get_links": re.compile(r"(?P<full_link>(?P<protocol_domain>(?P<Protocol>[A-Za-z]{3,9}:(?:\/\/)?)(?:[-;:&=\+\$,\w]+@)?[A-Za-z0-9.-]+|(?:www.|[-;:&=\+\$,\w]+@)[A-Za-z0-9.-]+)(?P<path>(?:\/[\+~%\/.\w\-_]*)?\??(?:[-\+=&;%@.\w_]*)#?(?:[\w]*))?)"),
     "has_snowflake": re.compile(r"(?:[0-9A-z_)]+)(:[0-9]{18})"),
