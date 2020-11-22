@@ -116,7 +116,7 @@ def get_eu_timezone(contents: str) -> List[Optional[str]]:
         `List[Optional[str]]`:
             The timezone found, if any.
     """
-    return re.findall(REGEX["timezone"], contents)
+    return re.findall(REGEX["timezone"], contents.lower())
 
 
 def get_instagram_links(msg: str) -> List[Optional[str]]:

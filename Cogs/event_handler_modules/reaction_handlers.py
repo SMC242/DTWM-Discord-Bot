@@ -104,9 +104,10 @@ class TextReactions(ReactionParent):
             return
 
         match_name: str = None
-        # react if ben or the bot is mentioned
         mentioned_ids = [person.id for person in msg.mentions]
         timezones = get_eu_timezone(msg.content)
+
+        # react if ben or the bot is mentioned
         if self.bot.user.id in mentioned_ids or 395598378387636234 in mentioned_ids:
             match_name = "ping"
 
@@ -114,7 +115,7 @@ class TextReactions(ReactionParent):
         elif timezones:
             found_zone = timezones[0]
             winter: bool = D.date.today().isocalendar()[1] > 26
-            current_zone = "CET" if winter else "CEST"
+            current_zone = "cet" if winter else "cest"
             if found_zone != current_zone:
                 match_name = current_zone
 
