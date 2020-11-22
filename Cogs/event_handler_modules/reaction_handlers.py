@@ -115,7 +115,7 @@ class TextReactions(ReactionParent):
         elif timezones:
             found_zone = timezones[0]
             winter: bool = D.date.today().isocalendar()[1] > 26
-            current_zone = "CET" if winter else "CEST"
+            current_zone = "cet" if winter else "cest"
             if found_zone != current_zone:
                 match_name = current_zone
 
