@@ -104,9 +104,10 @@ class TextReactions(ReactionParent):
             return
 
         match_name: str = None
-        # react if ben or the bot is mentioned
         mentioned_ids = [person.id for person in msg.mentions]
         timezones = get_eu_timezone(msg.content)
+
+        # react if ben or the bot is mentioned
         if self.bot.user.id in mentioned_ids or 395598378387636234 in mentioned_ids:
             match_name = "ping"
 
