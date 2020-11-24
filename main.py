@@ -13,7 +13,7 @@ if sys.version[2] >= "7":  # python 3.6 doesn't have the exceptions module
     from asyncio.exceptions import CancelledError
 else:
     from asyncio import CancelledError
-from asyncio import sleep as async_sleep, TimeoutError, get_event_loop, current_task, all_tasks
+from asyncio import sleep as async_sleep, TimeoutError, get_event_loop
 
 __version__ = "1.1.1"
 bot = None
@@ -114,8 +114,9 @@ async def graceful_exit(restart=False):
         os.system(cmd)
 
     # clean up asyncio loop
-    tasks = [t for t in all_tasks() if t is not
-             current_task()]
+    loop = get_event_loop()
+    tasks = [t for t in loop.all_tasks() if t is not
+             loop.current_task()]
     [task.cancel() for task in tasks]
     await bot.close()
     loop = get_event_loop()
