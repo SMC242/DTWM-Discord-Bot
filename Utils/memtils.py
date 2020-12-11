@@ -217,7 +217,10 @@ async def search_member(search_with: Union[Context, Guild],
     if isinstance(search_with, Context):
         search_with = search_with.guild
 
-    return NameParser(search_with.get_member_named(name).display_name).parsed
+    result = search_with.get_member_named(name)
+    if not result:
+        return
+    return NameParser(result.display_name).parsed
 
 
 async def is_member(name: str, outfit_members: List[str] = None,
