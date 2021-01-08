@@ -40,19 +40,19 @@ class MessageScrubber(commands.Cog):
             # handle no delete permissions
             perms = channel.permissions_for(ctx.me)
             if not all((perms.manage_messages, perms.read_message_history, perms.read_messages)) and not perms.administrator:
-                await ctx.send(f"{channel.name} skipped due to lack of permissions")
+                self.loop.create_task(
+                    ctx.send(f"{channel.name} skipped due to lack of permissions"))
                 continue
 
             # delete the messages
             async for msg in channel.history(limit=None):
                 if msg.author == person:
-                    self.loop.add_task(msg.delete())
-            self.loop.add_task(progress_msg.edit(
+                    self.loop.create_task(msg.delete())
+            self.loop.create_task(progress_msg.edit(
                 content=progress_msg.content + f"\n{channel.name}"))
         await ctx.send("Done")
 
-    @commands.Cog.cog_command_error
-    async def on_scrub_message_error(self, ctx, error):
+    async def cog_command_error(self, ctx, error):
         if isinstance(error, commands.ConversionError):
             return ctx.send("That is not a person")
         else:
