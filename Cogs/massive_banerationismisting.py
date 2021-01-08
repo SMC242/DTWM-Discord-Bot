@@ -13,12 +13,16 @@ class MessageScrubber(commands.Cog):
     @commands.command()
     async def scrub_messages(self, ctx: commands.Context, person: Member):
         """Delete all of a member's messages."""
-        await ctx.channel.purge(check=lambda m: m.author == person)
+        for channel in ctx.guild.text_channels:
+            await channel.purge(check=lambda m: m.author == person)
+        await ctx.send("Done")
 
     @scrub_messages.error
     async def on_scrub_message_error(self, ctx, error):
         if isinstance(error, commands.ConversionError):
             return ctx.send("That is not a person")
+        else:
+            raise error
 
 
 def setup(bot: commands.Bot):
