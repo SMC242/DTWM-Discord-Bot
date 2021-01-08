@@ -13,8 +13,14 @@ class MessageScrubber(commands.Cog):
     @commands.command()
     async def scrub_messages(self, ctx: commands.Context, person: Member):
         """Delete all of a member's messages."""
+        progress_msg = await ctx.send("0 channels covered")
         for channel in ctx.guild.text_channels:
+            perms = channel.permissions_for(self.bot.user)
+            if not perms.manage_messages or not perms.read_message_history:
+                await ctx.send(f"{channel.name} skipped due to lack of permissions")
+                continue
             await channel.purge(check=lambda m: m.author == person)
+            await progress_msg.edit(content=f"{progress_msg.content[0] + 1} channels covered")
         await ctx.send("Done")
 
     @scrub_messages.error
