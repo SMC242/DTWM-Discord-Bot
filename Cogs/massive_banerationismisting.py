@@ -2,6 +2,7 @@ from discord.ext import commands
 from discord import Member
 from Utils.common import leader_roles
 from traceback import print_exc
+from asyncio import get_event_loop
 
 
 class MessageScrubber(commands.Cog):
@@ -9,6 +10,7 @@ class MessageScrubber(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.loop = get_event_loop()
 
     @commands.has_any_role(*leader_roles)
     @commands.command()
@@ -44,8 +46,9 @@ class MessageScrubber(commands.Cog):
             # delete the messages
             async for msg in channel.history(limit=None):
                 if msg.author == person:
-                    await msg.delete()
-            await progress_msg.edit(content=progress_msg.content + f"\n{channel.name}")
+                    self.loop.add_task(msg.delete())
+            self.loop.add_task(progress_msg.edit(
+                content=progress_msg.content + f"\n{channel.name}"))
         await ctx.send("Done")
 
     @commands.Cog.cog_command_error
