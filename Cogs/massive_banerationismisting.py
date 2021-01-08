@@ -12,8 +12,8 @@ class MessageScrubber(commands.Cog):
 
     @commands.has_any_role(*leader_roles)
     @commands.command()
-    async def scrub_messages(self, ctx: commands.Context, person: Member):
-        """Delete all of a member's messages."""
+    async def purge_messages(self, ctx: commands.Context, person: Member):
+        """Note: does not work. Delete all of a member's messages."""
         print(person.display_name)
         progress_msg = await ctx.send("Channels covered:\n")
         for channel in ctx.guild.text_channels:
@@ -27,7 +27,7 @@ class MessageScrubber(commands.Cog):
 
     @commands.has_any_role(*leader_roles)
     @commands.command()
-    async def test(self, ctx: commands.Context, person: Member):
+    async def delete_messages(self, ctx: commands.Context, person: Member):
         """Delete all of a member's messages."""
         print(person.display_name)
         progress_msg = await ctx.send("Channels covered:\n")
@@ -42,7 +42,7 @@ class MessageScrubber(commands.Cog):
             await progress_msg.edit(content=progress_msg.content + f"\n{channel.name}")
         await ctx.send("Done")
 
-    @scrub_messages.error
+    @commands.Cog.cog_command_error
     async def on_scrub_message_error(self, ctx, error):
         if isinstance(error, commands.ConversionError):
             return ctx.send("That is not a person")
