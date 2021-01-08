@@ -14,13 +14,16 @@ class MessageScrubber(commands.Cog):
     @commands.command()
     async def purge_messages(self, ctx: commands.Context, person: Member):
         """Note: does not work. Delete all of a member's messages."""
-        print(person.display_name)
+
         progress_msg = await ctx.send("Channels covered:\n")
         for channel in ctx.guild.text_channels:
+            # handle no delete permissions
             perms = channel.permissions_for(ctx.me)
             if not all((perms.manage_messages, perms.read_message_history, perms.read_messages)) and not perms.administrator:
                 await ctx.send(f"{channel.name} skipped due to lack of permissions")
                 continue
+
+            # delete the messages
             await channel.purge(check=lambda m: m.author == person)
             await progress_msg.edit(content=progress_msg.content + f"\n{channel.name}")
         await ctx.send("Done")
@@ -29,13 +32,16 @@ class MessageScrubber(commands.Cog):
     @commands.command()
     async def delete_messages(self, ctx: commands.Context, person: Member):
         """Delete all of a member's messages."""
-        print(person.display_name)
+
         progress_msg = await ctx.send("Channels covered:\n")
         for channel in ctx.guild.text_channels:
+            # handle no delete permissions
             perms = channel.permissions_for(ctx.me)
             if not all((perms.manage_messages, perms.read_message_history, perms.read_messages)) and not perms.administrator:
                 await ctx.send(f"{channel.name} skipped due to lack of permissions")
                 continue
+
+            # delete the messages
             async for msg in channel.history(limit=None):
                 if msg.author == person:
                     await msg.delete()
