@@ -114,8 +114,7 @@ class TextReactions(ReactionParent):
         # correct people if they use the wrong timezone
         elif timezones:
             found_zone = timezones[0]
-            winter: bool = D.date.today().isocalendar()[1] > 26
-            current_zone = "cet" if winter else "cest"
+            current_zone = "cet" if self.is_winter else "cest"
             if found_zone != current_zone:
                 match_name = current_zone
 
@@ -131,6 +130,27 @@ class TextReactions(ReactionParent):
             with open("./Text Files/responses.json") as f:
                 responses = load(f)
             await msg.channel.send(choice(responses[match_name]))
+
+    @property
+    def is_winter(self) -> bool:
+        """
+        ### (method) is_winter()
+        Work out whether we are in daylight savings time
+
+        ### Returns
+            `bool`:
+                `True` if in winter time. `False` if in summer time
+        """
+        _, week_number, week_day = D.date.today().isocalendar()
+        TIMEZONE_SWITCH_WEEK = 13
+        TIMEZONE_SWITCH_DAY = 5
+        # accounting for winter being at the start of the year
+        if TIMEZONE_SWITCH_WEEK < week_number or week_number < TIMEZONE_SWITCH_WEEK:
+            return True
+        elif week_number == TIMEZONE_SWITCH_WEEK and week_day >= TIMEZONE_SWITCH_DAY:
+            return True
+        else:
+            return False
 
 
 class ReactReactions(ReactionParent):
