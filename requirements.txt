@@ -2,7 +2,7 @@ discord.py
 datetime
 asyncio
 typing
-numpy==1.19.3
+numpy==1.22.0
 Pillow
 matplotlib
 fuzzywuzzy
