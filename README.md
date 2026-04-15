@@ -13,7 +13,7 @@ A [Discord](https://discord.com/) [bot](https://docs.discord.com/developers/plat
   - Outfit tag typos: our outfit tag was unintuitive and often mispelled. The bot detects common typos and corrects them
 - Hot-updates
 
-## Fluff
+### Fluff
 - Fun leaderboards
   - Top messagers and reacters in channels
   - Worshipping the [Machine God](https://wh40k.lexicanum.com/wiki/Machine_God)
